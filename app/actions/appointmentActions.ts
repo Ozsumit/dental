@@ -71,6 +71,7 @@ export async function searchPatientsForDropdown(query: string) {
 
 export async function saveAppointment(formData: FormData, id?: string) {
   const patientId = formData.get("patientId") as string;
+  const doctorId = formData.get("doctorId") as string;
   const appointmentDate = new Date(formData.get("appointmentDate") as string);
 
   // GRAB ALL CHECKED BOXES AS AN ARRAY
@@ -78,6 +79,7 @@ export async function saveAppointment(formData: FormData, id?: string) {
 
   const data = {
     patientId,
+    doctorId: doctorId || null,
     appointmentDate,
     status: formData.get("status") as string,
     treatments, // Save the string to the database

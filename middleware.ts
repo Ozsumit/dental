@@ -19,6 +19,7 @@ export default async function middleware(req: NextRequest) {
     let redirectPath = "/";
     if (session.role === "ADMIN") redirectPath = "/admin";
     if (session.role === "DOCTOR") redirectPath = "/doctor";
+    if (session.role === "RECEPTIONIST") redirectPath = "/";
     return NextResponse.redirect(new URL(redirectPath, req.nextUrl));
   }
 

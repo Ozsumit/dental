@@ -19,6 +19,7 @@ model User {
   password         String
   role             Role            @default(RECEPTIONIST)
   assignedRecords  MedicalRecord[]
+  appointments     Appointment[]   @relation("DoctorAppointments")
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
 }
@@ -35,6 +36,8 @@ model Patient {
   address       String?
   role          String?        // Patient category or role
   bloodGroup    String?
+  allergies     String?        // Comma separated allergies
+  isOld         Boolean        @default(false)
   
   medicalRecord MedicalRecord?
   diagnosis     Diagnosis?
@@ -88,11 +91,13 @@ model Diagnosis {
 model Appointment {
   id              String   @id @default(uuid())
   patientId       String
+  doctorId        String?
   appointmentDate DateTime
   status          String
   treatments      String // Stored as JSON string or comma-separated
   
   patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor          User?    @relation("DoctorAppointments", fields: [doctorId], references: [id])
 
   createdAt       DateTime @default(now())
 }
@@ -101,6 +106,7 @@ model Procedure {
   id            String   @id @default(uuid())
   patientId     String
   name          String
+  type          String?  // e.g. Standard, Urgent, Follow-up
   description   String?
   cost          Float    @default(0)
   procedureDate DateTime @default(now())

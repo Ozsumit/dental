@@ -534,6 +534,64 @@ export default function DashboardClient({
                 </div>
               </div>
 
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">
+                  Allergies (comma separated)
+                </label>
+                <input
+                  name="allergies"
+                  defaultValue={selectedPatient?.allergies || ""}
+                  placeholder="e.g. Peanuts, Penicillin"
+                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-5 border-t border-slate-100 pt-5">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Insurance Provider
+                  </label>
+                  <input
+                    name="insurance"
+                    defaultValue={selectedPatient?.medicalRecord?.insurance || ""}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Insurance No
+                  </label>
+                  <input
+                    name="insuranceNo"
+                    defaultValue={selectedPatient?.medicalRecord?.insuranceNo || ""}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Emergency Contact Name
+                  </label>
+                  <input
+                    name="emergencyContactName"
+                    defaultValue={selectedPatient?.medicalRecord?.emergencyContactName || ""}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Emergency Contact No
+                  </label>
+                  <input
+                    name="emergencyContactNo"
+                    defaultValue={selectedPatient?.medicalRecord?.emergencyContactNo || ""}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+              </div>
+
               <div className="grid grid-cols-3 gap-5">
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">

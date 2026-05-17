@@ -1,4 +1,5 @@
 import { getAppointments } from "@/app/actions/appointmentActions";
+import { getDoctors } from "@/app/actions/userActions";
 import AppointmentsClient from "./AppointmentsClient";
 import { CalendarDays } from "lucide-react";
 
@@ -10,6 +11,7 @@ export default async function AppointmentsPage({
   const resolvedParams = await searchParams;
   const { data, totalPages, currentPage, totalCount } =
     await getAppointments(resolvedParams);
+  const doctors = await getDoctors();
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
@@ -46,6 +48,7 @@ export default async function AppointmentsPage({
           totalPages={totalPages}
           currentPage={currentPage}
           searchParams={resolvedParams}
+          doctors={doctors}
         />
       </div>
     </main>

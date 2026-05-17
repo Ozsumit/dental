@@ -25,21 +25,27 @@ import {
   AlertCircle
 } from "lucide-react";
 
-export default function DoctorClient({ patients }: { patients: Patient[] }) {
+export default function DoctorClient({ patients, history }: { patients: Patient[], history: Patient[] }) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [historySearchTerm, setHistorySearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
 
   // Batch procedures state
-  const [newProcedures, setNewProcedures] = useState([{ name: "", cost: "", description: "", medicine: "", suggestions: "" }]);
+  const [newProcedures, setNewProcedures] = useState([{ name: "", type: "Standard", cost: "0", description: "", medicine: "", suggestions: "" }]);
 
   const filteredPatients = patients.filter(p =>
     `${p.firstName} ${p.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.phone.includes(searchTerm)
   );
 
+  const filteredHistory = history.filter(p =>
+    `${p.firstName} ${p.lastName}`.toLowerCase().includes(historySearchTerm.toLowerCase()) ||
+    p.phone.includes(historySearchTerm)
+  );
+
   const addProcedureRow = () => {
-    setNewProcedures([...newProcedures, { name: "", cost: "", description: "", medicine: "", suggestions: "" }]);
+    setNewProcedures([...newProcedures, { name: "", type: "Standard", cost: "0", description: "", medicine: "", suggestions: "" }]);
   };
 
   const removeProcedureRow = (index: number) => {
@@ -72,13 +78,13 @@ export default function DoctorClient({ patients }: { patients: Patient[] }) {
       <div className="w-80 border-r border-slate-200 bg-white flex flex-col hidden md:flex shadow-xl z-10">
         <div className="p-6 border-b border-slate-100 bg-indigo-50/30">
            <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
-             <Clock className="w-5 h-5 text-indigo-600" /> Today
+             <Clock className="w-5 h-5 text-indigo-600" /> Appointments
            </h2>
           <div className="relative mt-4">
             <Search className="absolute left-3 top-3.5 h-4 w-4 text-slate-400" />
             <input
               type="text"
-              placeholder="Search patients..."
+              placeholder="Search appointments..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
@@ -88,16 +94,16 @@ export default function DoctorClient({ patients }: { patients: Patient[] }) {
         <div className="flex-1 overflow-y-auto">
           {filteredPatients.length === 0 ? (
             <div className="p-12 text-center text-slate-400 italic text-sm">
-              No assigned patients found.
+              No pending appointments.
             </div>
           ) : (
             filteredPatients.map(p => (
               <button
                 key={p.id}
                 onClick={() => handlePatientSelect(p)}
-                className={`w-full p-6 text-left hover:bg-slate-50 transition-all flex items-center gap-4 border-b border-slate-50 ${selectedPatient?.id === p.id ? "bg-indigo-50 border-indigo-200 ring-2 ring-inset ring-indigo-500/10" : ""}`}
+                className={`w-full p-6 text-left hover:bg-slate-50 transition-all flex items-center gap-4 border-b border-slate-50 ${selectedPatient?.id === p.id ? "bg-indigo-600 text-white" : ""}`}
               >
-                <div className={`p-3 rounded-2xl ${selectedPatient?.id === p.id ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-500"}`}>
+                <div className={`p-3 rounded-2xl ${selectedPatient?.id === p.id ? "bg-indigo-500 text-white" : "bg-slate-100 text-slate-500"}`}>
                   <User className="w-5 h-5" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -106,6 +112,44 @@ export default function DoctorClient({ patients }: { patients: Patient[] }) {
                 </div>
                 {selectedPatient?.id === p.id && <ChevronRight className="w-5 h-5 text-indigo-600" />}
               </button>
+            ))
+          )}
+        </div>
+
+        <div className="p-6 border-t border-slate-100 bg-slate-50/50">
+           <h2 className="text-lg font-black text-slate-700 flex items-center gap-2">
+             <History className="w-4 h-4 text-slate-500" /> Today's History
+           </h2>
+           <div className="relative mt-3">
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Filter history..."
+              value={historySearchTerm}
+              onChange={(e) => setHistorySearchTerm(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none"
+            />
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          {filteredHistory.length === 0 ? (
+            <div className="p-8 text-center text-slate-400 italic text-xs">
+              No patients completed yet.
+            </div>
+          ) : (
+            filteredHistory.map(p => (
+              <div
+                key={p.id}
+                className="w-full p-4 text-left flex items-center gap-3 border-b border-slate-50 opacity-60"
+              >
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-700 text-xs truncate">{p.firstName} {p.lastName}</p>
+                  <p className="text-[10px] text-slate-500 truncate">{p.appointments?.[0]?.treatments || "No treatment recorded"}</p>
+                </div>
+              </div>
             ))
           )}
         </div>
@@ -265,8 +309,12 @@ export default function DoctorClient({ patients }: { patients: Patient[] }) {
                                        <input value={proc.name} onChange={(e) => updateProcedureRow(index, "name", e.target.value)} className="w-full p-4 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-lg font-bold" placeholder="e.g. Filling" />
                                     </div>
                                     <div className="space-y-1">
-                                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cost ($)</label>
-                                       <input type="number" value={proc.cost} onChange={(e) => updateProcedureRow(index, "cost", e.target.value)} className="w-full p-4 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-lg font-black text-emerald-600" placeholder="0.00" />
+                                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</label>
+                                       <select value={proc.type} onChange={(e) => updateProcedureRow(index, "type", e.target.value)} className="w-full p-4 bg-white border border-slate-200 rounded-xl outline-none focus:border-indigo-500 text-lg font-bold">
+                                          <option value="Standard">Standard</option>
+                                          <option value="Urgent">Urgent</option>
+                                          <option value="Follow-up">Follow-up</option>
+                                       </select>
                                     </div>
                                  </div>
                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -307,7 +355,7 @@ export default function DoctorClient({ patients }: { patients: Patient[] }) {
                                await addBatchProcedures(selectedPatient.id, formatted);
                                alert("Session Completed Successfully!");
                                setSelectedPatient(null);
-                               setNewProcedures([{ name: "", cost: "", description: "", medicine: "", suggestions: "" }]);
+                               setNewProcedures([{ name: "", type: "Standard", cost: "0", description: "", medicine: "", suggestions: "" }]);
                              }}
                              className="flex-1 md:flex-none bg-emerald-600 text-white px-12 py-5 rounded-2xl font-black text-lg hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all flex items-center justify-center gap-3 active:scale-95"
                            >

@@ -72,8 +72,10 @@ async function main() {
         status: "ACTIVE",
         address: faker.location.streetAddress(),
         bloodGroup: faker.helpers.arrayElement(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]),
+        allergies: faker.helpers.arrayElement(["Peanuts", "Penicillin", "None", "Dust", "Latex"]),
         role: faker.helpers.arrayElement(["VIP", "Regular", "New"]),
         visitCount: faker.number.int({ min: 1, max: 6 }),
+        isOld: true, // Seeding mostly old patients for history
         lastVisitDate: faker.date.recent({ days: 30 }),
       },
     });

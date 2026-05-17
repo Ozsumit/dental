@@ -3,6 +3,46 @@
 import prisma from "@/lib/prisma";
 import { getSession } from "@/lib/auth/session";
 
+export async function getDoctorHistory() {
+  const session = await getSession();
+  if (!session || session.role !== "DOCTOR") {
+    return [];
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  return await prisma.patient.findMany({
+    where: {
+      medicalRecord: {
+        assignedDoctorId: session.id
+      },
+      appointments: {
+        some: {
+          appointmentDate: {
+            gte: today,
+            lt: tomorrow
+          },
+          status: "COMPLETED"
+        }
+      }
+    },
+    include: {
+      appointments: {
+        orderBy: { appointmentDate: "desc" }
+      },
+      procedures: {
+        orderBy: { procedureDate: "desc" }
+      },
+      medicalRecord: true,
+      diagnosis: true
+    },
+    orderBy: { updatedAt: "desc" }
+  });
+}
+
 export async function getDoctorPatients() {
   const session = await getSession();
   if (!session || session.role !== "DOCTOR") {
@@ -14,18 +54,34 @@ export async function getDoctorPatients() {
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
 
-  // Find patients assigned to this doctor who have an appointment today
+  // Find patients assigned to this doctor (via medical record OR specific appointment) who have an appointment today
   return await prisma.patient.findMany({
     where: {
-      medicalRecord: {
-        assignedDoctorId: session.id
-      },
+      OR: [
+        {
+          medicalRecord: {
+            assignedDoctorId: session.id
+          }
+        },
+        {
+          appointments: {
+            some: {
+              doctorId: session.id,
+              appointmentDate: {
+                gte: today,
+                lt: tomorrow
+              }
+            }
+          }
+        }
+      ],
       appointments: {
         some: {
           appointmentDate: {
             gte: today,
             lt: tomorrow
-          }
+          },
+          status: { not: "COMPLETED" }
         }
       }
     },

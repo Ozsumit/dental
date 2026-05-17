@@ -26,12 +26,16 @@ interface AppointmentsClientProps {
   totalPages: number;
   currentPage: number;
   searchParams: { [key: string]: string | string[] | undefined };
+  doctors: { id: string; username: string }[];
 }
+
+import { useEffect } from "react";
 
 export default function AppointmentsClient({
   appointments,
   totalPages,
   currentPage,
+  doctors: initialDoctors
 }: AppointmentsClientProps) {
   const router = useRouter();
   const params = useSearchParams();
@@ -397,21 +401,38 @@ export default function AppointmentsClient({
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  Treatment Type
-                </label>
-                <select
-                  name="treatments"
-                  defaultValue={selectedAppt?.treatments || "Checkup"}
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white"
-                >
-                  <option value="Checkup">Checkup</option>
-                  <option value="Cleaning">Cleaning</option>
-                  <option value="Filling">Filling</option>
-                  <option value="Root Canal">Root Canal</option>
-                  <option value="Whitening">Whitening</option>
-                </select>
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Treatment Type
+                  </label>
+                  <select
+                    name="treatments"
+                    defaultValue={selectedAppt?.treatments || "Checkup"}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white"
+                  >
+                    <option value="Checkup">Checkup</option>
+                    <option value="Cleaning">Cleaning</option>
+                    <option value="Filling">Filling</option>
+                    <option value="Root Canal">Root Canal</option>
+                    <option value="Whitening">Whitening</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Assign Doctor
+                  </label>
+                  <select
+                    name="doctorId"
+                    defaultValue={selectedAppt?.doctorId || ""}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white"
+                  >
+                    <option value="">Select Doctor (Optional)</option>
+                    {initialDoctors.map(d => (
+                      <option key={d.id} value={d.id}>{d.username}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="pt-2 flex justify-end gap-3 mt-6">

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { saveProcedure } from "@/app/actions/receptionistActions";
+import { transferPatientDoctor } from "@/app/actions/patientsActions";
+import { getDoctors } from "@/app/actions/userActions";
 import { Patient, Procedure, Appointment } from "@/lib/types";
 import {
   Clipboard,
@@ -23,6 +25,11 @@ import {
 
 export default function ReceptionistPatientView({ patient }: { patient: Patient }) {
   const [isProcedureModalOpen, setIsProcedureModalOpen] = useState(false);
+  const [doctors, setDoctors] = useState<{id: string, username: string}[]>([]);
+
+  useEffect(() => {
+    getDoctors().then(setDoctors);
+  }, []);
 
   const parseJson = (str: string | null | undefined) => {
     if (!str) return [];
@@ -87,6 +94,42 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Droplets className="w-4 h-4 text-red-500" /> Blood Group: <span className="font-bold">{patient.bloodGroup || "N/A"}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-slate-600">
+                <AlertCircle className="w-4 h-4 text-orange-500" /> Allergies: <span className="font-bold">{patient.allergies || "None"}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Assigned Doctor & Transfer */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <Activity className="w-4 h-4 text-indigo-500" /> Clinical Responsibility
+            </h3>
+            <div className="space-y-4">
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Assigned Doctor</p>
+                <div className="flex items-center justify-between mt-1">
+                   <p className="text-sm font-black text-indigo-600">Dr. {patient.medicalRecord?.assignedDoctor?.username || "Unassigned"}</p>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-slate-50">
+                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Transfer Patient</p>
+                 <select
+                   onChange={async (e) => {
+                     if (e.target.value) {
+                       await transferPatientDoctor(patient.id, e.target.value);
+                       alert("Patient transferred successfully.");
+                     }
+                   }}
+                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500"
+                   defaultValue=""
+                 >
+                   <option value="" disabled>Choose doctor...</option>
+                   {doctors.map(d => (
+                     <option key={d.id} value={d.id}>Dr. {d.username}</option>
+                   ))}
+                 </select>
               </div>
             </div>
           </div>
