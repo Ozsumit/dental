@@ -172,6 +172,35 @@ export async function transferPatientDoctor(patientId: string, doctorId: string)
   revalidatePath("/doctor");
 }
 
+export async function createAppointmentAction(formData: FormData) {
+  const patientId = formData.get("patientId") as string;
+  const doctorId = formData.get("doctorId") as string;
+  const appointmentDate = new Date(formData.get("appointmentDate") as string);
+  const treatments = formData.getAll("treatments").join(", ") || "Checkup";
+
+  await prisma.$transaction([
+    prisma.appointment.create({
+      data: {
+        patientId,
+        doctorId: doctorId || null,
+        appointmentDate,
+        status: "SCHEDULED",
+        treatments,
+      },
+    }),
+    prisma.patient.update({
+      where: { id: patientId },
+      data: {
+        visitCount: { increment: 1 },
+        lastVisitDate: appointmentDate,
+      },
+    }),
+  ]);
+
+  revalidatePath("/");
+  revalidatePath("/appointments");
+}
+
 // EXPORT FUNCTIONALITY
 export async function getPatientsForExport(searchParams: { [key: string]: string | string[] | undefined }) {
   const where: Prisma.PatientWhereInput = {};

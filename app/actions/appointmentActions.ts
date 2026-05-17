@@ -56,13 +56,16 @@ export async function getAppointments(searchParams: { [key: string]: string | st
 
 export async function searchPatientsForDropdown(query: string) {
   if (!query) return [];
+  const terms = query.trim().split(/\s+/);
   return prisma.patient.findMany({
     where: {
-      OR: [
-        { firstName: { contains: query } },
-        { lastName: { contains: query } },
-        { phone: { contains: query } },
-      ],
+      AND: terms.map(term => ({
+        OR: [
+          { firstName: { contains: term } },
+          { lastName: { contains: term } },
+          { phone: { contains: term } },
+        ],
+      })),
     },
     take: 10,
     select: { id: true, firstName: true, lastName: true, phone: true },

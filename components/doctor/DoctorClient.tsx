@@ -176,16 +176,19 @@ export default function DoctorClient({ patients, history }: { patients: Patient[
                   </div>
                </div>
 
-               {/* Step Indicator for iPad */}
+               {/* Step Indicator for iPad - Now clickable for flexible workflow */}
                <div className="flex items-center bg-slate-50 p-2 rounded-2xl w-full md:w-auto">
                   {[1, 2, 3].map(step => (
                     <div key={step} className="flex items-center">
-                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black transition-all ${
-                         currentStep === step ? "bg-indigo-600 text-white shadow-md scale-110" :
-                         currentStep > step ? "bg-emerald-500 text-white" : "bg-white text-slate-300 border border-slate-200"
-                       }`}>
+                       <button
+                         onClick={() => setCurrentStep(step)}
+                         className={`w-10 h-10 rounded-xl flex items-center justify-center font-black transition-all ${
+                           currentStep === step ? "bg-indigo-600 text-white shadow-md scale-110" :
+                           currentStep > step ? "bg-emerald-500 text-white" : "bg-white text-slate-300 border border-slate-200"
+                         }`}
+                       >
                           {currentStep > step ? <CheckCircle2 className="w-5 h-5" /> : step}
-                       </div>
+                       </button>
                        {step < 3 && <div className={`w-6 md:w-10 h-1 mx-1 rounded-full ${currentStep > step ? "bg-emerald-500" : "bg-slate-200"}`} />}
                     </div>
                   ))}
@@ -214,6 +217,22 @@ export default function DoctorClient({ patients, history }: { patients: Patient[
                </div>
 
                <div className="p-6 md:p-10 flex-1">
+                  {/* Quick Patient Info for reference in every step */}
+                  <div className="mb-8 p-4 bg-slate-50 rounded-2xl border border-slate-100 flex flex-wrap gap-4 text-xs font-bold uppercase tracking-wider text-slate-500">
+                     <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                        <Activity className="w-3.5 h-3.5 text-red-500" />
+                        Blood: <span className="text-slate-900">{selectedPatient.bloodGroup || "N/A"}</span>
+                     </div>
+                     <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                        <AlertCircle className="w-3.5 h-3.5 text-orange-500" />
+                        Allergies: <span className="text-slate-900">{selectedPatient.allergies || "None"}</span>
+                     </div>
+                     <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-slate-200">
+                        <History className="w-3.5 h-3.5 text-indigo-500" />
+                        Visits: <span className="text-slate-900">{selectedPatient.visitCount}</span>
+                     </div>
+                  </div>
+
                   {currentStep === 1 && (
                      <form action={async (formData) => {
                         await updateDiagnosis(selectedPatient.id, formData);
