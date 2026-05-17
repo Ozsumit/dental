@@ -88,6 +88,7 @@ model Diagnosis {
   icd10Code         String?
   treatmentPlan     String?
   homeExercise      String?
+  medicines         String?  // Stored as JSON string
   nextVisitDate     DateTime?
 
   patient           Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { saveProcedure } from "@/app/actions/receptionistActions";
 import { transferPatientDoctor } from "@/app/actions/patientsActions";
 import { getDoctors } from "@/app/actions/userActions";
-import { Patient, Procedure, Appointment } from "@/lib/types";
+import { Patient, Procedure, Appointment } from "@/lib/types/index";
 import {
   Clipboard,
   Activity,
@@ -20,12 +20,17 @@ import {
   Shield,
   Heart,
   FileText,
-  AlertCircle
+  AlertCircle,
+  Stethoscope,
+  Pill,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 
 export default function ReceptionistPatientView({ patient }: { patient: Patient }) {
   const [isProcedureModalOpen, setIsProcedureModalOpen] = useState(false);
   const [doctors, setDoctors] = useState<{id: string, username: string}[]>([]);
+  const [expandedProcedure, setExpandedProcedure] = useState<string | null>(null);
 
   useEffect(() => {
     getDoctors().then(setDoctors);
@@ -34,9 +39,12 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
   const parseJson = (str: string | null | undefined) => {
     if (!str) return [];
     try {
-      return JSON.parse(str);
+      if (typeof str === 'string' && str.startsWith('[')) {
+        return JSON.parse(str);
+      }
+      return str.split(",").map(s => s.trim()).filter(Boolean);
     } catch {
-      return str.split(",").map(s => s.trim());
+      return [];
     }
   };
 
@@ -45,7 +53,7 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
       {/* Header Info */}
       <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex gap-4 items-center">
-          <div className="bg-indigo-100 p-4 rounded-full text-indigo-600">
+          <div className="bg-emerald-100 p-4 rounded-full text-emerald-600">
             <User className="w-8 h-8" />
           </div>
           <div>
@@ -64,7 +72,7 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
         </div>
         <button
           onClick={() => setIsProcedureModalOpen(true)}
-          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition flex items-center gap-2"
+          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition flex items-center gap-2 shadow-lg shadow-emerald-100"
         >
           <Plus className="w-5 h-5" /> Record Payment
         </button>
@@ -73,63 +81,47 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Personal & Medical Details */}
         <div className="lg:col-span-1 space-y-6">
+          {/* Medical Summary (High Priority) */}
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+              <Activity className="w-4 h-4 text-red-500" /> Medical Summary
+            </h3>
+            <div className="grid grid-cols-2 gap-4">
+               <div className="bg-red-50 p-3 rounded-xl border border-red-100">
+                  <p className="text-[10px] font-black text-red-400 uppercase">Blood Group</p>
+                  <p className="text-lg font-black text-red-700">{patient.bloodGroup || "N/A"}</p>
+               </div>
+               <div className="bg-amber-50 p-3 rounded-xl border border-amber-100">
+                  <p className="text-[10px] font-black text-amber-500 uppercase">Allergies</p>
+                  <p className="text-xs font-bold text-amber-700 line-clamp-1">{patient.allergies || "None"}</p>
+               </div>
+            </div>
+            {patient.allergies && (
+               <div className="p-3 bg-amber-50 rounded-lg border border-amber-100 flex gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                  <p className="text-[11px] font-medium text-amber-700">{patient.allergies}</p>
+               </div>
+            )}
+          </div>
+
           {/* Personal Info */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <User className="w-4 h-4 text-indigo-500" /> Personal Details
+              <User className="w-4 h-4 text-indigo-500" /> Contact Info
             </h3>
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Phone className="w-4 h-4 text-slate-400" /> {patient.phone}
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-600">
-                <Mail className="w-4 h-4 text-slate-400" /> {patient.email || "No email provided"}
+                <Mail className="w-4 h-4 text-slate-400" /> {patient.email || "No email"}
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-600">
-                <MapPin className="w-4 h-4 text-slate-400" /> {patient.address || "No address provided"}
+                <MapPin className="w-4 h-4 text-slate-400" /> {patient.address || "No address"}
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Calendar className="w-4 h-4 text-slate-400" />
-                {new Date(patient.dateOfBirth).toLocaleDateString()} ({patient.gender})
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600">
-                <Droplets className="w-4 h-4 text-red-500" /> Blood Group: <span className="font-bold">{patient.bloodGroup || "N/A"}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600">
-                <AlertCircle className="w-4 h-4 text-orange-500" /> Allergies: <span className="font-bold">{patient.allergies || "None"}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Assigned Doctor & Transfer */}
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <Activity className="w-4 h-4 text-indigo-500" /> Clinical Responsibility
-            </h3>
-            <div className="space-y-4">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Assigned Doctor</p>
-                <div className="flex items-center justify-between mt-1">
-                   <p className="text-sm font-black text-indigo-600">Dr. {patient.medicalRecord?.assignedDoctor?.username || "Unassigned"}</p>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-slate-50">
-                 <p className="text-[10px] font-bold text-slate-400 uppercase mb-2">Transfer Patient</p>
-                 <select
-                   onChange={async (e) => {
-                     if (e.target.value) {
-                       await transferPatientDoctor(patient.id, e.target.value);
-                       alert("Patient transferred successfully.");
-                     }
-                   }}
-                   className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs outline-none focus:ring-2 focus:ring-indigo-500"
-                   defaultValue=""
-                 >
-                   <option value="" disabled>Choose doctor...</option>
-                   {doctors.map(d => (
-                     <option key={d.id} value={d.id}>Dr. {d.username}</option>
-                   ))}
-                 </select>
+                {new Date(patient.dateOfBirth).toLocaleDateString()}
               </div>
             </div>
           </div>
@@ -140,16 +132,16 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
               <Shield className="w-4 h-4 text-indigo-500" /> Insurance & Emergency
             </h3>
             <div className="space-y-4">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Insurance Provider</p>
-                <p className="text-sm font-medium text-slate-700">{patient.medicalRecord?.insurance || "N/A"}</p>
-                {patient.medicalRecord?.insuranceNo && <p className="text-xs text-slate-500">ID: {patient.medicalRecord.insuranceNo}</p>}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase">Provider</p>
+                <p className="text-sm font-bold text-slate-700">{patient.medicalRecord?.insurance || "N/A"}</p>
+                {patient.medicalRecord?.insuranceNo && <p className="text-xs text-slate-500 mt-0.5">ID: {patient.medicalRecord.insuranceNo}</p>}
               </div>
-              <div className="pt-2 border-t border-slate-50">
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Emergency Contact</p>
-                <p className="text-sm font-medium text-slate-700">{patient.medicalRecord?.emergencyContactName || "N/A"}</p>
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase">Emergency Contact</p>
+                <p className="text-sm font-bold text-slate-700">{patient.medicalRecord?.emergencyContactName || "N/A"}</p>
                 {patient.medicalRecord?.emergencyContactNo && (
-                  <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
+                  <p className="text-xs text-slate-500 flex items-center gap-1 mt-1 font-medium">
                     <Phone className="w-3 h-3" /> {patient.medicalRecord.emergencyContactNo}
                   </p>
                 )}
@@ -160,97 +152,125 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
 
         {/* Middle & Right Column: Clinical Data */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Diagnosis Summary */}
+          {/* Latest Clinical Assessment (Overhauled) */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <Activity className="w-4 h-4 text-indigo-500" /> Diagnosis & History
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Medical History</p>
-                <div className="flex flex-wrap gap-1">
-                  {parseJson(patient.diagnosis?.medicalHistory).map((h: string, i: number) => (
-                    <span key={i} className="px-2 py-0.5 bg-red-50 text-red-700 rounded-md text-[10px] font-bold border border-red-100">{h}</span>
-                  ))}
-                  {parseJson(patient.diagnosis?.medicalHistory).length === 0 && <p className="text-xs text-slate-400 italic">No recorded history</p>}
-                </div>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Past History</p>
-                <p className="text-xs text-slate-600 line-clamp-2">{patient.diagnosis?.pastHistory || "No past history recorded."}</p>
-              </div>
+            <div className="flex justify-between items-center">
+               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                 <Stethoscope className="w-4 h-4 text-emerald-500" /> Current Assessment
+               </h3>
+               {patient.diagnosis?.updatedAt && (
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Updated: {new Date(patient.diagnosis.updatedAt).toLocaleDateString()}</span>
+               )}
             </div>
-            <div className="pt-4 border-t border-slate-50">
-               <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Current Complaints</p>
-               <p className="text-sm text-slate-700">{patient.medicalRecord?.complaints || "No active complaints."}</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="space-y-4">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Clinical Diagnosis</p>
+                    <p className="text-sm text-slate-700 font-medium bg-slate-50 p-3 rounded-xl border border-slate-100 min-h-[60px]">
+                       {patient.diagnosis?.treatmentPlan || "No diagnosis recorded"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">ICD-10 Code</p>
+                    <p className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-1 rounded inline-block">
+                       {patient.diagnosis?.icd10Code || "N/A"}
+                    </p>
+                  </div>
+               </div>
+               <div className="space-y-4">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Medicines & Suggestions</p>
+                    <div className="text-sm text-slate-700 font-medium bg-emerald-50/30 p-3 rounded-xl border border-emerald-100 min-h-[60px] flex gap-2">
+                       <Pill className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                       <p className="whitespace-pre-wrap">{patient.diagnosis?.medicines || "No instructions provided"}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Home Exercises</p>
+                    <p className="text-xs text-slate-600 italic">
+                       {patient.diagnosis?.homeExercise || "None prescribed"}
+                    </p>
+                  </div>
+               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Procedures Table */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-              <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-indigo-500" /> History
-                </h3>
-              </div>
-              <div className="overflow-y-auto max-h-[300px]">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50/50 text-slate-400 font-bold sticky top-0">
-                    <tr>
-                      <th className="px-4 py-3">Date</th>
-                      <th className="px-4 py-3">Procedure</th>
-                      <th className="px-4 py-3 text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {patient.procedures?.map((proc: Procedure) => (
-                      <tr key={proc.id} className="hover:bg-slate-50/50 transition">
-                        <td className="px-4 py-3 text-slate-500">{new Date(proc.procedureDate).toLocaleDateString()}</td>
-                        <td className="px-4 py-3 font-medium text-slate-800">{proc.name}</td>
-                        <td className="px-4 py-3 text-right font-bold text-emerald-600">${proc.cost}</td>
-                      </tr>
-                    ))}
-                    {(!patient.procedures || patient.procedures.length === 0) && (
-                      <tr><td colSpan={3} className="px-4 py-8 text-center text-slate-400 italic">No history yet.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+          {/* Detailed Visit History */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <FileText className="w-4 h-4 text-indigo-500" /> Visit & Procedure History
+              </h3>
             </div>
+            <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
+              {patient.procedures?.map((proc: Procedure) => (
+                <div key={proc.id} className="p-4 hover:bg-slate-50 transition">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="text-[10px] font-black text-slate-400 uppercase">{new Date(proc.procedureDate).toLocaleDateString()}</span>
+                      <h4 className="font-bold text-slate-800">{proc.name}</h4>
+                    </div>
+                    <div className="text-right">
+                       <p className="font-black text-emerald-600">${proc.cost}</p>
+                       <button
+                         onClick={() => setExpandedProcedure(expandedProcedure === proc.id ? null : proc.id)}
+                         className="text-[10px] font-black text-indigo-500 uppercase flex items-center gap-1 mt-1 ml-auto"
+                       >
+                         {expandedProcedure === proc.id ? <><ChevronUp className="w-3 h-3" /> Hide Details</> : <><ChevronDown className="w-3 h-3" /> View Details</>}
+                       </button>
+                    </div>
+                  </div>
+                  {expandedProcedure === proc.id && (
+                    <div className="mt-4 pt-4 border-t border-dashed border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
+                       <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Medicines</p>
+                          <div className="flex flex-wrap gap-1">
+                             {parseJson(proc.medicine).map((m: string, i: number) => (
+                               <span key={i} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-bold">{m}</span>
+                             ))}
+                             {parseJson(proc.medicine).length === 0 && <span className="text-[10px] text-slate-400 italic">None recorded</span>}
+                          </div>
+                       </div>
+                       <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Suggestions</p>
+                          <p className="text-xs text-slate-600 leading-relaxed">{proc.description || "No description provided."}</p>
+                       </div>
+                    </div>
+                  )}
+                </div>
+              ))}
+              {(!patient.procedures || patient.procedures.length === 0) && (
+                <div className="px-4 py-12 text-center text-slate-400 italic">No historical visits recorded.</div>
+              )}
+            </div>
+          </div>
 
-            {/* Appointments Table */}
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-              <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                 <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                  <Clipboard className="w-4 h-4 text-indigo-500" /> Upcoming
-                </h3>
-              </div>
-              <div className="overflow-y-auto max-h-[300px]">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50/50 text-slate-400 font-bold sticky top-0">
-                    <tr>
-                      <th className="px-4 py-3">Date</th>
-                      <th className="px-4 py-3">Treatment</th>
-                      <th className="px-4 py-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {patient.appointments?.filter((a: Appointment) => a.status !== "COMPLETED").map((appt: Appointment) => (
-                      <tr key={appt.id} className="hover:bg-slate-50/50 transition">
-                        <td className="px-4 py-3 text-slate-500">{new Date(appt.appointmentDate).toLocaleDateString()}</td>
-                        <td className="px-4 py-3 font-medium text-slate-800">{appt.treatments}</td>
-                        <td className="px-4 py-3">
-                           <span className="bg-blue-50 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-blue-100">{appt.status}</span>
-                        </td>
-                      </tr>
-                    ))}
-                    {patient.appointments?.filter((a: Appointment) => a.status !== "COMPLETED").length === 0 && (
-                      <tr><td colSpan={3} className="px-4 py-8 text-center text-slate-400 italic">No scheduled appointments.</td></tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
+          {/* Upcoming Schedule */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-indigo-500" /> Upcoming Schedule
+              </h3>
+            </div>
+            <div className="p-4">
+               {patient.appointments?.filter((a: Appointment) => a.status !== "COMPLETED").map((appt: Appointment) => (
+                  <div key={appt.id} className="flex items-center justify-between p-3 bg-blue-50/30 rounded-xl border border-blue-100 mb-2 last:mb-0">
+                     <div className="flex items-center gap-3">
+                        <div className="bg-white p-2 rounded-lg text-blue-600 shadow-sm">
+                           <Calendar className="w-4 h-4" />
+                        </div>
+                        <div>
+                           <p className="text-xs font-black text-slate-800">{new Date(appt.appointmentDate).toLocaleDateString()}</p>
+                           <p className="text-[10px] font-bold text-blue-600 uppercase tracking-wider">{appt.treatments}</p>
+                        </div>
+                     </div>
+                     <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-lg text-[10px] font-black uppercase">{appt.status}</span>
+                  </div>
+               ))}
+               {patient.appointments?.filter((a: Appointment) => a.status !== "COMPLETED").length === 0 && (
+                  <div className="py-8 text-center text-slate-400 italic text-xs">No scheduled follow-ups.</div>
+               )}
             </div>
           </div>
         </div>
