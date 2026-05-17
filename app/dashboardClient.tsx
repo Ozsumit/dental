@@ -8,6 +8,7 @@ import {
   savePatient,
   deletePatient,
   getPatientsForExport,
+  createAppointmentAction,
 } from "./actions/patientsActions";
 import ReceptionistPatientView from "@/components/ReceptionistPatientView";
 import { Patient } from "@/lib/types";
@@ -373,16 +374,12 @@ export default function DashboardClient({
               </button>
               <button
                 onClick={() => {
-                  // 1. Close profile view
-                  setIsProfileOpen(false);
-                  // 2. Set the patient for the appt form
                   setAppointmentPatient(selectedPatient);
-                  // 3. Open the Appointment Modal
                   setIsApptFormOpen(true);
                 }}
                 className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition"
               >
-                + Add Procedure
+                + Schedule Appointment
               </button>
             </div>
 
@@ -702,12 +699,11 @@ export default function DashboardClient({
 
             <form
               action={async (formData) => {
-                // You need to import saveAppointment from your appointmentActions file
                 formData.append("patientId", apptPatient.id);
-                await saveAppointment(formData);
+                await createAppointmentAction(formData);
                 setIsApptFormOpen(false);
               }}
-              className="space-y-4"
+              className="p-6 space-y-5"
             >
               <div>
                 <label className="text-xs font-bold text-slate-500">Date</label>
