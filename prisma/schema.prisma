@@ -3,8 +3,23 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum Role {
+  ADMIN
+  DOCTOR
+  RECEPTIONIST
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  role      Role     @default(RECEPTIONIST)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Patient {
@@ -12,18 +27,21 @@ model Patient {
   firstName     String
   lastName      String
   phone         String
-  email         String?       
+  email         String?
   dateOfBirth   DateTime
+  gender        String?
+  status        String        @default("ACTIVE")
   
-  // NEW CATEGORIZATION FIELDS
-  gender        String?       // e.g., "Male", "Female", "Other"
-  status        String        @default("ACTIVE") // e.g., "ACTIVE", "INACTIVE"
+  // Medical Records
+  bloodType     String?
+  allergies     String?
+  medicalNotes  String?
   
-  // OPTIMIZED FIELDS FOR FAST FILTERING
-  lastVisitDate DateTime?     
-  visitCount    Int           @default(0) 
+  lastVisitDate DateTime?
+  visitCount    Int           @default(0)
 
   appointments  Appointment[]
+  procedures    Procedure[]
 
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -37,10 +55,24 @@ model Appointment {
   id              String   @id @default(uuid())
   patientId       String
   appointmentDate DateTime
-  status          String   
-  treatments      String[]
+  status          String
+  treatments      String // In SQLite we'll store this as a JSON string or comma-separated
   
   patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   createdAt       DateTime @default(now())
+}
+
+model Procedure {
+  id            String   @id @default(uuid())
+  patientId     String
+  name          String
+  description   String?
+  cost          Float    @default(0)
+  procedureDate DateTime @default(now())
+
+  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

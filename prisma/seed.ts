@@ -1,14 +1,42 @@
 import { PrismaClient } from "@prisma/client";
 import { faker } from "@faker-js/faker";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log("🧹 Clearing database...");
   await prisma.appointment.deleteMany();
+  await prisma.procedure.deleteMany();
   await prisma.patient.deleteMany();
+  await prisma.user.deleteMany();
 
-  const TOTAL_RECORDS = 8000;
+  console.log("👤 Creating initial users...");
+  const adminPassword = await bcrypt.hash("adminpassword", 10);
+  const doctorPassword = await bcrypt.hash("doctorpassword", 10);
+  const receptionistPassword = await bcrypt.hash("receptionistpassword", 10);
+
+  await prisma.user.createMany({
+    data: [
+      {
+        username: "admin",
+        password: adminPassword,
+        role: "ADMIN",
+      },
+      {
+        username: "doctor",
+        password: doctorPassword,
+        role: "DOCTOR",
+      },
+      {
+        username: "receptionist",
+        password: receptionistPassword,
+        role: "RECEPTIONIST",
+      },
+    ],
+  });
+
+  const TOTAL_RECORDS = 100; // Reduced for SQLite and speed
   const TREATMENT_OPTIONS = [
     "Cleaning",
     "Checkup",
@@ -54,25 +82,45 @@ async function main() {
     select: { id: true, visitCount: true },
   });
 
-  // 4. Prepare Appointment Data
-  console.log("🔗 Linking appointments...");
+  // 4. Prepare Appointment & Procedure Data
+  console.log("🔗 Linking appointments and procedures...");
   const appointmentsData = allPatients.flatMap((patient) => {
     return Array.from({ length: patient.visitCount }).map(() => ({
       patientId: patient.id,
       appointmentDate: faker.date.past({ years: 2 }),
       status: "COMPLETED",
-      treatments: faker.helpers.arrayElements(TREATMENT_OPTIONS, {
-        min: 1,
-        max: 3,
-      }),
+      treatments: faker.helpers
+        .arrayElements(TREATMENT_OPTIONS, {
+          min: 1,
+          max: 3,
+        })
+        .join(", "),
     }));
   });
 
-  // 5. Bulk Insert Appointments (In chunks to avoid packet size limits)
-  const CHUNK_SIZE = 5000;
+  const proceduresData = allPatients.flatMap((patient) => {
+    return Array.from({ length: faker.number.int({ min: 0, max: 2 }) }).map(
+      () => ({
+        patientId: patient.id,
+        name: faker.helpers.arrayElement(TREATMENT_OPTIONS),
+        description: faker.lorem.sentence(),
+        cost: parseFloat(faker.commerce.price({ min: 50, max: 500 })),
+        procedureDate: faker.date.past({ years: 1 }),
+      }),
+    );
+  });
+
+  // 5. Bulk Insert Appointments and Procedures
+  const CHUNK_SIZE = 1000;
   for (let i = 0; i < appointmentsData.length; i += CHUNK_SIZE) {
     await prisma.appointment.createMany({
       data: appointmentsData.slice(i, i + CHUNK_SIZE),
+    });
+  }
+
+  for (let i = 0; i < proceduresData.length; i += CHUNK_SIZE) {
+    await prisma.procedure.createMany({
+      data: proceduresData.slice(i, i + CHUNK_SIZE),
     });
   }
 

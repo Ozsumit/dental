@@ -2,35 +2,37 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 
-export async function getAppointments(searchParams: any) {
+export async function getAppointments(searchParams: { [key: string]: string | string[] | undefined }) {
   const page = Number(searchParams?.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  const where: any = {};
+  const where: Prisma.AppointmentWhereInput = {};
 
   if (searchParams?.q) {
+    const q = searchParams.q as string;
     where.patient = {
       OR: [
-        { firstName: { contains: searchParams.q, mode: "insensitive" } },
-        { lastName: { contains: searchParams.q, mode: "insensitive" } },
+        { firstName: { contains: q } },
+        { lastName: { contains: q } },
       ],
     };
   }
 
-  if (searchParams?.status) where.status = searchParams.status;
+  if (searchParams?.status) where.status = searchParams.status as string;
 
   // SEARCH INSIDE ARRAY OF PROCEDURES using Postgres 'has'
   if (searchParams?.treatment) {
-    where.treatments = { has: searchParams.treatment };
+    where.treatments = { contains: searchParams.treatment as string };
   }
   if (searchParams?.dateFrom || searchParams?.dateTo) {
     where.appointmentDate = {};
     if (searchParams.dateFrom)
-      where.appointmentDate.gte = new Date(searchParams.dateFrom);
+      where.appointmentDate.gte = new Date(searchParams.dateFrom as string);
     if (searchParams.dateTo)
-      where.appointmentDate.lte = new Date(searchParams.dateTo);
+      where.appointmentDate.lte = new Date(searchParams.dateTo as string);
   }
 
   const [totalCount, appointments] = await Promise.all([
@@ -57,9 +59,9 @@ export async function searchPatientsForDropdown(query: string) {
   return prisma.patient.findMany({
     where: {
       OR: [
-        { firstName: { contains: query, mode: "insensitive" } },
-        { lastName: { contains: query, mode: "insensitive" } },
-        { phone: { contains: query, mode: "insensitive" } },
+        { firstName: { contains: query } },
+        { lastName: { contains: query } },
+        { phone: { contains: query } },
       ],
     },
     take: 10,
@@ -72,13 +74,13 @@ export async function saveAppointment(formData: FormData, id?: string) {
   const appointmentDate = new Date(formData.get("appointmentDate") as string);
 
   // GRAB ALL CHECKED BOXES AS AN ARRAY
-  const treatments = formData.getAll("treatments") as string[];
+  const treatments = formData.getAll("treatments").join(", ") || (formData.get("treatmentType") as string) || "Checkup";
 
   const data = {
     patientId,
     appointmentDate,
     status: formData.get("status") as string,
-    treatments, // Save the array to the database
+    treatments, // Save the string to the database
   };
 
   if (!id) {
