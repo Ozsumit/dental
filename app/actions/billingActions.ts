@@ -29,6 +29,38 @@ export async function finalizeBilling(procedureId: string, billedCost: number) {
   revalidatePath("/");
 }
 
+export async function markPatientProceduresPaid(patientId: string) {
+  await prisma.procedure.updateMany({
+    where: {
+      patientId,
+      status: { in: ["PENDING", "BILLED"] }
+    },
+    data: { status: "PAID" }
+  });
+  revalidatePath("/");
+}
+
+export async function saveCatalogItem(formData: FormData, id?: string) {
+  const data = {
+    name: formData.get("name") as string,
+    category: formData.get("category") as string,
+    baseCost: parseFloat(formData.get("baseCost") as string || "0"),
+    description: formData.get("description") as string,
+  };
+
+  if (id) {
+    await prisma.billingCatalog.update({ where: { id }, data });
+  } else {
+    await prisma.billingCatalog.create({ data });
+  }
+  revalidatePath("/admin");
+}
+
+export async function deleteCatalogItem(id: string) {
+  await prisma.billingCatalog.delete({ where: { id } });
+  revalidatePath("/admin");
+}
+
 export async function markAsPaid(procedureId: string) {
   await prisma.procedure.update({
     where: { id: procedureId },

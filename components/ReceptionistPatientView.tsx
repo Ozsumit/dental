@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { saveProcedure } from "@/app/actions/receptionistActions";
 import { transferPatientDoctor } from "@/app/actions/patientsActions";
 import { getDoctors } from "@/app/actions/userActions";
@@ -32,6 +33,7 @@ import {
 import { finalizeBilling, markAsPaid } from "@/app/actions/billingActions";
 
 export default function ReceptionistPatientView({ patient }: { patient: Patient }) {
+  const router = useRouter();
   const [isProcedureModalOpen, setIsProcedureModalOpen] = useState(false);
   const [doctors, setDoctors] = useState<{id: string, username: string}[]>([]);
   const [expandedProcedure, setExpandedProcedure] = useState<string | null>(null);
@@ -54,14 +56,12 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
 
   const handleFinalize = async (id: string, cost: number) => {
     await finalizeBilling(id, cost);
-    // Note: In a real app we'd trigger a refresh or use optimistic UI.
-    // Since this is a server-side passed prop, we might need a router refresh.
-    window.location.reload();
+    router.refresh();
   };
 
   const handlePaid = async (id: string) => {
     await markAsPaid(id);
-    window.location.reload();
+    router.refresh();
   };
 
   const pendingProcedures = patient.procedures?.filter(p => p.status === "PENDING") || [];
