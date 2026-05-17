@@ -88,17 +88,23 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Droplets className="w-4 h-4 text-red-500" /> Blood Group: <span className="font-bold">{patient.bloodGroup || "N/A"}</span>
               </div>
+              <div className="flex items-center gap-3 text-sm text-slate-600">
+                <AlertCircle className="w-4 h-4 text-orange-500" /> Allergies: <span className="font-bold text-orange-700">{patient.allergies || "None"}</span>
+              </div>
+              <div className="flex items-center gap-3 text-sm text-slate-600">
+                <Shield className="w-4 h-4 text-indigo-500" /> Insurance: <span className="font-bold">{patient.insuranceDetails || "None"}</span>
+              </div>
             </div>
           </div>
 
           {/* Insurance & Emergency */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <Shield className="w-4 h-4 text-indigo-500" /> Insurance & Emergency
+              <Shield className="w-4 h-4 text-indigo-500" /> Clinical Insurance & Emergency
             </h3>
             <div className="space-y-4">
               <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Insurance Provider</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Doctor Noted Insurance</p>
                 <p className="text-sm font-medium text-slate-700">{patient.medicalRecord?.insurance || "N/A"}</p>
                 {patient.medicalRecord?.insuranceNo && <p className="text-xs text-slate-500">ID: {patient.medicalRecord.insuranceNo}</p>}
               </div>

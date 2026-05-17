@@ -72,7 +72,6 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
 
 export async function addBatchProcedures(patientId: string, procedures: {
   name: string;
-  cost: string;
   description: string;
   medicine: string[];
   suggestions: string[];
@@ -83,7 +82,7 @@ export async function addBatchProcedures(patientId: string, procedures: {
       data: {
         patientId,
         name: proc.name,
-        cost: parseFloat(proc.cost || "0"),
+        cost: 0, // Doctor does not handle billing
         procedureDate: new Date(proc.procedureDate || new Date()),
         description: proc.description,
         medicine: JSON.stringify(proc.medicine || []),
@@ -95,17 +94,30 @@ export async function addBatchProcedures(patientId: string, procedures: {
   // Update patient last visit stats based on the latest procedure date
   if (procedures.length > 0) {
     const latestDate = new Date(Math.max(...procedures.map(p => new Date(p.procedureDate || new Date()).getTime())));
+
+    const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+    const newVisitCount = (patient?.visitCount || 0) + procedures.length;
+
     await prisma.patient.update({
       where: { id: patientId },
       data: {
         lastVisitDate: latestDate,
-        visitCount: { increment: procedures.length }
+        visitCount: newVisitCount,
+        role: newVisitCount > 1 ? "OLD" : patient?.role
       }
     });
   }
 
   revalidatePath("/doctor");
   revalidatePath("/");
+}
+
+export async function closeAppointment(appointmentId: string) {
+  await prisma.appointment.update({
+    where: { id: appointmentId },
+    data: { isClosed: true, status: "COMPLETED" },
+  });
+  revalidatePath("/doctor");
 }
 
 // Backward compatibility or simple single procedure
@@ -118,18 +130,22 @@ export async function addProcedure(patientId: string, formData: FormData) {
       patientId,
       name: formData.get("name") as string,
       description: formData.get("description") as string,
-      cost: parseFloat(formData.get("cost") as string || "0"),
+      cost: 0, // Doctor does not handle billing
       procedureDate: new Date(formData.get("procedureDate") as string),
       medicine: medicineRaw ? JSON.stringify(medicineRaw.split(",").map(s => s.trim())) : "[]",
       suggestions: suggestionsRaw ? JSON.stringify(suggestionsRaw.split(",").map(s => s.trim())) : "[]",
     },
   });
 
+  const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+  const newVisitCount = (patient?.visitCount || 0) + 1;
+
   await prisma.patient.update({
     where: { id: patientId },
     data: {
       lastVisitDate: new Date(formData.get("procedureDate") as string),
-      visitCount: { increment: 1 }
+      visitCount: newVisitCount,
+      role: newVisitCount > 1 ? "OLD" : patient?.role
     }
   });
 

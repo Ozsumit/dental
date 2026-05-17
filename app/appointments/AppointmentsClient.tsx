@@ -7,6 +7,7 @@ import {
   saveAppointment,
   deleteAppointment,
   searchPatientsForDropdown,
+  transferAppointment,
 } from "@/app/actions/appointmentActions";
 import { Appointment } from "@/lib/types";
 import {
@@ -26,12 +27,14 @@ interface AppointmentsClientProps {
   totalPages: number;
   currentPage: number;
   searchParams: { [key: string]: string | string[] | undefined };
+  doctors: { id: string; username: string }[];
 }
 
 export default function AppointmentsClient({
   appointments,
   totalPages,
   currentPage,
+  doctors,
 }: AppointmentsClientProps) {
   const router = useRouter();
   const params = useSearchParams();
@@ -168,6 +171,7 @@ export default function AppointmentsClient({
             <tr>
               <th className="px-6 py-5">Date & Time</th>
               <th className="px-6 py-5">Patient</th>
+              <th className="px-6 py-5">Assigned Doctor</th>
               <th className="px-6 py-5">Treatment</th>
               <th className="px-6 py-5">Status</th>
               <th className="px-6 py-5 text-right">Actions</th>
@@ -222,6 +226,21 @@ export default function AppointmentsClient({
                       <div className="text-xs text-slate-500 ml-6">
                         {appt.patient?.phone} • <span className="text-indigo-600 font-bold">{appt.patient?.role}</span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <select
+                        defaultValue={appt.assignedDoctorId || ""}
+                        onChange={async (e) => {
+                           await transferAppointment(appt.id, e.target.value);
+                           alert("Appointment transferred successfully.");
+                        }}
+                        className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold outline-none"
+                      >
+                        <option value="">No Doctor</option>
+                        {doctors.map(d => (
+                          <option key={d.id} value={d.id}>{d.username}</option>
+                        ))}
+                      </select>
                     </td>
                     <td className="px-6 py-4">
                       <div className="font-medium text-slate-800">{appt.treatments}</div>
@@ -397,21 +416,38 @@ export default function AppointmentsClient({
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  Treatment Type
-                </label>
-                <select
-                  name="treatments"
-                  defaultValue={selectedAppt?.treatments || "Checkup"}
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white"
-                >
-                  <option value="Checkup">Checkup</option>
-                  <option value="Cleaning">Cleaning</option>
-                  <option value="Filling">Filling</option>
-                  <option value="Root Canal">Root Canal</option>
-                  <option value="Whitening">Whitening</option>
-                </select>
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Assign Doctor
+                  </label>
+                  <select
+                    name="assignedDoctorId"
+                    defaultValue={selectedAppt?.assignedDoctorId || ""}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white"
+                  >
+                    <option value="">No Doctor</option>
+                    {doctors.map(d => (
+                      <option key={d.id} value={d.id}>{d.username}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Treatment Type
+                  </label>
+                  <select
+                    name="treatments"
+                    defaultValue={selectedAppt?.treatments || "Checkup"}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white"
+                  >
+                    <option value="Checkup">Checkup</option>
+                    <option value="Cleaning">Cleaning</option>
+                    <option value="Filling">Filling</option>
+                    <option value="Root Canal">Root Canal</option>
+                    <option value="Whitening">Whitening</option>
+                  </select>
+                </div>
               </div>
 
               <div className="pt-2 flex justify-end gap-3 mt-6">

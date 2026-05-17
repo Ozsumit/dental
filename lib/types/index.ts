@@ -19,6 +19,8 @@ export interface Patient {
   address?: string | null;
   role?: string | null;
   bloodGroup?: string | null;
+  allergies?: string | null;
+  insuranceDetails?: string | null;
   medicalNotes?: string | null;
   lastVisitDate?: Date | null;
   visitCount: number;
@@ -33,8 +35,10 @@ export interface Patient {
 export interface Appointment {
   id: string;
   patientId: string;
+  assignedDoctorId?: string | null;
   appointmentDate: Date;
   status: string;
+  isClosed: boolean;
   treatments: string;
   patient?: Patient;
   createdAt: Date;

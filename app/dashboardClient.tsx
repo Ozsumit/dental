@@ -29,10 +29,12 @@ interface DashboardClientProps {
   totalPages: number;
   currentPage: number;
   searchParams: { [key: string]: string | string[] | undefined };
+  doctors: { id: string; username: string }[];
 }
 
 export default function DashboardClient({
   patients,
+  doctors,
 }: DashboardClientProps) {
   const [isApptFormOpen, setIsApptFormOpen] = useState(false);
   const [apptPatient, setAppointmentPatient] = useState<Patient | null>(null); // Holds patient for the new appt
@@ -472,15 +474,42 @@ export default function DashboardClient({
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  Address
-                </label>
-                <input
-                  name="address"
-                  defaultValue={selectedPatient?.address || ""}
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
+              <div className="grid grid-cols-1 gap-5">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Address
+                  </label>
+                  <input
+                    name="address"
+                    defaultValue={selectedPatient?.address || ""}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-5">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Allergies
+                  </label>
+                  <input
+                    name="allergies"
+                    defaultValue={selectedPatient?.allergies || ""}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    placeholder="e.g. Penicillin, Peanuts"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Insurance Details
+                  </label>
+                  <input
+                    name="insuranceDetails"
+                    defaultValue={selectedPatient?.insuranceDetails || ""}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    placeholder="Provider, Policy No..."
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-3 gap-5 border-t border-slate-100 pt-5">
@@ -574,6 +603,34 @@ export default function DashboardClient({
                   />
                 </div>
               </div>
+
+              {!selectedPatient && (
+                <div className="pt-5 border-t border-slate-100 space-y-4">
+                  <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Initial Appointment (Optional)</h3>
+                  <div className="grid grid-cols-2 gap-5">
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase">Appointment Date</label>
+                      <input
+                        type="date"
+                        name="appointmentDate"
+                        className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-bold text-slate-500 uppercase">Assign Doctor</label>
+                      <select
+                        name="assignedDoctorId"
+                        className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                      >
+                        <option value="none">No Doctor</option>
+                        {doctors.map(d => (
+                          <option key={d.id} value={d.id}>{d.username}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="pt-2 flex justify-end gap-3 mt-6">
                 <button

@@ -71,6 +71,7 @@ export async function searchPatientsForDropdown(query: string) {
 
 export async function saveAppointment(formData: FormData, id?: string) {
   const patientId = formData.get("patientId") as string;
+  const assignedDoctorId = formData.get("assignedDoctorId") as string || null;
   const appointmentDate = new Date(formData.get("appointmentDate") as string);
 
   // GRAB ALL CHECKED BOXES AS AN ARRAY
@@ -78,6 +79,7 @@ export async function saveAppointment(formData: FormData, id?: string) {
 
   const data = {
     patientId,
+    assignedDoctorId,
     appointmentDate,
     status: formData.get("status") as string,
     treatments, // Save the string to the database
@@ -99,6 +101,17 @@ export async function saveAppointment(formData: FormData, id?: string) {
   }
 
   revalidatePath("/appointments");
+  revalidatePath("/doctor");
+  revalidatePath("/");
+}
+
+export async function transferAppointment(appointmentId: string, newDoctorId: string) {
+  await prisma.appointment.update({
+    where: { id: appointmentId },
+    data: { assignedDoctorId: newDoctorId },
+  });
+  revalidatePath("/appointments");
+  revalidatePath("/doctor");
 }
 
 export async function deleteAppointment(id: string) {

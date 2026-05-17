@@ -1,4 +1,5 @@
 import { getPatients } from "./actions/patientsActions";
+import { getUsers } from "./actions/userActions";
 import DashboardClient from "./dashboardClient";
 import { Users } from "lucide-react";
 
@@ -8,8 +9,10 @@ export default async function Page({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const resolvedParams = await searchParams;
-  const { data, totalPages, currentPage, totalCount } =
-    await getPatients(resolvedParams);
+  const [{ data, totalPages, currentPage, totalCount }, users] =
+    await Promise.all([getPatients(resolvedParams), getUsers()]);
+
+  const doctors = users.filter((u) => u.role === "DOCTOR");
 
   return (
     <div className="p-6 max-w-[1600px] mx-auto space-y-6">
@@ -31,6 +34,7 @@ export default async function Page({
         totalPages={totalPages}
         currentPage={currentPage}
         searchParams={resolvedParams}
+        doctors={doctors}
       />
     </div>
   );

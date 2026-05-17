@@ -117,6 +117,8 @@ export async function savePatient(formData: FormData, id?: string) {
     status: formData.get("status") as string,
     address: formData.get("address") as string,
     bloodGroup: formData.get("bloodGroup") as string,
+    allergies: formData.get("allergies") as string,
+    insuranceDetails: formData.get("insuranceDetails") as string,
     role: formData.get("role") as string,
     dateOfBirth: new Date(formData.get("dateOfBirth") as string),
     visitCount: visitCountStr ? Number(visitCountStr) : 0,
@@ -125,9 +127,35 @@ export async function savePatient(formData: FormData, id?: string) {
   if (id) {
     await prisma.patient.update({ where: { id }, data });
   } else {
-    await prisma.patient.create({ data });
+    const patient = await prisma.patient.create({ data });
+
+    // Auto-create appointment if date and doctor are provided
+    const apptDate = formData.get("appointmentDate") as string;
+    const assignedDoctorId = formData.get("assignedDoctorId") as string;
+
+    if (apptDate && assignedDoctorId) {
+      await prisma.appointment.create({
+        data: {
+          patientId: patient.id,
+          assignedDoctorId: assignedDoctorId !== "none" ? assignedDoctorId : null,
+          appointmentDate: new Date(apptDate),
+          status: "SCHEDULED",
+          treatments: "Initial Consultation",
+        }
+      });
+
+      // Update visit count and last visit date
+      await prisma.patient.update({
+        where: { id: patient.id },
+        data: {
+          visitCount: { increment: 1 },
+          lastVisitDate: new Date(apptDate)
+        }
+      });
+    }
   }
   revalidatePath("/");
+  revalidatePath("/appointments");
 }
 
 export async function deletePatient(id: string) {
