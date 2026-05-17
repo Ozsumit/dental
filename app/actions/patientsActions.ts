@@ -2,32 +2,34 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 
-export async function getPatients(searchParams: any) {
+export async function getPatients(searchParams: { [key: string]: string | string[] | undefined }) {
   const page = Number(searchParams?.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  const where: any = {};
+  const where: Prisma.PatientWhereInput = {};
 
   // 1. BULLETPROOF SEARCH
   if (searchParams?.q) {
-    const terms = searchParams.q.trim().split(/\s+/);
+    const q = searchParams.q as string;
+    const terms = q.trim().split(/\s+/);
     where.AND = terms.map((term: string) => ({
       OR: [
-        { firstName: { contains: term, mode: "insensitive" } },
-        { lastName: { contains: term, mode: "insensitive" } },
-        { email: { contains: term, mode: "insensitive" } },
-        { phone: { contains: term, mode: "insensitive" } },
+        { firstName: { contains: term } },
+        { lastName: { contains: term } },
+        { email: { contains: term } },
+        { phone: { contains: term } },
       ],
     }));
   }
 
   // 2. CATEGORIZATION FILTERS
-  if (searchParams?.status) where.status = searchParams.status;
-  if (searchParams?.gender) where.gender = searchParams.gender;
+  if (searchParams?.status) where.status = searchParams.status as string;
+  if (searchParams?.gender) where.gender = searchParams.gender as string;
   if (searchParams?.minVisits)
-    where.visitCount = { gte: Number(searchParams.minVisits) };
+    where.visitCount = { gte: Number(searchParams.minVisits as string) };
 
   // 3. AGE RANGE FILTER
   if (searchParams?.minAge || searchParams?.maxAge) {
@@ -35,7 +37,7 @@ export async function getPatients(searchParams: any) {
     where.dateOfBirth = {};
     if (searchParams.minAge) {
       const maxDob = new Date(
-        today.getFullYear() - Number(searchParams.minAge),
+        today.getFullYear() - Number(searchParams.minAge as string),
         today.getMonth(),
         today.getDate(),
       );
@@ -43,7 +45,7 @@ export async function getPatients(searchParams: any) {
     }
     if (searchParams.maxAge) {
       const minDob = new Date(
-        today.getFullYear() - Number(searchParams.maxAge) - 1,
+        today.getFullYear() - Number(searchParams.maxAge as string) - 1,
         today.getMonth(),
         today.getDate() + 1,
       );
@@ -55,13 +57,13 @@ export async function getPatients(searchParams: any) {
   if (searchParams?.dateFrom || searchParams?.dateTo) {
     where.lastVisitDate = {};
     if (searchParams.dateFrom)
-      where.lastVisitDate.gte = new Date(searchParams.dateFrom);
+      where.lastVisitDate.gte = new Date(searchParams.dateFrom as string);
     if (searchParams.dateTo)
-      where.lastVisitDate.lte = new Date(searchParams.dateTo);
+      where.lastVisitDate.lte = new Date(searchParams.dateTo as string);
   }
 
   // 5. SORTING LOGIC
-  let orderBy: any = { createdAt: "desc" };
+  let orderBy: Prisma.PatientOrderByWithRelationInput | Prisma.PatientOrderByWithRelationInput[] = { createdAt: "desc" };
   if (searchParams?.sort === "oldest") orderBy = { createdAt: "asc" };
   if (searchParams?.sort === "nameAsc")
     orderBy = [{ firstName: "asc" }, { lastName: "asc" }];
@@ -80,6 +82,9 @@ export async function getPatients(searchParams: any) {
       include: {
         appointments: {
           orderBy: { appointmentDate: "desc" }, // Orders history from newest to oldest
+        },
+        procedures: {
+          orderBy: { procedureDate: "desc" },
         },
       },
     }),
@@ -124,21 +129,22 @@ export async function deletePatient(id: string) {
 }
 
 // EXPORT FUNCTIONALITY
-export async function getPatientsForExport(searchParams: any) {
-  const where: any = {};
+export async function getPatientsForExport(searchParams: { [key: string]: string | string[] | undefined }) {
+  const where: Prisma.PatientWhereInput = {};
   if (searchParams?.q) {
-    const terms = searchParams.q.trim().split(/\s+/);
+    const q = searchParams.q as string;
+    const terms = q.trim().split(/\s+/);
     where.AND = terms.map((term: string) => ({
       OR: [
-        { firstName: { contains: term, mode: "insensitive" } },
-        { lastName: { contains: term, mode: "insensitive" } },
-        { email: { contains: term, mode: "insensitive" } },
-        { phone: { contains: term, mode: "insensitive" } },
+        { firstName: { contains: term } },
+        { lastName: { contains: term } },
+        { email: { contains: term } },
+        { phone: { contains: term } },
       ],
     }));
   }
-  if (searchParams?.status) where.status = searchParams.status;
-  if (searchParams?.gender) where.gender = searchParams.gender;
+  if (searchParams?.status) where.status = searchParams.status as string;
+  if (searchParams?.gender) where.gender = searchParams.gender as string;
 
   return await prisma.patient.findMany({
     where,

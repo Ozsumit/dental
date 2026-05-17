@@ -5,7 +5,7 @@ import { Users } from "lucide-react";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<any>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const resolvedParams = await searchParams;
   const { data, totalPages, currentPage, totalCount } =

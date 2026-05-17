@@ -1,6 +1,5 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 const TREATMENT_OPTIONS: string[] = [
   "Cleaning",
@@ -12,56 +11,54 @@ const TREATMENT_OPTIONS: string[] = [
 async function updateAppointmentProceduresAction(formData: FormData) {
   "use server";
   const id = formData.get("id") as string | null;
-  const treatments = formData.getAll("treatments").map((v) => String(v));
-  const notes = (formData.get("notes") as string) || undefined;
+  const treatments = formData.getAll("treatments").join(", ");
   if (!id) return;
   await prisma.appointment.update({
     where: { id },
-    data: { treatments, notes },
+    data: { treatments },
   });
+  revalidatePath("/appointments");
 }
 
 export default async function AppointmentDetails({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const appointment = await prisma.appointment.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { patient: true },
   });
   if (!appointment) return <div>Appointment not found</div>;
 
   return (
-    <div className="p-8 bg-white rounded-2xl shadow-sm">
-      <h1 className="text-2xl font-bold">
-        Session for {appointment.patient.firstName}
+    <div className="p-8 bg-white rounded-2xl shadow-sm max-w-2xl mx-auto mt-10 border border-slate-200">
+      <h1 className="text-2xl font-bold text-slate-900 mb-6">
+        Session for {appointment.patient.firstName} {appointment.patient.lastName}
       </h1>
       <form action={updateAppointmentProceduresAction}>
         <input type="hidden" name="id" value={appointment.id} />
 
-        <div className="grid grid-cols-4 gap-4 mt-6">
+        <div className="grid grid-cols-2 gap-4 mt-6">
           {TREATMENT_OPTIONS.map((t: string) => (
             <label
               key={t}
-              className="p-4 border rounded-xl flex items-center gap-2"
+              className="p-4 border border-slate-200 rounded-xl flex items-center gap-3 hover:bg-slate-50 cursor-pointer transition"
             >
               <input
                 type="checkbox"
                 name="treatments"
                 value={t}
                 defaultChecked={appointment.treatments.includes(t)}
+                className="w-5 h-5 accent-indigo-600"
               />
-              {t}
+              <span className="font-medium text-slate-700">{t}</span>
             </label>
           ))}
         </div>
-        <textarea
-          name="notes"
-          placeholder="Doctor's notes..."
-          className="w-full mt-4 p-4 border rounded-xl"
-        />
-        <button className="mt-6 bg-indigo-600 text-white px-8 py-3 rounded-xl">
+
+        <button className="mt-8 w-full bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md">
           Save Session Details
         </button>
       </form>

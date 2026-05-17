@@ -8,6 +8,7 @@ import {
   deleteAppointment,
   searchPatientsForDropdown,
 } from "@/app/actions/appointmentActions";
+import { Appointment } from "@/lib/types";
 import {
   Search,
   Plus,
@@ -20,22 +21,28 @@ import {
   X,
 } from "lucide-react";
 
+interface AppointmentsClientProps {
+  appointments: Appointment[];
+  totalPages: number;
+  currentPage: number;
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
 export default function AppointmentsClient({
   appointments,
   totalPages,
   currentPage,
-  searchParams,
-}: any) {
+}: AppointmentsClientProps) {
   const router = useRouter();
   const params = useSearchParams();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [selectedAppt, setSelectedAppt] = useState<any>(null);
+  const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
 
   // Patient Search State for the Form
   const [patientSearchQuery, setPatientSearchQuery] = useState("");
-  const [patientResults, setPatientResults] = useState<any[]>([]);
+  const [patientResults, setPatientResults] = useState<{ id: string; firstName: string; lastName: string; phone: string }[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState("");
 
   const updateQuery = useCallback(
@@ -72,10 +79,12 @@ export default function AppointmentsClient({
     setIsFormOpen(true);
   };
 
-  const openEdit = (appt: any) => {
+  const openEdit = (appt: Appointment) => {
     setSelectedAppt(appt);
     setSelectedPatientId(appt.patientId);
-    setPatientSearchQuery(`${appt.patient.firstName} ${appt.patient.lastName}`);
+    setPatientSearchQuery(
+      `${appt.patient?.firstName} ${appt.patient?.lastName}`,
+    );
     setIsFormOpen(true);
   };
 
@@ -159,7 +168,7 @@ export default function AppointmentsClient({
                 </td>
               </tr>
             ) : (
-              appointments.map((appt: any) => {
+              appointments.map((appt: Appointment) => {
                 const dateStr = new Date(
                   appt.appointmentDate,
                 ).toLocaleDateString(undefined, {
@@ -189,10 +198,10 @@ export default function AppointmentsClient({
                     </td>
                     <td className="px-6 py-4 font-medium text-slate-900 flex items-center gap-2">
                       <User className="w-4 h-4 text-slate-400" />{" "}
-                      {appt.patient.firstName} {appt.patient.lastName}
+                      {appt.patient?.firstName} {appt.patient?.lastName}
                     </td>
                     <td className="px-6 py-4 font-medium">
-                      {appt.treatmentType}
+                      {appt.treatments}
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -367,8 +376,8 @@ export default function AppointmentsClient({
                   Treatment Type
                 </label>
                 <select
-                  name="treatmentType"
-                  defaultValue={selectedAppt?.treatmentType || "Checkup"}
+                  name="treatments"
+                  defaultValue={selectedAppt?.treatments || "Checkup"}
                   className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white"
                 >
                   <option value="Checkup">Checkup</option>
@@ -418,7 +427,9 @@ export default function AppointmentsClient({
               </button>
               <button
                 onClick={async () => {
-                  await deleteAppointment(selectedAppt.id);
+                  if (selectedAppt) {
+                    await deleteAppointment(selectedAppt.id);
+                  }
                   setIsDeleteOpen(false);
                 }}
                 className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold"

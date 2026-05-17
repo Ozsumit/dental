@@ -9,38 +9,40 @@ import {
   deletePatient,
   getPatientsForExport,
 } from "./actions/patientsActions";
+import ReceptionistPatientView from "@/components/ReceptionistPatientView";
+import { Patient } from "@/lib/types";
 import {
   Search,
   Plus,
   Edit2,
   Trash2,
-  Calendar,
   User,
-  ChevronLeft,
-  ChevronRight,
   X,
   Filter,
   Download,
   Eye,
-  Activity,
 } from "lucide-react";
 import * as XLSX from "xlsx"; // Import Excel library
 
+interface DashboardClientProps {
+  patients: Patient[];
+  totalPages: number;
+  currentPage: number;
+  searchParams: { [key: string]: string | string[] | undefined };
+}
+
 export default function DashboardClient({
   patients,
-  totalPages,
-  currentPage,
-  searchParams,
-}: any) {
+}: DashboardClientProps) {
   const [isApptFormOpen, setIsApptFormOpen] = useState(false);
-  const [apptPatient, setAppointmentPatient] = useState<any>(null); // Holds patient for the new appt
+  const [apptPatient, setAppointmentPatient] = useState<Patient | null>(null); // Holds patient for the new appt
   const router = useRouter();
   const params = useSearchParams();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false); // New Profile State
-  const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [isExporting, setIsExporting] = useState(false); // Export Loading State
 
@@ -65,15 +67,15 @@ export default function DashboardClient({
     setSelectedPatient(null);
     setIsFormOpen(true);
   };
-  const openEdit = (p: any) => {
+  const openEdit = (p: Patient) => {
     setSelectedPatient(p);
     setIsFormOpen(true);
   };
-  const openDelete = (p: any) => {
+  const openDelete = (p: Patient) => {
     setSelectedPatient(p);
     setIsDeleteOpen(true);
   };
-  const openProfile = (p: any) => {
+  const openProfile = (p: Patient) => {
     setSelectedPatient(p);
     setIsProfileOpen(true);
   };
@@ -87,7 +89,7 @@ export default function DashboardClient({
       const dataToExport = await getPatientsForExport(currentFilters);
 
       // Format data for Excel
-      const formattedData = dataToExport.map((p: any) => ({
+      const formattedData = dataToExport.map((p: Patient) => ({
         "First Name": p.firstName,
         "Last Name": p.lastName,
         Phone: p.phone,
@@ -106,7 +108,8 @@ export default function DashboardClient({
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Patients");
       XLSX.writeFile(workbook, "Patients_Export.xlsx");
-    } catch (error) {
+    } catch (e) {
+      console.error(e);
       alert("Failed to export data.");
     }
     setIsExporting(false);
@@ -191,7 +194,7 @@ export default function DashboardClient({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {patients.map((patient: any) => (
+            {patients.map((patient: Patient) => (
               <tr
                 key={patient.id}
                 className="hover:bg-slate-50 transition group"
@@ -297,92 +300,8 @@ export default function DashboardClient({
             </div>
 
             {/* Profile Body (Scrollable) */}
-            <div className="p-8 overflow-y-auto flex-1 bg-white flex flex-col gap-8">
-              {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-6">
-                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                  <p className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-1">
-                    Total Visits
-                  </p>
-                  <p className="text-2xl font-black text-slate-800">
-                    {selectedPatient.visitCount}
-                  </p>
-                </div>
-                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                  <p className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-1">
-                    Date of Birth
-                  </p>
-                  <p className="text-xl font-bold text-slate-800">
-                    {new Date(selectedPatient.dateOfBirth).toLocaleDateString()}
-                  </p>
-                </div>
-                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                  <p className="text-slate-500 font-bold text-xs uppercase tracking-wider mb-1">
-                    Last Visit
-                  </p>
-                  <p className="text-xl font-bold text-slate-800">
-                    {selectedPatient.lastVisitDate
-                      ? new Date(
-                          selectedPatient.lastVisitDate,
-                        ).toLocaleDateString()
-                      : "Never"}
-                  </p>
-                </div>
-              </div>
-
-              {/* Procedure History (Appointments) */}
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-indigo-500" /> Procedure &
-                  Appointment History
-                </h3>
-
-                <div className="border border-slate-200 rounded-2xl overflow-hidden">
-                  <table className="w-full text-left text-sm text-slate-600">
-                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase text-xs">
-                      <tr>
-                        <th className="px-4 py-3">Date</th>
-                        <th className="px-4 py-3">Procedure</th>
-                        <th className="px-4 py-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {selectedPatient.appointments?.length === 0 ? (
-                        <tr>
-                          <td
-                            colSpan={3}
-                            className="p-6 text-center text-slate-500"
-                          >
-                            No medical history found.
-                          </td>
-                        </tr>
-                      ) : (
-                        selectedPatient.appointments?.map((appt: any) => (
-                          <tr key={appt.id} className="hover:bg-slate-50">
-                            <td className="px-4 py-3 font-medium text-slate-800">
-                              {new Date(
-                                appt.appointmentDate,
-                              ).toLocaleDateString()}
-                            </td>
-                            <td className="px-4 py-3 font-bold text-indigo-600">
-                              {appt.treatments && appt.treatments.length > 0
-                                ? appt.treatments.join(", ")
-                                : "Checkup"}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span
-                                className={`text-xs font-bold px-2 py-1 rounded-full ${appt.status === "COMPLETED" ? "bg-green-100 text-green-700" : appt.status === "CANCELLED" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}
-                              >
-                                {appt.status}
-                              </span>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+            <div className="p-8 overflow-y-auto flex-1 bg-slate-50 flex flex-col gap-8">
+               <ReceptionistPatientView patient={selectedPatient} />
             </div>
           </div>
         </div>
@@ -460,7 +379,7 @@ export default function DashboardClient({
                   <input
                     type="email"
                     name="email"
-                    defaultValue={selectedPatient?.email}
+                    defaultValue={selectedPatient?.email || ""}
                     className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
                   />
                 </div>
@@ -592,7 +511,9 @@ export default function DashboardClient({
               </button>
               <button
                 onClick={async () => {
-                  await deletePatient(selectedPatient.id);
+                  if (selectedPatient) {
+                    await deletePatient(selectedPatient.id);
+                  }
                   setIsDeleteOpen(false);
                 }}
                 className="flex-1 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 shadow-md transition font-bold"
