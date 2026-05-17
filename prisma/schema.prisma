@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Patient {
+  id            String        @id @default(uuid())
+  firstName     String
+  lastName      String
+  phone         String
+  email         String?       
+  dateOfBirth   DateTime
+  
+  // NEW CATEGORIZATION FIELDS
+  gender        String?       // e.g., "Male", "Female", "Other"
+  status        String        @default("ACTIVE") // e.g., "ACTIVE", "INACTIVE"
+  
+  // OPTIMIZED FIELDS FOR FAST FILTERING
+  lastVisitDate DateTime?     
+  visitCount    Int           @default(0) 
+
+  appointments  Appointment[]
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([firstName, lastName])
+  @@index([phone])
+  @@index([status])
+}
+
+model Appointment {
+  id              String   @id @default(uuid())
+  patientId       String
+  appointmentDate DateTime
+  status          String   
+  treatments      String[]
+  
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  createdAt       DateTime @default(now())
+}
