@@ -10,7 +10,7 @@ import {
   createAppointmentAction,
 } from "./actions/patientsActions";
 import ReceptionistPatientView from "@/components/ReceptionistPatientView";
-import { Patient } from "@/lib/types/index";
+import { Patient, Procedure } from "@/lib/types/index";
 import {
   Search,
   Plus,
@@ -25,9 +25,15 @@ import {
   ChevronLeft,
   ChevronRight,
   Phone,
-  Mail
+  Mail,
+  Receipt,
+  CreditCard,
+  DollarSign,
+  Briefcase,
+  CheckCircle2
 } from "lucide-react";
 import * as XLSX from "xlsx"; // Import Excel library
+import { getPendingBillings, finalizeBilling, markAsPaid } from "./actions/billingActions";
 
 interface DashboardClientProps {
   patients: Patient[];
@@ -36,12 +42,112 @@ interface DashboardClientProps {
   searchParams: { [key: string]: string | string[] | undefined };
 }
 
+function BillingModal({ onClose }: { onClose: () => void }) {
+  const [pending, setPending] = useState<Procedure[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPending = useCallback(async () => {
+    setLoading(true);
+    const data = await getPendingBillings();
+    setPending(data);
+    setLoading(false);
+  }, []);
+
+  useState(() => {
+    fetchPending();
+  });
+
+  const handleFinalize = async (id: string, cost: number) => {
+    await finalizeBilling(id, cost);
+    fetchPending();
+  };
+
+  const handlePaid = async (id: string) => {
+    await markAsPaid(id);
+    fetchPending();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+      <div className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[85vh] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
+          <div>
+            <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
+              <Receipt className="w-6 h-6 text-amber-500" /> Pending Billing
+            </h2>
+            <p className="text-xs text-slate-400 font-bold uppercase mt-1">Review and finalize procedure costs</p>
+          </div>
+          <button onClick={onClose} className="p-3 bg-white text-slate-400 hover:text-slate-800 rounded-xl border border-slate-200 transition-all">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-8">
+          {loading ? (
+            <div className="py-20 text-center animate-pulse">
+               <Receipt className="w-12 h-12 text-slate-200 mx-auto mb-4" />
+               <p className="text-slate-400 font-bold uppercase text-xs">Loading pending records...</p>
+            </div>
+          ) : pending.length === 0 ? (
+            <div className="py-20 text-center">
+               <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                  <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+               </div>
+               <h3 className="text-xl font-bold text-slate-800">All Billed!</h3>
+               <p className="text-slate-400 text-sm mt-2">There are no pending procedures waiting for billing.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+               {pending.map((item) => (
+                 <div key={item.id} className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm hover:border-amber-200 transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div className="flex gap-4 items-center">
+                       <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center font-black">
+                          {item.patient?.firstName[0]}{item.patient?.lastName[0]}
+                       </div>
+                       <div>
+                          <p className="text-sm font-black text-slate-800">{item.patient?.firstName} {item.patient?.lastName}</p>
+                          <p className="text-xs font-bold text-slate-500 uppercase tracking-tighter mt-0.5">{item.name} • {item.type}</p>
+                          <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(item.procedureDate).toLocaleDateString()}</p>
+                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                       <div className="relative flex-1 md:w-32">
+                          <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input
+                            type="number"
+                            defaultValue={item.cost}
+                            onBlur={(e) => {
+                              const val = parseFloat(e.target.value);
+                              if (val !== item.cost) handleFinalize(item.id, val);
+                            }}
+                            className="w-full pl-9 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 outline-none focus:border-amber-500 transition-all"
+                          />
+                       </div>
+                       <button
+                         onClick={() => handlePaid(item.id)}
+                         className="px-6 py-2.5 bg-emerald-500 text-white text-xs font-black uppercase tracking-widest rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100"
+                       >
+                         Mark Paid
+                       </button>
+                    </div>
+                 </div>
+               ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardClient({
   patients,
   totalPages,
   currentPage,
 }: DashboardClientProps) {
   const [isApptFormOpen, setIsApptFormOpen] = useState(false);
+  const [isBillingOpen, setIsBillingOpen] = useState(false);
   const [apptPatient, setAppointmentPatient] = useState<Patient | null>(null); // Holds patient for the new appt
   const router = useRouter();
   const params = useSearchParams();
@@ -154,6 +260,13 @@ export default function DashboardClient({
           >
             <Download className="w-5 h-5" />{" "}
             {isExporting ? "Exporting..." : "Export Excel"}
+          </button>
+
+          <button
+            onClick={() => setIsBillingOpen(true)}
+            className="px-5 py-3 bg-amber-50 text-amber-700 rounded-xl font-medium flex items-center gap-2 hover:bg-amber-100 transition"
+          >
+            <Receipt className="w-5 h-5" /> Billing
           </button>
 
           <button
@@ -538,6 +651,46 @@ export default function DashboardClient({
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-50">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Insurance Provider</label>
+                  <input
+                    name="insurance"
+                    defaultValue={selectedPatient?.medicalRecord?.insurance || ""}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
+                    placeholder="e.g. HealthCare Plus"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Insurance No.</label>
+                  <input
+                    name="insuranceNo"
+                    defaultValue={selectedPatient?.medicalRecord?.insuranceNo || ""}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
+                    placeholder="e.g. HCP-889900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Emergency Name</label>
+                  <input
+                    name="emergencyContactName"
+                    defaultValue={selectedPatient?.medicalRecord?.emergencyContactName || ""}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Emergency Phone</label>
+                  <input
+                    name="emergencyContactNo"
+                    defaultValue={selectedPatient?.medicalRecord?.emergencyContactNo || ""}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
+                  />
+                </div>
+              </div>
+
               <div className="pt-4 flex justify-end gap-3 mt-4">
                 <button
                   type="button"
@@ -556,6 +709,11 @@ export default function DashboardClient({
             </form>
           </div>
         </div>
+      )}
+
+      {/* BILLING OVERLAY (NEW) */}
+      {isBillingOpen && (
+        <BillingModal onClose={() => setIsBillingOpen(false)} />
       )}
 
       {/* DELETE MODAL */}

@@ -126,10 +126,10 @@ export async function savePatient(formData: FormData, id?: string) {
   };
 
   const medicalRecordData = {
-    insurance: formData.get("insurance") as string,
-    insuranceNo: formData.get("insuranceNo") as string,
-    emergencyContactName: formData.get("emergencyContactName") as string,
-    emergencyContactNo: formData.get("emergencyContactNo") as string,
+    insurance: formData.get("insurance")?.toString() || null,
+    insuranceNo: formData.get("insuranceNo")?.toString() || null,
+    emergencyContactName: formData.get("emergencyContactName")?.toString() || null,
+    emergencyContactNo: formData.get("emergencyContactNo")?.toString() || null,
   };
 
   if (id) {

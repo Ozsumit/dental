@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getSession } from "@/lib/auth/session";
 
 export async function updateMedicalRecord(patientId: string, formData: FormData) {
   await prisma.medicalRecord.upsert({
@@ -45,6 +46,7 @@ export async function updateMedicalRecord(patientId: string, formData: FormData)
 }
 
 export async function updateDiagnosis(patientId: string, formData: FormData) {
+  const session = await getSession();
   const medicalHistoryRaw = formData.get("medicalHistory")?.toString();
   let medicalHistory = medicalHistoryRaw || null;
 
@@ -61,6 +63,9 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
       nextVisitDate = d;
     }
   }
+
+  const referredDoctorId = formData.get("referredDoctorId")?.toString() || null;
+  const selectedProceduresRaw = formData.get("selectedProcedures")?.toString() || "[]";
   const finalize = formData.get("finalize") === "true";
 
   const rawVasScore = formData.get("vasScore")?.toString();
@@ -80,32 +85,50 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
   };
 
   try {
-  const medicalRecordData = {
-    complaints: formData.get("complaints")?.toString() || null,
-    insurance: formData.get("insurance")?.toString() || null,
-    insuranceNo: formData.get("insuranceNo")?.toString() || null,
-    emergencyContactName: formData.get("emergencyContactName")?.toString() || null,
-    emergencyContactNo: formData.get("emergencyContactNo")?.toString() || null,
-  };
+    await prisma.$transaction([
+      prisma.diagnosis.upsert({
+        where: { patientId },
+        update: diagnosisData,
+        create: {
+          patientId,
+          ...diagnosisData,
+        },
+      }),
+      prisma.medicalRecord.update({
+        where: { patientId },
+        data: {
+          complaints: formData.get("complaints")?.toString() || undefined,
+        },
+      }),
+    ]);
 
-  await prisma.$transaction([
-    prisma.diagnosis.upsert({
-      where: { patientId },
-      update: diagnosisData,
-      create: {
-        patientId,
-        ...diagnosisData,
-      },
-    }),
-    prisma.medicalRecord.upsert({
-      where: { patientId },
-      update: medicalRecordData,
-      create: {
-        patientId,
-        ...medicalRecordData,
-      },
-    }),
-  ]);
+    if (finalize) {
+      // Process selected procedures
+      try {
+        const procedureNames = JSON.parse(selectedProceduresRaw) as string[];
+        if (procedureNames.length > 0) {
+          const catalogItems = await prisma.billingCatalog.findMany({
+            where: { name: { in: procedureNames } }
+          });
+
+          for (const item of catalogItems) {
+            await prisma.procedure.create({
+              data: {
+                patientId,
+                name: item.name,
+                type: item.category || "General",
+                cost: item.baseCost,
+                status: "PENDING",
+                procedureDate: new Date(),
+                description: `Recommended by doctor during assessment.`
+              }
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Failed to process procedures:", e);
+      }
+    }
   } catch (error) {
     console.error("Failed to upsert diagnosis:", error);
     // Fallback if patientId index is having issues
@@ -140,13 +163,16 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
 
     // Create follow-up appointment if date is set
     if (nextVisitDate && !isNaN(nextVisitDate.getTime())) {
-      // Find the doctor who treated the patient
-      const patient = await prisma.patient.findUnique({
-        where: { id: patientId },
-        include: { medicalRecord: true }
-      });
+      // Assign the doctor (either referral or current assigned doctor)
+      let doctorId = referredDoctorId;
 
-      const doctorId = patient?.medicalRecord?.assignedDoctorId;
+      if (!doctorId) {
+        const patient = await prisma.patient.findUnique({
+          where: { id: patientId },
+          include: { medicalRecord: true }
+        });
+        doctorId = patient?.medicalRecord?.assignedDoctorId || null;
+      }
 
       await prisma.appointment.create({
         data: {
@@ -157,6 +183,22 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
           treatments: "Follow-up",
         }
       });
+
+      // Update patient's primary doctor assignment
+      // If referred, set to referred doctor. Otherwise, ensure it's set to current doctor.
+      const finalDoctorId = referredDoctorId || session?.id;
+      if (finalDoctorId) {
+        await prisma.medicalRecord.update({
+          where: { patientId },
+          data: { assignedDoctorId: finalDoctorId }
+        });
+      }
+    } else if (session?.id) {
+        // Even if no follow-up, ensure the current doctor is assigned if they are the one finalizing
+        await prisma.medicalRecord.update({
+          where: { patientId },
+          data: { assignedDoctorId: session.id }
+        });
     }
   }
 

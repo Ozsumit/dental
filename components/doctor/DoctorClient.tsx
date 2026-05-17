@@ -18,7 +18,9 @@ import {
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
-  Heart
+  Heart,
+  FileText,
+  UserPlus
 } from "lucide-react";
 
 const MEDICAL_CONDITIONS = [
@@ -38,7 +40,15 @@ const MEDICAL_CONDITIONS = [
 
 type DoctorTab = "Subjective" | "Medical Record" | "Diagnosis";
 
-export default function DoctorClient({ patients }: { patients: (Patient & { currentAppointmentId?: string })[] }) {
+export default function DoctorClient({
+  patients,
+  doctors,
+  catalog
+}: {
+  patients: (Patient & { currentAppointmentId?: string })[],
+  doctors: { id: string, username: string }[],
+  catalog: { id: string, name: string, baseCost: number, category: string | null }[]
+}) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<(Patient & { currentAppointmentId?: string }) | null>(null);
   const [activeTab, setActiveTab] = useState<DoctorTab>("Subjective");
@@ -48,6 +58,8 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
   const [vasScore, setVasScore] = useState(0);
   const [selectedConditions, setSelectedConditions] = useState<string[]>([]);
   const [nextVisitDate, setNextVisitDate] = useState("");
+  const [referredDoctorId, setReferredDoctorId] = useState("");
+  const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
 
   const filteredPatients = useMemo(() => {
     const tokens = searchTerm.toLowerCase().trim().split(/\s+/);
@@ -102,6 +114,9 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
     } else {
         setNextVisitDate("");
     }
+
+    setReferredDoctorId(p.medicalRecord?.assignedDoctorId || "");
+    setSelectedProcedures([]);
   };
 
   const toggleCondition = (id: string) => {
@@ -266,6 +281,8 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
                       formData.append("medicalHistory", JSON.stringify(selectedConditions));
                       formData.append("vasScore", vasScore.toString());
                       formData.append("nextVisitDate", nextVisitDate);
+                      formData.append("referredDoctorId", referredDoctorId);
+                      formData.append("selectedProcedures", JSON.stringify(selectedProcedures));
                       await updateDiagnosis(selectedPatient.id, formData);
                       alert("Assessment saved successfully!");
                       if (formData.get("finalize") === "true") {
@@ -362,71 +379,95 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
 
                      {/* Medical Record Tab Content */}
                      <div className={`${activeTab !== "Medical Record" ? "hidden" : "block"} space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500`}>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-                              <div className="flex items-center gap-3 mb-2">
-                                 <ShieldCheck className="w-5 h-5 text-emerald-500" />
-                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Insurance Information</label>
-                              </div>
-                              <div className="grid grid-cols-1 gap-4">
-                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 mb-2 block">Insurance Provider</label>
-                                    <input
-                                      name="insurance"
-                                      defaultValue={selectedPatient.medicalRecord?.insurance || ""}
-                                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-medium"
-                                      placeholder="e.g. HealthCare Plus"
-                                    />
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                           <div className="lg:col-span-2 space-y-6">
+                              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                 <div className="flex items-center gap-3 mb-4">
+                                    <FileText className="w-5 h-5 text-emerald-500" />
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Clinical History & Past Diagnoses</label>
                                  </div>
-                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 mb-2 block">Insurance Number</label>
-                                    <input
-                                      name="insuranceNo"
-                                      defaultValue={selectedPatient.medicalRecord?.insuranceNo || ""}
-                                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-medium"
-                                      placeholder="e.g. HCP-12345678"
-                                    />
-                                 </div>
+
+                                 {selectedPatient.isOld ? (
+                                   <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                                      {/* Mock/Previous Diagnosis data if available, or just display pastHistory */}
+                                      <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                         <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Previous Assessment Summary</p>
+                                         <p className="text-sm text-slate-700 font-medium leading-relaxed">
+                                            {selectedPatient.diagnosis?.treatmentPlan || "No previous detailed clinical summary found."}
+                                         </p>
+                                      </div>
+                                      <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                         <p className="text-[10px] font-black text-slate-400 uppercase mb-2">ICD-10 Code History</p>
+                                         <p className="text-sm text-slate-700 font-bold">
+                                            {selectedPatient.diagnosis?.icd10Code || "N/A"}
+                                         </p>
+                                      </div>
+                                      <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                         <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Past Medical History (Reported)</p>
+                                         <p className="text-sm text-slate-600 italic">
+                                            {selectedPatient.diagnosis?.pastHistory || "None reported."}
+                                         </p>
+                                      </div>
+
+                                      {/* Visit/Procedure History */}
+                                      <div className="pt-4">
+                                         <p className="text-[10px] font-black text-slate-400 uppercase mb-3 px-1">Visit History</p>
+                                         <div className="space-y-2">
+                                            {selectedPatient.procedures?.map((proc, i) => (
+                                              <div key={i} className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
+                                                 <div className="flex justify-between items-start">
+                                                    <p className="text-xs font-bold text-slate-700">{proc.name}</p>
+                                                    <p className="text-[9px] font-black text-slate-400">{new Date(proc.procedureDate).toLocaleDateString()}</p>
+                                                 </div>
+                                                 {proc.description && <p className="text-[10px] text-slate-500 mt-1 line-clamp-2">{proc.description}</p>}
+                                              </div>
+                                            ))}
+                                            {(!selectedPatient.procedures || selectedPatient.procedures.length === 0) && (
+                                              <p className="text-[10px] text-slate-400 italic px-1">No clinical procedures recorded.</p>
+                                            )}
+                                         </div>
+                                      </div>
+                                   </div>
+                                 ) : (
+                                   <div className="py-12 text-center">
+                                      <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                                         <UserPlus className="w-6 h-6 text-slate-300" />
+                                      </div>
+                                      <p className="text-sm text-slate-400 font-medium">New patient record. No history available.</p>
+                                   </div>
+                                 )}
                               </div>
                            </div>
 
-                           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
-                              <div className="flex items-center gap-3 mb-2">
-                                 <Heart className="w-5 h-5 text-red-500" />
-                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Emergency Contact</label>
+                           <div className="space-y-6">
+                              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                                 <div className="flex items-center gap-3 mb-2">
+                                    <Heart className="w-5 h-5 text-red-500" />
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Emergency Contact</label>
+                                 </div>
+                                 <div className="space-y-4">
+                                    <div>
+                                       <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Contact Name</p>
+                                       <p className="text-sm font-bold text-slate-700">{selectedPatient.medicalRecord?.emergencyContactName || "Not Provided"}</p>
+                                    </div>
+                                    <div>
+                                       <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Contact Number</p>
+                                       <p className="text-sm font-bold text-slate-700">{selectedPatient.medicalRecord?.emergencyContactNo || "Not Provided"}</p>
+                                    </div>
+                                 </div>
                               </div>
-                              <div className="grid grid-cols-1 gap-4">
-                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 mb-2 block">Contact Name</label>
-                                    <input
-                                      name="emergencyContactName"
-                                      defaultValue={selectedPatient.medicalRecord?.emergencyContactName || ""}
-                                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-medium"
-                                      placeholder="Name of contact"
-                                    />
-                                 </div>
-                                 <div>
-                                    <label className="text-xs font-bold text-slate-500 mb-2 block">Contact Number</label>
-                                    <input
-                                      name="emergencyContactNo"
-                                      defaultValue={selectedPatient.medicalRecord?.emergencyContactNo || ""}
-                                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-medium"
-                                      placeholder="Phone number"
-                                    />
-                                 </div>
+
+                              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Patient Complaints</label>
+                                 <textarea
+                                   name="complaints"
+                                   defaultValue={selectedPatient.medicalRecord?.complaints || ""}
+                                   rows={6}
+                                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
+                                   placeholder="Initial complaints recorded by receptionist..."
+                                 />
                               </div>
                            </div>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Patient Clinical Notes</label>
-                           <textarea
-                             name="complaints"
-                             defaultValue={selectedPatient.medicalRecord?.complaints || ""}
-                             rows={4}
-                             className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
-                             placeholder="Any additional clinical notes or specific complaints..."
-                           />
                         </div>
 
                         <div className="flex justify-end gap-3 pt-4">
@@ -451,77 +492,91 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
                                    placeholder="Summary of clinical findings and definitive diagnosis..."
                                  />
                               </div>
-                              <div>
-                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">ICD-10 Classification</label>
-                                 <div className="relative">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                              <div className="grid grid-cols-2 gap-4">
+                                 <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">ICD-10 Code</label>
                                     <input
                                       name="icd10Code"
                                       defaultValue={selectedPatient.diagnosis?.icd10Code || ""}
-                                      className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-medium"
-                                      placeholder="Search codes (e.g. M54.5)"
+                                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-medium"
+                                      placeholder="e.g. M54.5"
                                     />
+                                 </div>
+                                 <div>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Refer to Doctor</label>
+                                    <select
+                                      value={referredDoctorId}
+                                      onChange={(e) => setReferredDoctorId(e.target.value)}
+                                      className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-bold text-slate-700"
+                                    >
+                                       <option value="">No Referral</option>
+                                       {doctors.map(d => (
+                                         <option key={d.id} value={d.id}>Dr. {d.username}</option>
+                                       ))}
+                                    </select>
                                  </div>
                               </div>
                            </div>
 
-                           <div className="space-y-6">
-                              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Medicines & Suggestions</label>
-                                 <textarea
-                                   name="medicines"
-                                   defaultValue={selectedPatient.diagnosis?.medicines || ""}
-                                   rows={4}
-                                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
-                                   placeholder="Prescribed medicines, lifestyle changes..."
-                                 />
-                              </div>
-                              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Treatment Administered</label>
-                                 <textarea
-                                   name="currentComplaint"
-                                   defaultValue={selectedPatient.diagnosis?.currentComplaint || ""}
-                                   rows={2}
-                                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
-                                   placeholder="Manual therapy, modalities performed..."
-                                 />
-                              </div>
-                              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Home Exercise Program (HEP)</label>
-                                 <textarea
-                                   name="homeExercise"
-                                   defaultValue={selectedPatient.diagnosis?.homeExercise || ""}
-                                   rows={2}
-                                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
-                                   placeholder="Patient instructions for home..."
-                                 />
+                           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">Recommended Procedures</label>
+                              <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2">
+                                 {catalog.map(item => (
+                                   <button
+                                     key={item.id}
+                                     type="button"
+                                     onClick={() => {
+                                       setSelectedProcedures(prev =>
+                                         prev.includes(item.name) ? prev.filter(p => p !== item.name) : [...prev, item.name]
+                                       )
+                                     }}
+                                     className={`flex items-center justify-between p-3 rounded-xl border transition-all ${selectedProcedures.includes(item.name) ? 'bg-emerald-50 border-emerald-200' : 'bg-slate-50 border-slate-100 hover:border-slate-200'}`}
+                                   >
+                                      <div className="text-left">
+                                         <p className={`text-[11px] font-bold ${selectedProcedures.includes(item.name) ? 'text-emerald-700' : 'text-slate-600'}`}>{item.name}</p>
+                                         <p className="text-[9px] text-slate-400 uppercase tracking-tighter">{item.category}</p>
+                                      </div>
+                                      <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${selectedProcedures.includes(item.name) ? 'bg-emerald-500 border-emerald-500' : 'border-slate-300'}`}>
+                                         {selectedProcedures.includes(item.name) && <Plus className="w-2 h-2 text-white" />}
+                                      </div>
+                                   </button>
+                                 ))}
                               </div>
                            </div>
                         </div>
 
-                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block text-center">Follow-up Planning</label>
-                           <div className="flex flex-col md:flex-row gap-6 items-center justify-center">
-                              <div className="relative w-full max-w-xs">
-                                 <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Medicines & Suggestions</label>
+                              <textarea
+                                name="medicines"
+                                defaultValue={selectedPatient.diagnosis?.medicines || ""}
+                                rows={3}
+                                className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
+                                placeholder="Prescribed medicines, lifestyle changes..."
+                              />
+                           </div>
+                           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">Follow-up Schedule</label>
+                              <div className="flex gap-4">
                                  <input
                                    type="date"
                                    value={nextVisitDate}
                                    onChange={(e) => setNextVisitDate(e.target.value)}
-                                   className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-sm font-bold text-slate-700"
+                                   className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-sm font-bold text-slate-700"
                                  />
-                              </div>
-                              <div className="flex gap-2">
-                                 {[1, 2, 4].map(w => (
-                                   <button
-                                     key={w}
-                                     type="button"
-                                     onClick={() => handleNextVisitPreset(w)}
-                                     className="px-6 py-3 rounded-xl border border-slate-200 bg-white text-slate-600 text-[11px] font-black uppercase tracking-widest hover:border-emerald-500 hover:text-emerald-600 transition-all"
-                                   >
-                                     {w} week{w > 1 ? 's' : ''}
-                                   </button>
-                                 ))}
+                                 <div className="flex gap-1">
+                                    {[1, 2].map(w => (
+                                      <button
+                                        key={w}
+                                        type="button"
+                                        onClick={() => handleNextVisitPreset(w)}
+                                        className="px-3 py-3 rounded-xl border border-slate-200 bg-white text-[10px] font-black hover:border-emerald-500 hover:text-emerald-600 transition-all"
+                                      >
+                                        {w}W
+                                      </button>
+                                    ))}
+                                 </div>
                               </div>
                            </div>
                         </div>
