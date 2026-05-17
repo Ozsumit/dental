@@ -53,18 +53,33 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
     medicalHistory = JSON.stringify(medicalHistoryRaw.split(",").map(s => s.trim()));
   }
 
+  const nextVisitDateRaw = formData.get("nextVisitDate") as string;
+  const nextVisitDate = nextVisitDateRaw ? new Date(nextVisitDateRaw) : null;
+
   await prisma.diagnosis.upsert({
     where: { patientId },
     update: {
       currentComplaint: formData.get("currentComplaint") as string,
+      currentHistory: formData.get("currentHistory") as string,
       pastHistory: formData.get("pastHistory") as string,
       medicalHistory,
+      vasScore: parseInt(formData.get("vasScore") as string || "0"),
+      icd10Code: formData.get("icd10Code") as string,
+      treatmentPlan: formData.get("treatmentPlan") as string,
+      homeExercise: formData.get("homeExercise") as string,
+      nextVisitDate,
     },
     create: {
       patientId,
       currentComplaint: formData.get("currentComplaint") as string,
+      currentHistory: formData.get("currentHistory") as string,
       pastHistory: formData.get("pastHistory") as string,
       medicalHistory,
+      vasScore: parseInt(formData.get("vasScore") as string || "0"),
+      icd10Code: formData.get("icd10Code") as string,
+      treatmentPlan: formData.get("treatmentPlan") as string,
+      homeExercise: formData.get("homeExercise") as string,
+      nextVisitDate,
     },
   });
   revalidatePath("/doctor");
