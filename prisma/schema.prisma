@@ -82,6 +82,14 @@ model Diagnosis {
   pastHistory       String?
   medicalHistory    String?  // Stored as JSON string
 
+  // New fields for overhauled doctor view
+  currentHistory    String?
+  vasScore          Int?     @default(0)
+  icd10Code         String?
+  treatmentPlan     String?
+  homeExercise      String?
+  nextVisitDate     DateTime?
+
   patient           Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   createdAt         DateTime @default(now())

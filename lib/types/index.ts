@@ -80,6 +80,12 @@ export interface Diagnosis {
   currentComplaint?: string | null;
   pastHistory?: string | null;
   medicalHistory?: string | null;
+  currentHistory?: string | null;
+  vasScore?: number | null;
+  icd10Code?: string | null;
+  treatmentPlan?: string | null;
+  homeExercise?: string | null;
+  nextVisitDate?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

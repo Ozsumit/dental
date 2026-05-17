@@ -49,12 +49,7 @@ export async function getDoctorPatients() {
     return [];
   }
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-
-  // Find patients assigned to this doctor (via medical record OR specific appointment) who have an appointment today
+  // Find patients assigned to this doctor (via medical record OR specific appointment)
   return await prisma.patient.findMany({
     where: {
       OR: [
@@ -67,27 +62,15 @@ export async function getDoctorPatients() {
           appointments: {
             some: {
               doctorId: session.id,
-              appointmentDate: {
-                gte: today,
-                lt: tomorrow
-              }
+              status: { not: "COMPLETED" }
             }
           }
         }
       ],
-      appointments: {
-        some: {
-          appointmentDate: {
-            gte: today,
-            lt: tomorrow
-          },
-          status: { not: "COMPLETED" }
-        }
-      }
     },
     include: {
       appointments: {
-        orderBy: { appointmentDate: "desc" }
+        orderBy: { appointmentDate: "asc" }
       },
       procedures: {
         orderBy: { procedureDate: "desc" }

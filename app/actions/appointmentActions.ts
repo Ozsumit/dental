@@ -12,12 +12,16 @@ export async function getAppointments(searchParams: { [key: string]: string | st
   const where: Prisma.AppointmentWhereInput = {};
 
   if (searchParams?.q) {
-    const q = searchParams.q as string;
+    const q = (searchParams.q as string).trim();
+    const tokens = q.split(/\s+/);
     where.patient = {
-      OR: [
-        { firstName: { contains: q } },
-        { lastName: { contains: q } },
-      ],
+      AND: tokens.map(token => ({
+        OR: [
+          { firstName: { contains: token, mode: 'insensitive' } },
+          { lastName: { contains: token, mode: 'insensitive' } },
+          { phone: { contains: token, mode: 'insensitive' } },
+        ],
+      })),
     };
   }
 
@@ -56,19 +60,21 @@ export async function getAppointments(searchParams: { [key: string]: string | st
 
 export async function searchPatientsForDropdown(query: string) {
   if (!query) return [];
-  const terms = query.trim().split(/\s+/);
+  const tokens = query.trim().split(/\s+/);
+
   return prisma.patient.findMany({
     where: {
-      AND: terms.map(term => ({
+      AND: tokens.map(token => ({
         OR: [
-          { firstName: { contains: term } },
-          { lastName: { contains: term } },
-          { phone: { contains: term } },
+          { firstName: { contains: token, mode: 'insensitive' } },
+          { lastName: { contains: token, mode: 'insensitive' } },
+          { phone: { contains: token, mode: 'insensitive' } },
         ],
       })),
     },
-    take: 10,
-    select: { id: true, firstName: true, lastName: true, phone: true },
+    take: 20,
+    select: { id: true, firstName: true, lastName: true, phone: true, role: true },
+    orderBy: { firstName: 'asc' }
   });
 }
 
