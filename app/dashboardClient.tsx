@@ -160,7 +160,6 @@ export default function DashboardClient({
 
         {showFilters && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100">
-            {/* ... Your existing filters (status, gender, etc) ... */}
             <select
               onChange={(e) => updateQuery("status", e.target.value)}
               defaultValue={params.get("status") || ""}
@@ -170,6 +169,72 @@ export default function DashboardClient({
               <option value="ACTIVE">Active</option>
               <option value="INACTIVE">Inactive</option>
             </select>
+
+            <select
+              onChange={(e) => updateQuery("gender", e.target.value)}
+              defaultValue={params.get("gender") || ""}
+              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+            >
+              <option value="">All Genders</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+            </select>
+
+            <select
+              onChange={(e) => updateQuery("sort", e.target.value)}
+              defaultValue={params.get("sort") || ""}
+              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+            >
+              <option value="">Newest First</option>
+              <option value="oldest">Oldest First</option>
+              <option value="nameAsc">Name (A-Z)</option>
+              <option value="nameDesc">Name (Z-A)</option>
+              <option value="mostVisits">Most Visits</option>
+            </select>
+
+            <div className="flex gap-2">
+              <input
+                type="number"
+                placeholder="Min Age"
+                defaultValue={params.get("minAge") || ""}
+                onChange={(e) => updateQuery("minAge", e.target.value)}
+                className="w-1/2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+              />
+              <input
+                type="number"
+                placeholder="Max Age"
+                defaultValue={params.get("maxAge") || ""}
+                onChange={(e) => updateQuery("maxAge", e.target.value)}
+                className="w-1/2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="date"
+                title="From Date"
+                defaultValue={params.get("dateFrom") || ""}
+                onChange={(e) => updateQuery("dateFrom", e.target.value)}
+                className="w-1/2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-slate-500"
+              />
+              <input
+                type="date"
+                title="To Date"
+                defaultValue={params.get("dateTo") || ""}
+                onChange={(e) => updateQuery("dateTo", e.target.value)}
+                className="w-1/2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-slate-500"
+              />
+            </div>
+
+            <input
+              type="number"
+              placeholder="Min Visits"
+              defaultValue={params.get("minVisits") || ""}
+              onChange={(e) => updateQuery("minVisits", e.target.value)}
+              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+            />
+
             {hasFilters && (
               <button
                 onClick={() => router.push("/")}
@@ -385,6 +450,17 @@ export default function DashboardClient({
                 </div>
               </div>
 
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">
+                  Address
+                </label>
+                <input
+                  name="address"
+                  defaultValue={selectedPatient?.address || ""}
+                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </div>
+
               <div className="grid grid-cols-3 gap-5 border-t border-slate-100 pt-5">
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">
@@ -421,6 +497,24 @@ export default function DashboardClient({
                 </div>
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">
+                    Blood Group
+                  </label>
+                  <select
+                    name="bloodGroup"
+                    defaultValue={selectedPatient?.bloodGroup || ""}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                  >
+                    <option value="">Select...</option>
+                    {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(bg => (
+                      <option key={bg} value={bg}>{bg}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-5">
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
                     Status
                   </label>
                   <select
@@ -432,29 +526,23 @@ export default function DashboardClient({
                     <option value="INACTIVE">Inactive</option>
                   </select>
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">
-                    Last Visit Date (Optional)
+                    Category (Role)
                   </label>
-                  <input
-                    type="date"
-                    name="lastVisitDate"
-                    defaultValue={
-                      selectedPatient?.lastVisitDate
-                        ? new Date(selectedPatient.lastVisitDate)
-                            .toISOString()
-                            .split("T")[0]
-                        : ""
-                    }
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-600"
-                  />
+                  <select
+                    name="role"
+                    defaultValue={selectedPatient?.role || "Regular"}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                  >
+                    <option value="Regular">Regular</option>
+                    <option value="VIP">VIP</option>
+                    <option value="New">New</option>
+                  </select>
                 </div>
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">
-                    Total Past Visits
+                    Total Visits
                   </label>
                   <input
                     type="number"

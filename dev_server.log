@@ -1,0 +1,38 @@
+
+> client-dashboard-8k@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+✓ Ready in 1402ms
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+
+ GET /login 200 in 1056ms (next.js: 484ms, proxy.ts: 261ms, application-code: 311ms)
+ GET /login 200 in 135ms (next.js: 12ms, proxy.ts: 19ms, application-code: 104ms)
+ GET / 200 in 288ms (next.js: 100ms, proxy.ts: 26ms, application-code: 162ms)
+ POST /login 303 in 715ms (next.js: 6ms, proxy.ts: 14ms, application-code: 695ms)
+  └─ ƒ login({}) in 286ms actions/authActions.ts
+ GET /?q=Emilio&page=1 200 in 121ms (next.js: 9ms, proxy.ts: 17ms, application-code: 94ms)
+ GET / 200 in 305ms (next.js: 5ms, proxy.ts: 7ms, application-code: 293ms)
+ GET /login 200 in 89ms (next.js: 5ms, proxy.ts: 9ms, application-code: 75ms)
+ GET / 200 in 101ms (next.js: 5ms, proxy.ts: 8ms, application-code: 88ms)
+ POST /login 303 in 296ms (next.js: 5ms, proxy.ts: 9ms, application-code: 282ms)
+  └─ ƒ login({}) in 144ms actions/authActions.ts
+ GET / 200 in 148ms (next.js: 5ms, proxy.ts: 15ms, application-code: 127ms)
+ GET /login 200 in 49ms (next.js: 4ms, proxy.ts: 5ms, application-code: 40ms)
+ POST / 303 in 87ms (next.js: 4ms, proxy.ts: 12ms, application-code: 71ms)
+  └─ ƒ handleLogout() in 3ms actions/authActions.ts
+ GET /login 200 in 23ms (next.js: 4ms, proxy.ts: 6ms, application-code: 13ms)
+ GET /login 200 in 29ms (next.js: 3ms, proxy.ts: 5ms, application-code: 21ms)
+ GET /doctor 200 in 102ms (next.js: 32ms, proxy.ts: 7ms, application-code: 63ms)
+ POST /login 303 in 268ms (next.js: 5ms, proxy.ts: 7ms, application-code: 257ms)
+  └─ ƒ login({}) in 141ms actions/authActions.ts
+ GET /login 200 in 44ms (next.js: 3ms, proxy.ts: 4ms, application-code: 37ms)
+ POST /doctor 303 in 70ms (next.js: 8ms, proxy.ts: 6ms, application-code: 56ms)
+  └─ ƒ handleLogout() in 1ms actions/authActions.ts
+ GET /login 200 in 16ms (next.js: 3ms, proxy.ts: 6ms, application-code: 7ms)
+ GET /login 200 in 50ms (next.js: 5ms, proxy.ts: 9ms, application-code: 37ms)
+ GET /admin 200 in 89ms (next.js: 32ms, proxy.ts: 6ms, application-code: 50ms)
+ POST /login 303 in 253ms (next.js: 5ms, proxy.ts: 8ms, application-code: 240ms)
+  └─ ƒ login({}) in 140ms actions/authActions.ts
