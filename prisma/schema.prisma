@@ -111,6 +111,16 @@ model Appointment {
   createdAt       DateTime @default(now())
 }
 
+model BillingCatalog {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  category    String?  // e.g., Radiology, Surgery, Consultation
+  baseCost    Float    @default(0)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 model Procedure {
   id            String   @id @default(uuid())
   patientId     String
@@ -121,6 +131,10 @@ model Procedure {
   procedureDate DateTime @default(now())
   medicine      String?  // Stored as JSON string
   suggestions   String?  // Stored as JSON string
+
+  // Billing fields
+  status        String   @default("PENDING") // PENDING, BILLED, PAID
+  billedById    String?
 
   patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 

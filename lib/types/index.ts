@@ -53,6 +53,8 @@ export interface Procedure {
   procedureDate: Date;
   medicine?: string | null;
   suggestions?: string | null;
+  status?: string | null;
+  billedById?: string | null;
   patient?: Patient;
   createdAt: Date;
   updatedAt: Date;

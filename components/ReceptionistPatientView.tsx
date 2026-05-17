@@ -24,8 +24,12 @@ import {
   Stethoscope,
   Pill,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Receipt,
+  CheckCircle2,
+  Clock
 } from "lucide-react";
+import { finalizeBilling, markAsPaid } from "@/app/actions/billingActions";
 
 export default function ReceptionistPatientView({ patient }: { patient: Patient }) {
   const [isProcedureModalOpen, setIsProcedureModalOpen] = useState(false);
@@ -47,6 +51,20 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
       return [];
     }
   };
+
+  const handleFinalize = async (id: string, cost: number) => {
+    await finalizeBilling(id, cost);
+    // Note: In a real app we'd trigger a refresh or use optimistic UI.
+    // Since this is a server-side passed prop, we might need a router refresh.
+    window.location.reload();
+  };
+
+  const handlePaid = async (id: string) => {
+    await markAsPaid(id);
+    window.location.reload();
+  };
+
+  const pendingProcedures = patient.procedures?.filter(p => p.status === "PENDING") || [];
 
   return (
     <div className="space-y-6">
@@ -152,6 +170,47 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
 
         {/* Middle & Right Column: Clinical Data */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Pending Billing Alert */}
+          {pendingProcedures.length > 0 && (
+            <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 space-y-4">
+               <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-black text-amber-800 uppercase tracking-widest flex items-center gap-2">
+                    <Receipt className="w-5 h-5" /> Pending Billing Items ({pendingProcedures.length})
+                  </h3>
+               </div>
+               <div className="space-y-3">
+                  {pendingProcedures.map(proc => (
+                    <div key={proc.id} className="bg-white p-4 rounded-xl border border-amber-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                       <div>
+                          <p className="text-sm font-bold text-slate-800">{proc.name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">{proc.type} • Recommended by Dr. {patient.medicalRecord?.assignedDoctor?.username}</p>
+                       </div>
+                       <div className="flex items-center gap-3 w-full md:w-auto">
+                          <div className="relative flex-1 md:w-24">
+                             <span className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">$</span>
+                             <input
+                               type="number"
+                               defaultValue={proc.cost}
+                               onBlur={(e) => {
+                                 const val = parseFloat(e.target.value);
+                                 if (val !== proc.cost) handleFinalize(proc.id, val);
+                               }}
+                               className="w-full pl-5 pr-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:border-amber-500"
+                             />
+                          </div>
+                          <button
+                            onClick={() => handlePaid(proc.id)}
+                            className="px-4 py-2 bg-emerald-500 text-white text-[10px] font-black uppercase rounded-lg hover:bg-emerald-600 transition-all"
+                          >
+                            Mark Paid
+                          </button>
+                       </div>
+                    </div>
+                  ))}
+               </div>
+            </div>
+          )}
+
           {/* Latest Clinical Assessment (Overhauled) */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex justify-between items-center">
@@ -204,12 +263,29 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
               </h3>
             </div>
             <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
-              {patient.procedures?.map((proc: Procedure) => (
+              {patient.procedures?.sort((a,b) => new Date(b.procedureDate).getTime() - new Date(a.procedureDate).getTime()).map((proc: Procedure) => (
                 <div key={proc.id} className="p-4 hover:bg-slate-50 transition">
                   <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <span className="text-[10px] font-black text-slate-400 uppercase">{new Date(proc.procedureDate).toLocaleDateString()}</span>
-                      <h4 className="font-bold text-slate-800">{proc.name}</h4>
+                    <div className="flex gap-3">
+                       <div className="mt-1">
+                          {proc.status === "PAID" ? (
+                             <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                          ) : proc.status === "BILLED" ? (
+                             <Clock className="w-4 h-4 text-blue-500" />
+                          ) : (
+                             <Receipt className="w-4 h-4 text-amber-500" />
+                          )}
+                       </div>
+                       <div>
+                         <span className="text-[10px] font-black text-slate-400 uppercase">{new Date(proc.procedureDate).toLocaleDateString()}</span>
+                         <h4 className="font-bold text-slate-800">{proc.name}</h4>
+                         <span className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
+                           proc.status === "PAID" ? "bg-emerald-50 text-emerald-600" :
+                           proc.status === "BILLED" ? "bg-blue-50 text-blue-600" : "bg-amber-50 text-amber-600"
+                         }`}>
+                           {proc.status || "COMPLETED"}
+                         </span>
+                       </div>
                     </div>
                     <div className="text-right">
                        <p className="font-black text-emerald-600">${proc.cost}</p>

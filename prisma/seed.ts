@@ -125,7 +125,28 @@ async function main() {
         procedureDate: faker.date.past(),
         medicine: JSON.stringify(["Amoxicillin", "Paracetamol"]),
         suggestions: JSON.stringify(["Avoid cold drinks", "Brush twice daily"]),
+        status: "PAID"
       },
+    });
+  }
+
+  console.log("💳 Seeding billing catalog...");
+  const catalog = [
+    { name: "Consultation", category: "General", baseCost: 100 },
+    { name: "Follow-up Consultation", category: "General", baseCost: 50 },
+    { name: "X-Ray Chest", category: "Radiology", baseCost: 150 },
+    { name: "Dental Cleaning", category: "Dental", baseCost: 80 },
+    { name: "Root Canal Treatment", category: "Dental", baseCost: 450 },
+    { name: "Full Blood Count", category: "Laboratory", baseCost: 60 },
+    { name: "MRI Scan", category: "Radiology", baseCost: 1200 },
+    { name: "Physical Therapy Session", category: "Therapy", baseCost: 90 },
+  ];
+
+  for (const item of catalog) {
+    await prisma.billingCatalog.upsert({
+      where: { name: item.name },
+      update: {},
+      create: item,
     });
   }
 
