@@ -16,7 +16,9 @@ import {
   Phone,
   History,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  ShieldCheck,
+  Heart
 } from "lucide-react";
 
 const MEDICAL_CONDITIONS = [
@@ -34,7 +36,7 @@ const MEDICAL_CONDITIONS = [
   { id: "Other", label: "Other" },
 ];
 
-type DoctorTab = "Subjective" | "Objective" | "Diagnosis";
+type DoctorTab = "Subjective" | "Medical Record" | "Diagnosis";
 
 export default function DoctorClient({ patients }: { patients: (Patient & { currentAppointmentId?: string })[] }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -242,7 +244,7 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
 
             {/* Sub-Header / Navigation Tabs */}
             <div className="bg-white border-b border-slate-200 px-8 flex gap-10 shrink-0">
-               {(["Subjective", "Objective", "Diagnosis"] as DoctorTab[]).map((tab) => (
+               {(["Subjective", "Medical Record", "Diagnosis"] as DoctorTab[]).map((tab) => (
                  <button
                    key={tab}
                    onClick={() => setActiveTab(tab)}
@@ -352,20 +354,87 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
 
                         <div className="flex justify-end gap-3 pt-4">
                            <button type="submit" className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all">Save Draft</button>
-                           <button type="button" onClick={() => setActiveTab("Objective")} className="bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
-                             Next: Objective <ChevronRight className="w-4 h-4" />
+                           <button type="button" onClick={() => setActiveTab("Medical Record")} className="bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
+                             Next: Medical Record <ChevronRight className="w-4 h-4" />
                            </button>
                         </div>
                      </div>
 
-                     {/* Objective Tab Content */}
-                     <div className={`${activeTab !== "Objective" ? "hidden" : "block"} bg-white p-20 rounded-2xl border border-slate-200 shadow-sm text-center animate-in fade-in zoom-in-95 duration-500`}>
-                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                           <Stethoscope className="w-10 h-10 text-slate-200" />
+                     {/* Medical Record Tab Content */}
+                     <div className={`${activeTab !== "Medical Record" ? "hidden" : "block"} space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500`}>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                              <div className="flex items-center gap-3 mb-2">
+                                 <ShieldCheck className="w-5 h-5 text-emerald-500" />
+                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Insurance Information</label>
+                              </div>
+                              <div className="grid grid-cols-1 gap-4">
+                                 <div>
+                                    <label className="text-xs font-bold text-slate-500 mb-2 block">Insurance Provider</label>
+                                    <input
+                                      name="insurance"
+                                      defaultValue={selectedPatient.medicalRecord?.insurance || ""}
+                                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-medium"
+                                      placeholder="e.g. HealthCare Plus"
+                                    />
+                                 </div>
+                                 <div>
+                                    <label className="text-xs font-bold text-slate-500 mb-2 block">Insurance Number</label>
+                                    <input
+                                      name="insuranceNo"
+                                      defaultValue={selectedPatient.medicalRecord?.insuranceNo || ""}
+                                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-medium"
+                                      placeholder="e.g. HCP-12345678"
+                                    />
+                                 </div>
+                              </div>
+                           </div>
+
+                           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-6">
+                              <div className="flex items-center gap-3 mb-2">
+                                 <Heart className="w-5 h-5 text-red-500" />
+                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Emergency Contact</label>
+                              </div>
+                              <div className="grid grid-cols-1 gap-4">
+                                 <div>
+                                    <label className="text-xs font-bold text-slate-500 mb-2 block">Contact Name</label>
+                                    <input
+                                      name="emergencyContactName"
+                                      defaultValue={selectedPatient.medicalRecord?.emergencyContactName || ""}
+                                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-medium"
+                                      placeholder="Name of contact"
+                                    />
+                                 </div>
+                                 <div>
+                                    <label className="text-xs font-bold text-slate-500 mb-2 block">Contact Number</label>
+                                    <input
+                                      name="emergencyContactNo"
+                                      defaultValue={selectedPatient.medicalRecord?.emergencyContactNo || ""}
+                                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-medium"
+                                      placeholder="Phone number"
+                                    />
+                                 </div>
+                              </div>
+                           </div>
                         </div>
-                        <h3 className="text-xl font-bold text-slate-800">Physical Examination</h3>
-                        <p className="text-slate-500 text-sm max-w-sm mx-auto mt-2 font-medium">Record objective findings, vitals, range of motion, and special tests here.</p>
-                        <button type="button" onClick={() => setActiveTab("Diagnosis")} className="mt-8 bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-600 transition-colors">Continue to Diagnosis</button>
+
+                        <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Patient Clinical Notes</label>
+                           <textarea
+                             name="complaints"
+                             defaultValue={selectedPatient.medicalRecord?.complaints || ""}
+                             rows={4}
+                             className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
+                             placeholder="Any additional clinical notes or specific complaints..."
+                           />
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-4">
+                           <button type="submit" className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all">Save Draft</button>
+                           <button type="button" onClick={() => setActiveTab("Diagnosis")} className="bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
+                             Next: Diagnosis <ChevronRight className="w-4 h-4" />
+                           </button>
+                        </div>
                      </div>
 
                      {/* Diagnosis Tab Content */}

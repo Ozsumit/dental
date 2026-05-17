@@ -80,14 +80,32 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
   };
 
   try {
-    await prisma.diagnosis.upsert({
+  const medicalRecordData = {
+    complaints: formData.get("complaints")?.toString() || null,
+    insurance: formData.get("insurance")?.toString() || null,
+    insuranceNo: formData.get("insuranceNo")?.toString() || null,
+    emergencyContactName: formData.get("emergencyContactName")?.toString() || null,
+    emergencyContactNo: formData.get("emergencyContactNo")?.toString() || null,
+  };
+
+  await prisma.$transaction([
+    prisma.diagnosis.upsert({
       where: { patientId },
       update: diagnosisData,
       create: {
         patientId,
         ...diagnosisData,
       },
-    });
+    }),
+    prisma.medicalRecord.upsert({
+      where: { patientId },
+      update: medicalRecordData,
+      create: {
+        patientId,
+        ...medicalRecordData,
+      },
+    }),
+  ]);
   } catch (error) {
     console.error("Failed to upsert diagnosis:", error);
     // Fallback if patientId index is having issues

@@ -110,17 +110,17 @@ export async function savePatient(formData: FormData, id?: string) {
   const visitCount = visitCountStr ? Number(visitCountStr) : 0;
 
   const patientData = {
-    firstName: formData.get("firstName") as string,
-    lastName: formData.get("lastName") as string,
-    phone: formData.get("phone") as string,
-    email: formData.get("email") as string,
-    gender: formData.get("gender") as string,
-    status: formData.get("status") as string,
-    address: formData.get("address") as string,
-    bloodGroup: formData.get("bloodGroup") as string,
-    allergies: formData.get("allergies") as string,
-    role: formData.get("role") as string,
-    dateOfBirth: new Date(formData.get("dateOfBirth") as string),
+    firstName: formData.get("firstName")?.toString() || "",
+    lastName: formData.get("lastName")?.toString() || "",
+    phone: formData.get("phone")?.toString() || "",
+    email: formData.get("email")?.toString() || null,
+    gender: formData.get("gender")?.toString() || null,
+    status: formData.get("status")?.toString() || "ACTIVE",
+    address: formData.get("address")?.toString() || null,
+    bloodGroup: formData.get("bloodGroup")?.toString() || null,
+    allergies: formData.get("allergies")?.toString() || null,
+    role: formData.get("role")?.toString() || "Regular",
+    dateOfBirth: new Date(formData.get("dateOfBirth")?.toString() || new Date().toISOString()),
     visitCount: visitCount,
     isOld: visitCount > 1
   };
