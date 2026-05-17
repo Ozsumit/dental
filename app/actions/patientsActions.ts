@@ -86,6 +86,10 @@ export async function getPatients(searchParams: { [key: string]: string | string
         procedures: {
           orderBy: { procedureDate: "desc" },
         },
+        medicalRecord: {
+          include: { assignedDoctor: true }
+        },
+        diagnosis: true,
       },
     }),
   ]);
@@ -100,7 +104,6 @@ export async function getPatients(searchParams: { [key: string]: string | string
 
 // CRUD OPERATIONS
 export async function savePatient(formData: FormData, id?: string) {
-  const visitDateStr = formData.get("lastVisitDate") as string;
   const visitCountStr = formData.get("visitCount") as string;
 
   const data = {
@@ -110,8 +113,10 @@ export async function savePatient(formData: FormData, id?: string) {
     email: formData.get("email") as string,
     gender: formData.get("gender") as string,
     status: formData.get("status") as string,
+    address: formData.get("address") as string,
+    bloodGroup: formData.get("bloodGroup") as string,
+    role: formData.get("role") as string,
     dateOfBirth: new Date(formData.get("dateOfBirth") as string),
-    lastVisitDate: visitDateStr ? new Date(visitDateStr) : null,
     visitCount: visitCountStr ? Number(visitCountStr) : 0,
   };
 

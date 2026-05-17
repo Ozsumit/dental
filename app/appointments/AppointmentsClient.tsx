@@ -116,6 +116,19 @@ export default function AppointmentsClient({
           <option value="CANCELLED">Cancelled</option>
         </select>
 
+        <select
+          onChange={(e) => updateQuery("treatment", e.target.value)}
+          defaultValue={params.get("treatment") || ""}
+          className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-700"
+        >
+          <option value="">All Treatments</option>
+          <option value="Checkup">Checkup</option>
+          <option value="Cleaning">Cleaning</option>
+          <option value="Filling">Filling</option>
+          <option value="Root Canal">Root Canal</option>
+          <option value="Whitening">Whitening</option>
+        </select>
+
         <input
           type="date"
           title="From Date"

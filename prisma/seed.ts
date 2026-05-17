@@ -8,6 +8,8 @@ async function main() {
   console.log("🧹 Clearing database...");
   await prisma.appointment.deleteMany();
   await prisma.procedure.deleteMany();
+  await prisma.diagnosis.deleteMany();
+  await prisma.medicalRecord.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.user.deleteMany();
 
@@ -16,27 +18,31 @@ async function main() {
   const doctorPassword = await bcrypt.hash("doctorpassword", 10);
   const receptionistPassword = await bcrypt.hash("receptionistpassword", 10);
 
-  await prisma.user.createMany({
-    data: [
-      {
-        username: "admin",
-        password: adminPassword,
-        role: "ADMIN",
-      },
-      {
-        username: "doctor",
-        password: doctorPassword,
-        role: "DOCTOR",
-      },
-      {
-        username: "receptionist",
-        password: receptionistPassword,
-        role: "RECEPTIONIST",
-      },
-    ],
+  const admin = await prisma.user.create({
+    data: {
+      username: "admin",
+      password: adminPassword,
+      role: "ADMIN",
+    },
   });
 
-  const TOTAL_RECORDS = 100; // Reduced for SQLite and speed
+  const doctor = await prisma.user.create({
+    data: {
+      username: "doctor",
+      password: doctorPassword,
+      role: "DOCTOR",
+    },
+  });
+
+  const receptionist = await prisma.user.create({
+    data: {
+      username: "receptionist",
+      password: receptionistPassword,
+      role: "RECEPTIONIST",
+    },
+  });
+
+  const TOTAL_RECORDS = 50;
   const TREATMENT_OPTIONS = [
     "Cleaning",
     "Checkup",
@@ -48,83 +54,80 @@ async function main() {
     "Braces",
   ];
 
-  console.log(`🚀 Fast seeding ${TOTAL_RECORDS} patients...`);
+  console.log(`🚀 Seeding ${TOTAL_RECORDS} patients...`);
 
-  // 1. Prepare Patient Data
-  const patientsData = Array.from({ length: TOTAL_RECORDS }).map(() => {
-    const gender = faker.helpers.arrayElement([
-      "Male",
-      "Female",
-      "Other",
-    ] as const);
-    return {
-      firstName: faker.person.firstName(
-        gender === "Other"
-          ? undefined
-          : (gender.toLowerCase() as "male" | "female"),
-      ),
-      lastName: faker.person.lastName(),
-      phone: faker.phone.number({ style: "national" }),
-      email: faker.internet.email(),
-      dateOfBirth: faker.date.birthdate({ min: 10, max: 80, mode: "age" }),
-      gender,
-      status: "ACTIVE",
-      visitCount: faker.number.int({ min: 1, max: 6 }),
-      lastVisitDate: faker.date.recent({ days: 30 }),
-    };
-  });
+  for (let i = 0; i < TOTAL_RECORDS; i++) {
+    const gender = faker.helpers.arrayElement(["Male", "Female", "Other"] as const);
+    const firstName = faker.person.firstName(gender === "Other" ? undefined : (gender.toLowerCase() as "male" | "female"));
+    const lastName = faker.person.lastName();
 
-  // 2. Bulk Insert Patients
-  await prisma.patient.createMany({ data: patientsData });
+    const patient = await prisma.patient.create({
+      data: {
+        firstName,
+        lastName,
+        phone: faker.phone.number({ style: "national" }),
+        email: faker.internet.email(),
+        dateOfBirth: faker.date.birthdate({ min: 10, max: 80, mode: "age" }),
+        gender,
+        status: "ACTIVE",
+        address: faker.location.streetAddress(),
+        bloodGroup: faker.helpers.arrayElement(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]),
+        role: faker.helpers.arrayElement(["VIP", "Regular", "New"]),
+        visitCount: faker.number.int({ min: 1, max: 6 }),
+        lastVisitDate: faker.date.recent({ days: 30 }),
+      },
+    });
 
-  // 3. Fetch all newly created patients to link appointments
-  const allPatients = await prisma.patient.findMany({
-    select: { id: true, visitCount: true },
-  });
+    // Create Medical Record
+    await prisma.medicalRecord.create({
+      data: {
+        patientId: patient.id,
+        assignedDoctorId: doctor.id,
+        complaints: faker.lorem.sentence(),
+        insurance: "HealthCare Plus",
+        insuranceNo: faker.string.alphanumeric(10),
+        emergencyContactName: faker.person.fullName(),
+        emergencyContactNo: faker.phone.number({ style: "national" }),
+        status: "STABLE",
+        title: "Routine Patient",
+      },
+    });
 
-  // 4. Prepare Appointment & Procedure Data
-  console.log("🔗 Linking appointments and procedures...");
-  const appointmentsData = allPatients.flatMap((patient) => {
-    return Array.from({ length: patient.visitCount }).map(() => ({
-      patientId: patient.id,
-      appointmentDate: faker.date.past({ years: 2 }),
-      status: "COMPLETED",
-      treatments: faker.helpers
-        .arrayElements(TREATMENT_OPTIONS, {
-          min: 1,
-          max: 3,
-        })
-        .join(", "),
-    }));
-  });
+    // Create Diagnosis
+    await prisma.diagnosis.create({
+      data: {
+        patientId: patient.id,
+        currentComplaint: "Slight toothache",
+        pastHistory: "No major surgeries",
+        medicalHistory: JSON.stringify(["Hypertension", "Asthma"].slice(0, faker.number.int({min:0, max:2}))),
+      },
+    });
 
-  const proceduresData = allPatients.flatMap((patient) => {
-    return Array.from({ length: faker.number.int({ min: 0, max: 2 }) }).map(
-      () => ({
+    // Create some appointments
+    const appointmentDate = i < 5 ? new Date() : faker.date.future(); // First 5 patients have appointments today
+    await prisma.appointment.create({
+      data: {
+        patientId: patient.id,
+        appointmentDate,
+        status: i < 5 ? "SCHEDULED" : "COMPLETED",
+        treatments: faker.helpers.arrayElement(TREATMENT_OPTIONS),
+      },
+    });
+
+    // Create some procedures
+    await prisma.procedure.create({
+      data: {
         patientId: patient.id,
         name: faker.helpers.arrayElement(TREATMENT_OPTIONS),
-        description: faker.lorem.sentence(),
         cost: parseFloat(faker.commerce.price({ min: 50, max: 500 })),
-        procedureDate: faker.date.past({ years: 1 }),
-      }),
-    );
-  });
-
-  // 5. Bulk Insert Appointments and Procedures
-  const CHUNK_SIZE = 1000;
-  for (let i = 0; i < appointmentsData.length; i += CHUNK_SIZE) {
-    await prisma.appointment.createMany({
-      data: appointmentsData.slice(i, i + CHUNK_SIZE),
+        procedureDate: faker.date.past(),
+        medicine: JSON.stringify(["Amoxicillin", "Paracetamol"]),
+        suggestions: JSON.stringify(["Avoid cold drinks", "Brush twice daily"]),
+      },
     });
   }
 
-  for (let i = 0; i < proceduresData.length; i += CHUNK_SIZE) {
-    await prisma.procedure.createMany({
-      data: proceduresData.slice(i, i + CHUNK_SIZE),
-    });
-  }
-
-  console.log("🎉 Seeding complete in seconds!");
+  console.log("🎉 Seeding complete!");
 }
 
 main()

@@ -1,15 +1,8 @@
-import prisma from "@/lib/prisma";
 import DoctorClient from "@/components/doctor/DoctorClient";
+import { getDoctorPatients } from "../actions/doctorPatientActions";
 
 export default async function DoctorPage() {
-  const patients = await prisma.patient.findMany({
-    include: {
-      procedures: {
-        orderBy: { procedureDate: "desc" }
-      }
-    },
-    orderBy: { lastName: "asc" }
-  });
+  const patients = await getDoctorPatients();
 
   return (
     <div className="h-full">
