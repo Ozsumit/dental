@@ -45,43 +45,103 @@ export async function updateMedicalRecord(patientId: string, formData: FormData)
 }
 
 export async function updateDiagnosis(patientId: string, formData: FormData) {
-  const medicalHistoryRaw = formData.get("medicalHistory") as string;
-  let medicalHistory = medicalHistoryRaw;
+  const medicalHistoryRaw = formData.get("medicalHistory")?.toString();
+  let medicalHistory = medicalHistoryRaw || null;
 
   // If it's sent as a comma-separated string from a simple input, convert to JSON array string
   if (medicalHistoryRaw && !medicalHistoryRaw.startsWith("[")) {
     medicalHistory = JSON.stringify(medicalHistoryRaw.split(",").map(s => s.trim()));
   }
 
-  const nextVisitDateRaw = formData.get("nextVisitDate") as string;
-  const nextVisitDate = nextVisitDateRaw ? new Date(nextVisitDateRaw) : null;
+  const nextVisitDateRaw = formData.get("nextVisitDate")?.toString();
+  let nextVisitDate = null;
+  if (nextVisitDateRaw) {
+    const d = new Date(nextVisitDateRaw);
+    if (!isNaN(d.getTime())) {
+      nextVisitDate = d;
+    }
+  }
+  const finalize = formData.get("finalize") === "true";
 
-  await prisma.diagnosis.upsert({
-    where: { patientId },
-    update: {
-      currentComplaint: formData.get("currentComplaint") as string,
-      currentHistory: formData.get("currentHistory") as string,
-      pastHistory: formData.get("pastHistory") as string,
-      medicalHistory,
-      vasScore: parseInt(formData.get("vasScore") as string || "0"),
-      icd10Code: formData.get("icd10Code") as string,
-      treatmentPlan: formData.get("treatmentPlan") as string,
-      homeExercise: formData.get("homeExercise") as string,
-      nextVisitDate,
-    },
-    create: {
-      patientId,
-      currentComplaint: formData.get("currentComplaint") as string,
-      currentHistory: formData.get("currentHistory") as string,
-      pastHistory: formData.get("pastHistory") as string,
-      medicalHistory,
-      vasScore: parseInt(formData.get("vasScore") as string || "0"),
-      icd10Code: formData.get("icd10Code") as string,
-      treatmentPlan: formData.get("treatmentPlan") as string,
-      homeExercise: formData.get("homeExercise") as string,
-      nextVisitDate,
-    },
-  });
+  const rawVasScore = formData.get("vasScore")?.toString();
+  const vasScore = rawVasScore ? parseInt(rawVasScore) : 0;
+
+  const diagnosisData = {
+    currentComplaint: formData.get("currentComplaint")?.toString() || null,
+    currentHistory: formData.get("currentHistory")?.toString() || null,
+    pastHistory: formData.get("pastHistory")?.toString() || null,
+    medicalHistory: medicalHistory || null,
+    vasScore: isNaN(vasScore) ? 0 : vasScore,
+    icd10Code: formData.get("icd10Code")?.toString() || null,
+    treatmentPlan: formData.get("treatmentPlan")?.toString() || null,
+    homeExercise: formData.get("homeExercise")?.toString() || null,
+    medicines: formData.get("medicines")?.toString() || null,
+    nextVisitDate: nextVisitDate,
+  };
+
+  try {
+    await prisma.diagnosis.upsert({
+      where: { patientId },
+      update: diagnosisData,
+      create: {
+        patientId,
+        ...diagnosisData,
+      },
+    });
+  } catch (error) {
+    console.error("Failed to upsert diagnosis:", error);
+    // Fallback if patientId index is having issues
+    const existing = await prisma.diagnosis.findUnique({ where: { patientId } });
+    if (existing) {
+      await prisma.diagnosis.update({ where: { patientId }, data: diagnosisData });
+    } else {
+      await prisma.diagnosis.create({ data: { patientId, ...diagnosisData } });
+    }
+  }
+
+  if (finalize) {
+    // Mark today's appointment as COMPLETED
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    await prisma.appointment.updateMany({
+      where: {
+        patientId,
+        appointmentDate: {
+          gte: today,
+          lt: tomorrow
+        },
+        status: { not: "COMPLETED" }
+      },
+      data: {
+        status: "COMPLETED"
+      }
+    });
+
+    // Create follow-up appointment if date is set
+    if (nextVisitDate && !isNaN(nextVisitDate.getTime())) {
+      // Find the doctor who treated the patient
+      const patient = await prisma.patient.findUnique({
+        where: { id: patientId },
+        include: { medicalRecord: true }
+      });
+
+      const doctorId = patient?.medicalRecord?.assignedDoctorId;
+
+      await prisma.appointment.create({
+        data: {
+          patientId,
+          doctorId,
+          appointmentDate: nextVisitDate,
+          status: "SCHEDULED",
+          treatments: "Follow-up",
+        }
+      });
+    }
+  }
+
   revalidatePath("/doctor");
 }
 

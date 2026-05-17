@@ -3,7 +3,6 @@
 import { useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";
-import { saveAppointment } from "./actions/appointmentActions";
 import {
   savePatient,
   deletePatient,
@@ -11,7 +10,7 @@ import {
   createAppointmentAction,
 } from "./actions/patientsActions";
 import ReceptionistPatientView from "@/components/ReceptionistPatientView";
-import { Patient } from "@/lib/types";
+import { Patient } from "@/lib/types/index";
 import {
   Search,
   Plus,
@@ -22,6 +21,11 @@ import {
   Filter,
   Download,
   Eye,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Phone,
+  Mail
 } from "lucide-react";
 import * as XLSX from "xlsx"; // Import Excel library
 
@@ -34,6 +38,8 @@ interface DashboardClientProps {
 
 export default function DashboardClient({
   patients,
+  totalPages,
+  currentPage,
 }: DashboardClientProps) {
   const [isApptFormOpen, setIsApptFormOpen] = useState(false);
   const [apptPatient, setAppointmentPatient] = useState<Patient | null>(null); // Holds patient for the new appt
@@ -49,7 +55,6 @@ export default function DashboardClient({
 
   const updateQuery = useCallback(
     (name: string, value: string) => {
-      /* Same as before */
       const newParams = new URLSearchParams(params.toString());
       if (value) newParams.set(name, value);
       else newParams.delete(name);
@@ -160,7 +165,7 @@ export default function DashboardClient({
         </div>
 
         {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
             <select
               onChange={(e) => updateQuery("status", e.target.value)}
               defaultValue={params.get("status") || ""}
@@ -261,7 +266,7 @@ export default function DashboardClient({
             {hasFilters && (
               <button
                 onClick={() => router.push("/")}
-                className="px-5 py-3 bg-red-50 text-red-600 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-red-100"
+                className="px-5 py-3 bg-red-50 text-red-600 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-red-100 transition"
               >
                 Clear Filters
               </button>
@@ -271,7 +276,7 @@ export default function DashboardClient({
       </div>
 
       {/* TABLE */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
         <table className="min-w-full text-left text-sm text-slate-600">
           <thead className="bg-slate-50 text-slate-700 uppercase font-bold text-xs border-b border-slate-200">
             <tr>
@@ -288,49 +293,49 @@ export default function DashboardClient({
                 className="hover:bg-slate-50 transition group"
               >
                 <td className="px-6 py-4 flex items-center gap-3">
-                  <div className="bg-slate-100 p-2.5 rounded-full text-slate-600">
+                  <div className="bg-indigo-50 p-2.5 rounded-xl text-indigo-600">
                     <User className="w-5 h-5" />
                   </div>
                   <div>
-                    <span className="font-bold text-slate-900">
+                    <span className="font-bold text-slate-900 block">
                       {patient.firstName} {patient.lastName}
                     </span>
-                    <div className="text-xs text-slate-500">
-                      {patient.gender}
+                    <div className="text-xs text-slate-500 mt-0.5">
+                      {patient.gender} • {patient.role || "Regular"}
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-6 py-4 font-medium text-slate-700">
                   {patient.phone}
                   <br />
-                  <span className="text-xs text-slate-400">
-                    {patient.email}
+                  <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                    {patient.email || "No Email"}
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className="bg-green-50 text-green-700 py-1 px-3 rounded-full text-xs font-bold border border-green-200">
+                  <span className={`py-1 px-3 rounded-full text-[10px] font-black uppercase border ${
+                    patient.status === "ACTIVE" ? "bg-green-50 text-green-700 border-green-100" : "bg-red-50 text-red-700 border-red-100"
+                  }`}>
                     {patient.status}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
-                    {/* VIEW PROFILE BUTTON */}
                     <button
                       onClick={() => openProfile(patient)}
-                      title="View Profile"
-                      className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition"
+                      className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg transition-all"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => openEdit(patient)}
-                      className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => openDelete(patient)}
-                      className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                      className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -338,77 +343,104 @@ export default function DashboardClient({
                 </td>
               </tr>
             ))}
+            {patients.length === 0 && (
+               <tr><td colSpan={4} className="px-6 py-20 text-center text-slate-400 italic">No patients found.</td></tr>
+            )}
           </tbody>
         </table>
-        {/* Pagination controls ... */}
+
+        {/* SERVER PAGINATION */}
+        <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-200">
+          <p className="text-sm text-slate-500 font-medium">
+            Page <span className="text-slate-900">{currentPage}</span> of{" "}
+            <span className="text-slate-900">{totalPages || 1}</span>
+          </p>
+          <div className="flex gap-2">
+            <button
+              disabled={currentPage <= 1}
+              onClick={() => updateQuery("page", String(currentPage - 1))}
+              className="p-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition disabled:opacity-30"
+            >
+              <ChevronLeft className="w-5 h-5 text-slate-600" />
+            </button>
+            <button
+              disabled={currentPage >= totalPages}
+              onClick={() => updateQuery("page", String(currentPage + 1))}
+              className="p-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition disabled:opacity-30"
+            >
+              <ChevronRight className="w-5 h-5 text-slate-600" />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* --- NEW FULL PATIENT PROFILE MODAL --- */}
+      {/* --- REFINED PATIENT PROFILE MODAL --- */}
       {isProfileOpen && selectedPatient && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
+          <div className="bg-white rounded-[2rem] w-full max-w-5xl max-h-[95vh] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             {/* Profile Header */}
-            <div className="bg-slate-50 p-8 border-b border-slate-200 flex justify-between items-start">
+            <div className="bg-slate-50/50 p-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div className="flex gap-6 items-center">
-                <div className="w-20 h-20 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center border-4 border-white shadow-sm">
-                  <User className="w-10 h-10" />
+                <div className="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100">
+                  <User className="w-8 h-8" />
                 </div>
                 <div>
-                  <h2 className="text-3xl font-black text-slate-900">
+                  <h2 className="text-3xl font-black text-slate-900 leading-tight">
                     {selectedPatient.firstName} {selectedPatient.lastName}
                   </h2>
-                  <div className="flex gap-4 text-sm font-medium text-slate-500 mt-2">
-                    <span>{selectedPatient.phone}</span> •
-                    <span>{selectedPatient.email || "No Email"}</span> •
-                    <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
+                  <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">
+                    <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {selectedPatient.phone}</span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {selectedPatient.email || "No Email"}</span>
+                    <span>•</span>
+                    <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
                       {selectedPatient.status}
                     </span>
                   </div>
                 </div>
               </div>
-              <button
-                onClick={() => setIsProfileOpen(false)}
-                className="bg-white p-2 rounded-full shadow-sm text-slate-400 hover:text-slate-800 border border-slate-200"
-              >
-                <X className="w-6 h-6" />
-              </button>
-              <button
-                onClick={() => {
-                  setAppointmentPatient(selectedPatient);
-                  setIsApptFormOpen(true);
-                }}
-                className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition"
-              >
-                + Schedule Appointment
-              </button>
+              <div className="flex gap-3 w-full md:w-auto">
+                 <button
+                   onClick={() => {
+                     setAppointmentPatient(selectedPatient);
+                     setIsApptFormOpen(true);
+                   }}
+                   className="flex-1 md:flex-none bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                 >
+                   <Calendar className="w-4 h-4" /> New Appointment
+                 </button>
+                 <button
+                   onClick={() => setIsProfileOpen(false)}
+                   className="p-3 bg-white text-slate-400 hover:text-slate-800 rounded-xl border border-slate-200 transition-all"
+                 >
+                   <X className="w-6 h-6" />
+                 </button>
+              </div>
             </div>
 
             {/* Profile Body (Scrollable) */}
-            <div className="p-8 overflow-y-auto flex-1 bg-slate-50 flex flex-col gap-8">
+            <div className="p-8 overflow-y-auto flex-1 bg-white">
                <ReceptionistPatientView patient={selectedPatient} />
             </div>
           </div>
         </div>
       )}
 
-      {/* KEEP EXISTING EDIT & DELETE MODALS BELOW */}
-      {/* ... */}
-
-      {/* CREATE / EDIT MODAL */}
+      {/* REGISTER / EDIT MODAL */}
       {isFormOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden">
-            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
-              <h2 className="text-xl font-bold text-slate-800">
+          <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-8 border-b border-slate-50 bg-slate-50/30">
+              <h2 className="text-2xl font-black text-slate-800 tracking-tight">
                 {selectedPatient
-                  ? "Update Patient Record"
-                  : "Register New Patient"}
+                  ? "Update Record"
+                  : "New Patient Registration"}
               </h2>
               <button
                 onClick={() => setIsFormOpen(false)}
-                className="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full"
+                className="text-slate-400 hover:text-slate-600 bg-slate-100 p-2 rounded-xl"
               >
-                <X className="w-5 h-5" />
+                <X className="w-6 h-6" />
               </button>
             </div>
 
@@ -417,74 +449,53 @@ export default function DashboardClient({
                 await savePatient(formData, selectedPatient?.id);
                 setIsFormOpen(false);
               }}
-              className="p-6 space-y-5"
+              className="p-8 space-y-6"
             >
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    First Name
-                  </label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">First Name</label>
                   <input
                     required
                     name="firstName"
                     defaultValue={selectedPatient?.firstName}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Last Name
-                  </label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Last Name</label>
                   <input
                     required
                     name="lastName"
                     defaultValue={selectedPatient?.lastName}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-5">
+              <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Phone
-                  </label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Phone Number</label>
                   <input
                     required
                     name="phone"
                     defaultValue={selectedPatient?.phone}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Email
-                  </label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Email Address</label>
                   <input
                     type="email"
                     name="email"
                     defaultValue={selectedPatient?.email || ""}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  Address
-                </label>
-                <input
-                  name="address"
-                  defaultValue={selectedPatient?.address || ""}
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-5 border-t border-slate-100 pt-5">
+              <div className="grid grid-cols-3 gap-6 pt-4 border-t border-slate-50">
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Date of Birth
-                  </label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Birth Date</label>
                   <input
                     required
                     type="date"
@@ -496,17 +507,15 @@ export default function DashboardClient({
                             .split("T")[0]
                         : ""
                     }
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-slate-600"
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-600"
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Gender
-                  </label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Gender</label>
                   <select
                     name="gender"
                     defaultValue={selectedPatient?.gender || ""}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none bg-white font-medium"
                   >
                     <option value="">Select...</option>
                     <option value="Male">Male</option>
@@ -515,13 +524,11 @@ export default function DashboardClient({
                   </select>
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Blood Group
-                  </label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Blood Group</label>
                   <select
                     name="bloodGroup"
                     defaultValue={selectedPatient?.bloodGroup || ""}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none bg-white font-medium"
                   >
                     <option value="">Select...</option>
                     {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(bg => (
@@ -531,118 +538,19 @@ export default function DashboardClient({
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  Allergies (comma separated)
-                </label>
-                <input
-                  name="allergies"
-                  defaultValue={selectedPatient?.allergies || ""}
-                  placeholder="e.g. Peanuts, Penicillin"
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-5 border-t border-slate-100 pt-5">
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Insurance Provider
-                  </label>
-                  <input
-                    name="insurance"
-                    defaultValue={selectedPatient?.medicalRecord?.insurance || ""}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Insurance No
-                  </label>
-                  <input
-                    name="insuranceNo"
-                    defaultValue={selectedPatient?.medicalRecord?.insuranceNo || ""}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Emergency Contact Name
-                  </label>
-                  <input
-                    name="emergencyContactName"
-                    defaultValue={selectedPatient?.medicalRecord?.emergencyContactName || ""}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Emergency Contact No
-                  </label>
-                  <input
-                    name="emergencyContactNo"
-                    defaultValue={selectedPatient?.medicalRecord?.emergencyContactNo || ""}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-5">
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Status
-                  </label>
-                  <select
-                    name="status"
-                    defaultValue={selectedPatient?.status || "ACTIVE"}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                  >
-                    <option value="ACTIVE">Active</option>
-                    <option value="INACTIVE">Inactive</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Category (Role)
-                  </label>
-                  <select
-                    name="role"
-                    defaultValue={selectedPatient?.role || "Regular"}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none bg-white"
-                  >
-                    <option value="Regular">Regular</option>
-                    <option value="VIP">VIP</option>
-                    <option value="New">New</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Total Visits
-                  </label>
-                  <input
-                    type="number"
-                    name="visitCount"
-                    defaultValue={selectedPatient?.visitCount || 0}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-2 flex justify-end gap-3 mt-6">
+              <div className="pt-4 flex justify-end gap-3 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsFormOpen(false)}
-                  className="px-6 py-3 text-slate-700 font-bold hover:bg-slate-100 rounded-xl transition"
+                  className="px-8 py-3.5 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-xl shadow-md transition"
+                  className="px-8 py-3.5 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100 transition"
                 >
-                  Save Patient
+                  Confirm & Save
                 </button>
               </div>
             </form>
@@ -653,27 +561,17 @@ export default function DashboardClient({
       {/* DELETE MODAL */}
       {isDeleteOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-8 text-center">
-            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-5 border-4 border-red-100">
-              <Trash2 className="w-8 h-8" />
+          <div className="bg-white rounded-[2rem] w-full max-w-sm shadow-2xl p-10 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-20 h-20 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
+              <Trash2 className="w-10 h-10" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900">
-              Delete Patient
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+              Delete Record
             </h2>
-            <p className="text-slate-500 mt-2 text-sm leading-relaxed">
-              Are you sure you want to delete{" "}
-              <strong>
-                {selectedPatient?.firstName} {selectedPatient?.lastName}
-              </strong>
-              ? All their history will be permanently erased.
+            <p className="text-slate-500 mt-3 text-sm leading-relaxed">
+              Are you sure you want to delete <strong>{selectedPatient?.firstName}</strong>? This action cannot be undone.
             </p>
-            <div className="flex gap-3 mt-8">
-              <button
-                onClick={() => setIsDeleteOpen(false)}
-                className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl hover:bg-slate-200 transition font-bold"
-              >
-                Cancel
-              </button>
+            <div className="flex flex-col gap-2 mt-8">
               <button
                 onClick={async () => {
                   if (selectedPatient) {
@@ -681,21 +579,31 @@ export default function DashboardClient({
                   }
                   setIsDeleteOpen(false);
                 }}
-                className="flex-1 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 shadow-md transition font-bold"
+                className="w-full py-4 bg-red-600 text-white rounded-xl hover:bg-red-700 shadow-lg shadow-red-100 transition font-bold"
               >
-                Delete
+                Yes, Delete Patient
+              </button>
+              <button
+                onClick={() => setIsDeleteOpen(false)}
+                className="w-full py-4 text-slate-400 hover:text-slate-800 transition font-bold"
+              >
+                Keep Record
               </button>
             </div>
           </div>
         </div>
       )}
+
       {/* APPOINTMENT ADD MODAL */}
       {isApptFormOpen && apptPatient && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
-            <h2 className="text-xl font-bold mb-4">
-              Add Procedure for {apptPatient.firstName}
-            </h2>
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-8 border-b border-slate-50 bg-slate-50/30">
+               <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+                 <Calendar className="w-5 h-5 text-indigo-500" /> New Session
+               </h2>
+               <p className="text-xs text-slate-400 font-bold mt-1 uppercase">Scheduling for: {apptPatient.firstName} {apptPatient.lastName}</p>
+            </div>
 
             <form
               action={async (formData) => {
@@ -703,50 +611,48 @@ export default function DashboardClient({
                 await createAppointmentAction(formData);
                 setIsApptFormOpen(false);
               }}
-              className="p-6 space-y-5"
+              className="p-8 space-y-6"
             >
               <div>
-                <label className="text-xs font-bold text-slate-500">Date</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Preferred Date</label>
                 <input
                   required
                   type="date"
                   name="appointmentDate"
-                  className="w-full p-3 border rounded-xl"
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-medium"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  Procedures
-                </label>
-                <div className="grid grid-cols-2 gap-2 mt-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Select Procedures</label>
+                <div className="grid grid-cols-2 gap-3 mt-2">
                   {["Cleaning", "Filling", "Root Canal", "Checkup"].map(
                     (proc) => (
                       <label
                         key={proc}
-                        className="flex items-center gap-2 p-2 border rounded-lg cursor-pointer"
+                        className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200"
                       >
-                        <input type="checkbox" name="treatments" value={proc} />
-                        <span className="text-sm">{proc}</span>
+                        <input type="checkbox" name="treatments" value={proc} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
+                        <span className="text-xs font-bold text-slate-600">{proc}</span>
                       </label>
                     ),
                   )}
                 </div>
               </div>
 
-              <div className="flex gap-3 mt-6">
+              <div className="flex gap-3 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsApptFormOpen(false)}
-                  className="flex-1 py-3 bg-slate-100 rounded-xl font-bold"
+                  className="flex-1 py-4 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-bold"
+                  className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition"
                 >
-                  Save Session
+                  Create Session
                 </button>
               </div>
             </form>

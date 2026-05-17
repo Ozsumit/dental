@@ -85,6 +85,7 @@ export interface Diagnosis {
   icd10Code?: string | null;
   treatmentPlan?: string | null;
   homeExercise?: string | null;
+  medicines?: string | null;
   nextVisitDate?: Date | null;
   createdAt: Date;
   updatedAt: Date;

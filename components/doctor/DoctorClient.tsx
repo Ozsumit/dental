@@ -13,7 +13,10 @@ import {
   ChevronLeft,
   User,
   Clock,
-  Phone
+  Phone,
+  History,
+  CheckCircle2,
+  AlertCircle
 } from "lucide-react";
 
 const MEDICAL_CONDITIONS = [
@@ -46,14 +49,27 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
 
   const filteredPatients = useMemo(() => {
     const tokens = searchTerm.toLowerCase().trim().split(/\s+/);
-    if (tokens.length === 0 || (tokens.length === 1 && tokens[0] === "")) return patients;
-
-    return patients.filter(p => {
+    const results = tokens.length === 0 || (tokens.length === 1 && tokens[0] === "") ? patients : patients.filter(p => {
       const fullName = `${p.firstName} ${p.lastName}`.toLowerCase();
       return tokens.every(token =>
         fullName.includes(token) || p.phone.includes(token)
       );
     });
+
+    const pending = results.filter(p =>
+      !p.appointments?.some(a =>
+        a.status === "COMPLETED" &&
+        new Date(a.appointmentDate).toDateString() === new Date().toDateString()
+      )
+    );
+    const completedToday = results.filter(p =>
+      p.appointments?.some(a =>
+        a.status === "COMPLETED" &&
+        new Date(a.appointmentDate).toDateString() === new Date().toDateString()
+      )
+    );
+
+    return { pending, completedToday };
   }, [patients, searchTerm]);
 
   const calculateAge = (dob: Date) => {
@@ -103,7 +119,7 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
       {/* Integrated Patient List (Left Column) */}
       <div className={`flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ${isSidebarCollapsed && selectedPatient ? 'w-0 overflow-hidden' : 'w-80 lg:w-96'}`}>
          <div className="p-6 border-b border-slate-100 shrink-0">
-            <h2 className="text-lg font-bold text-slate-800 mb-4">Pending Visits</h2>
+            <h2 className="text-lg font-bold text-slate-800 mb-4">Clinical Queue</h2>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
@@ -116,32 +132,71 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
             </div>
          </div>
 
-         <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {filteredPatients.map(p => (
-              <button
-                key={p.id + (p.currentAppointmentId || '')}
-                onClick={() => handlePatientSelect(p)}
-                className={`w-full p-4 rounded-2xl text-left transition-all border ${selectedPatient?.id === p.id ? "bg-emerald-50 border-emerald-200 shadow-sm" : "bg-white border-slate-100 hover:border-slate-200 hover:shadow-sm"}`}
-              >
-                <div className="flex justify-between items-start mb-2">
-                   <div className="flex items-center gap-2">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${selectedPatient?.id === p.id ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                         {p.firstName[0]}{p.lastName[0]}
+         <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* Pending Section */}
+            <div>
+               <div className="flex items-center gap-2 mb-3 px-2">
+                  <AlertCircle className="w-4 h-4 text-amber-500" />
+                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Waiting for Review ({filteredPatients.pending.length})</h3>
+               </div>
+               <div className="space-y-2">
+                  {filteredPatients.pending.map(p => (
+                    <button
+                      key={p.id + (p.currentAppointmentId || '')}
+                      onClick={() => handlePatientSelect(p)}
+                      className={`w-full p-4 rounded-2xl text-left transition-all border ${selectedPatient?.id === p.id ? "bg-emerald-50 border-emerald-200 shadow-sm" : "bg-white border-slate-100 hover:border-slate-200 hover:shadow-sm"}`}
+                    >
+                      <div className="flex justify-between items-start mb-2">
+                         <div className="flex items-center gap-2">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${selectedPatient?.id === p.id ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
+                               {p.firstName[0]}{p.lastName[0]}
+                            </div>
+                            <div>
+                               <p className={`font-bold text-sm ${selectedPatient?.id === p.id ? "text-emerald-900" : "text-slate-900"}`}>{p.firstName} {p.lastName}</p>
+                               <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{p.role || 'Regular'}</p>
+                            </div>
+                         </div>
+                         {p.role === 'VIP' && <div className="bg-amber-400 w-2 h-2 rounded-full" />}
                       </div>
-                      <div>
-                         <p className={`font-bold text-sm ${selectedPatient?.id === p.id ? "text-emerald-900" : "text-slate-900"}`}>{p.firstName} {p.lastName}</p>
-                         <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{p.role || 'Regular'}</p>
+                      <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
+                         <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {p.phone}</span>
+                         <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {p.appointments?.[0] ? new Date(p.appointments[0].appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:30 AM'}</span>
                       </div>
-                   </div>
-                   {p.role === 'VIP' && <div className="bg-amber-400 w-2 h-2 rounded-full" />}
-                </div>
-                <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
-                   <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {p.phone}</span>
-                   <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {p.appointments?.[0] ? new Date(p.appointments[0].appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:30 AM'}</span>
-                </div>
-              </button>
-            ))}
-            {filteredPatients.length === 0 && (
+                    </button>
+                  ))}
+               </div>
+            </div>
+
+            {/* Today's History Section */}
+            {filteredPatients.completedToday.length > 0 && (
+               <div>
+                  <div className="flex items-center gap-2 mb-3 px-2">
+                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Finalized Today ({filteredPatients.completedToday.length})</h3>
+                  </div>
+                  <div className="space-y-2 opacity-75">
+                     {filteredPatients.completedToday.map(p => (
+                       <button
+                         key={p.id}
+                         onClick={() => handlePatientSelect(p)}
+                         className={`w-full p-4 rounded-2xl text-left transition-all border ${selectedPatient?.id === p.id ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-100 hover:bg-white hover:border-slate-200"}`}
+                       >
+                         <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs">
+                               {p.firstName[0]}{p.lastName[0]}
+                            </div>
+                            <div>
+                               <p className="font-bold text-sm text-slate-700">{p.firstName} {p.lastName}</p>
+                               <p className="text-[10px] text-emerald-600 font-bold uppercase">Assessment Complete</p>
+                            </div>
+                         </div>
+                       </button>
+                     ))}
+                  </div>
+               </div>
+            )}
+
+            {filteredPatients.pending.length === 0 && filteredPatients.completedToday.length === 0 && (
               <div className="py-20 text-center opacity-40">
                  <User className="w-12 h-12 mx-auto mb-2" />
                  <p className="text-sm font-medium">No assigned patients</p>
@@ -180,7 +235,7 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
                      <p className="text-sm font-bold text-slate-700">Clinical Assessment</p>
                   </div>
                   <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
-                     <Plus className="w-4 h-4" /> New Record
+                     <History className="w-4 h-4" /> Full History
                   </button>
                </div>
             </div>
@@ -211,6 +266,9 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
                       formData.append("nextVisitDate", nextVisitDate);
                       await updateDiagnosis(selectedPatient.id, formData);
                       alert("Assessment saved successfully!");
+                      if (formData.get("finalize") === "true") {
+                          setSelectedPatient(null);
+                      }
                   }}>
                      {/* Subjective Tab Content */}
                      <div className={`${activeTab !== "Subjective" ? "hidden" : "block"} space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500`}>
@@ -340,13 +398,23 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
 
                            <div className="space-y-6">
                               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Medicines & Suggestions</label>
+                                 <textarea
+                                   name="medicines"
+                                   defaultValue={selectedPatient.diagnosis?.medicines || ""}
+                                   rows={4}
+                                   className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
+                                   placeholder="Prescribed medicines, lifestyle changes..."
+                                 />
+                              </div>
+                              <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Treatment Administered</label>
                                  <textarea
                                    name="currentComplaint"
                                    defaultValue={selectedPatient.diagnosis?.currentComplaint || ""}
-                                   rows={4}
+                                   rows={2}
                                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
-                                   placeholder="Manual therapy, modalities, exercise performed today..."
+                                   placeholder="Manual therapy, modalities performed..."
                                  />
                               </div>
                               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -354,7 +422,7 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
                                  <textarea
                                    name="homeExercise"
                                    defaultValue={selectedPatient.diagnosis?.homeExercise || ""}
-                                   rows={4}
+                                   rows={2}
                                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
                                    placeholder="Patient instructions for home..."
                                  />
@@ -396,14 +464,21 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
                               </div>
                               <div>
                                  <p className="text-white font-bold text-sm">Review & Finalize</p>
-                                 <p className="text-slate-400 text-[10px] uppercase tracking-widest">Signed by Dr. {selectedPatient.assignedDoctorId?.slice(0,4)}</p>
+                                 <p className="text-slate-400 text-[10px] uppercase tracking-widest">Signed by Dr. {selectedPatient.medicalRecord?.assignedDoctor?.username || "Doctor"}</p>
                               </div>
                            </div>
                            <div className="flex gap-3">
-                              <button type="submit" className="px-6 py-3 bg-white/5 text-white font-black uppercase tracking-widest rounded-xl text-[10px] hover:bg-white/10 transition-all border border-white/10">
+                              <input type="hidden" name="finalize" value="true" />
+                              <button type="submit" onClick={(e) => {
+                                 const hiddenInput = e.currentTarget.form?.querySelector('input[name="finalize"]') as HTMLInputElement;
+                                 if (hiddenInput) hiddenInput.value = "false";
+                              }} className="px-6 py-3 bg-white/5 text-white font-black uppercase tracking-widest rounded-xl text-[10px] hover:bg-white/10 transition-all border border-white/10">
                                 Save Draft
                               </button>
-                              <button type="submit" className="px-8 py-3 bg-emerald-500 text-white font-black uppercase tracking-widest rounded-xl text-[10px] hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20">
+                              <button type="submit" onClick={(e) => {
+                                 const hiddenInput = e.currentTarget.form?.querySelector('input[name="finalize"]') as HTMLInputElement;
+                                 if (hiddenInput) hiddenInput.value = "true";
+                              }} className="px-8 py-3 bg-emerald-500 text-white font-black uppercase tracking-widest rounded-xl text-[10px] hover:bg-emerald-400 transition-all shadow-lg shadow-emerald-500/20">
                                 Finalize Record
                               </button>
                            </div>
@@ -420,7 +495,7 @@ export default function DoctorClient({ patients }: { patients: (Patient & { curr
              </div>
              <h2 className="text-2xl font-black text-slate-800 uppercase tracking-tight">Clinical Workspace</h2>
              <p className="text-slate-400 text-sm mt-3 max-w-xs font-medium">Please select a patient from the pending list to begin their clinical assessment.</p>
-             {searchTerm && filteredPatients.length === 0 && (
+             {searchTerm && (filteredPatients.pending.length === 0 && filteredPatients.completedToday.length === 0) && (
                 <div className="mt-8 flex items-center gap-2 text-xs font-bold text-amber-600 bg-amber-50 px-4 py-2 rounded-lg border border-amber-100">
                    No results for &quot;{searchTerm}&quot;
                 </div>
