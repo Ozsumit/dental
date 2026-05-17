@@ -171,6 +171,28 @@ export default function DashboardClient({
             </select>
 
             <select
+              onChange={(e) => updateQuery("category", e.target.value)}
+              defaultValue={params.get("category") || ""}
+              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+            >
+              <option value="">All Categories</option>
+              <option value="Regular">Regular</option>
+              <option value="VIP">VIP</option>
+              <option value="New">New</option>
+            </select>
+
+            <select
+              onChange={(e) => updateQuery("bloodGroup", e.target.value)}
+              defaultValue={params.get("bloodGroup") || ""}
+              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
+            >
+              <option value="">All Blood Groups</option>
+              {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(bg => (
+                <option key={bg} value={bg}>{bg}</option>
+              ))}
+            </select>
+
+            <select
               onChange={(e) => updateQuery("gender", e.target.value)}
               defaultValue={params.get("gender") || ""}
               className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"

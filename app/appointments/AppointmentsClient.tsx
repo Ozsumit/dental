@@ -205,16 +205,27 @@ export default function AppointmentsClient({
                     key={appt.id}
                     className="hover:bg-slate-50 transition group"
                   >
-                    <td className="px-6 py-4 font-bold text-slate-800 flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-indigo-500" />
-                      {dateStr}
+                    <td className="px-6 py-4 font-bold text-slate-800">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-indigo-500" />
+                        {dateStr}
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-medium ml-6 uppercase">
+                        Scheduled at {new Date(appt.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
                     </td>
-                    <td className="px-6 py-4 font-medium text-slate-900 flex items-center gap-2">
-                      <User className="w-4 h-4 text-slate-400" />{" "}
-                      {appt.patient?.firstName} {appt.patient?.lastName}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 font-bold text-slate-900">
+                        <User className="w-4 h-4 text-slate-400" />{" "}
+                        {appt.patient?.firstName} {appt.patient?.lastName}
+                      </div>
+                      <div className="text-xs text-slate-500 ml-6">
+                        {appt.patient?.phone} • <span className="text-indigo-600 font-bold">{appt.patient?.role}</span>
+                      </div>
                     </td>
-                    <td className="px-6 py-4 font-medium">
-                      {appt.treatments}
+                    <td className="px-6 py-4">
+                      <div className="font-medium text-slate-800">{appt.treatments}</div>
+                      <div className="text-[10px] text-slate-400 italic">Previous visits: {appt.patient?.visitCount}</div>
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -224,21 +235,23 @@ export default function AppointmentsClient({
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => openEdit(appt)}
-                        className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedAppt(appt);
-                          setIsDeleteOpen(true);
-                        }}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex justify-end gap-1">
+                        <button
+                          onClick={() => openEdit(appt)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedAppt(appt);
+                            setIsDeleteOpen(true);
+                          }}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
