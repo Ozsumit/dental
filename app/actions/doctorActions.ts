@@ -72,6 +72,7 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
 
 export async function addBatchProcedures(patientId: string, procedures: {
   name: string;
+  type: string;
   cost: string;
   description: string;
   medicine: string[];
@@ -83,6 +84,7 @@ export async function addBatchProcedures(patientId: string, procedures: {
       data: {
         patientId,
         name: proc.name,
+        type: proc.type,
         cost: parseFloat(proc.cost || "0"),
         procedureDate: new Date(proc.procedureDate || new Date()),
         description: proc.description,
@@ -95,16 +97,42 @@ export async function addBatchProcedures(patientId: string, procedures: {
   // Update patient last visit stats based on the latest procedure date
   if (procedures.length > 0) {
     const latestDate = new Date(Math.max(...procedures.map(p => new Date(p.procedureDate || new Date()).getTime())));
+
+    // Check if patient becomes "old"
+    const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+    const newVisitCount = (patient?.visitCount || 0) + 1;
+
     await prisma.patient.update({
       where: { id: patientId },
       data: {
         lastVisitDate: latestDate,
-        visitCount: { increment: procedures.length }
+        visitCount: newVisitCount,
+        isOld: newVisitCount > 1
+      }
+    });
+
+    // Mark today's appointment as COMPLETED
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+
+    await prisma.appointment.updateMany({
+      where: {
+        patientId,
+        appointmentDate: {
+          gte: today,
+          lt: tomorrow
+        }
+      },
+      data: {
+        status: "COMPLETED"
       }
     });
   }
 
   revalidatePath("/doctor");
+  revalidatePath("/appointments");
   revalidatePath("/");
 }
 

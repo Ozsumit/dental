@@ -41,3 +41,11 @@ export async function deleteUser(id: string) {
   await prisma.user.delete({ where: { id } });
   revalidatePath("/admin");
 }
+
+export async function getDoctors() {
+  return await prisma.user.findMany({
+    where: { role: "DOCTOR" },
+    select: { id: true, username: true },
+    orderBy: { username: "asc" },
+  });
+}

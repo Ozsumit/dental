@@ -13,11 +13,15 @@ export async function saveProcedure(patientId: string, formData: FormData) {
     },
   });
 
+  const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+  const newVisitCount = (patient?.visitCount || 0) + 1;
+
   await prisma.patient.update({
     where: { id: patientId },
     data: {
       lastVisitDate: new Date(formData.get("procedureDate") as string),
-      visitCount: { increment: 1 }
+      visitCount: newVisitCount,
+      isOld: newVisitCount > 1
     }
   });
 

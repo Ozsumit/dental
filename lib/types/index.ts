@@ -19,6 +19,8 @@ export interface Patient {
   address?: string | null;
   role?: string | null;
   bloodGroup?: string | null;
+  allergies?: string | null;
+  isOld: boolean;
   medicalNotes?: string | null;
   lastVisitDate?: Date | null;
   visitCount: number;
@@ -33,6 +35,7 @@ export interface Patient {
 export interface Appointment {
   id: string;
   patientId: string;
+  doctorId?: string | null;
   appointmentDate: Date;
   status: string;
   treatments: string;
@@ -44,6 +47,7 @@ export interface Procedure {
   id: string;
   patientId: string;
   name: string;
+  type?: string | null;
   description?: string | null;
   cost: number;
   procedureDate: Date;
@@ -58,6 +62,7 @@ export interface MedicalRecord {
   id: string;
   patientId: string;
   assignedDoctorId?: string | null;
+  assignedDoctor?: { id: string; username: string } | null;
   complaints?: string | null;
   insurance?: string | null;
   insuranceNo?: string | null;

@@ -107,8 +107,9 @@ export async function getPatients(searchParams: { [key: string]: string | string
 // CRUD OPERATIONS
 export async function savePatient(formData: FormData, id?: string) {
   const visitCountStr = formData.get("visitCount") as string;
+  const visitCount = visitCountStr ? Number(visitCountStr) : 0;
 
-  const data = {
+  const patientData = {
     firstName: formData.get("firstName") as string,
     lastName: formData.get("lastName") as string,
     phone: formData.get("phone") as string,
@@ -117,15 +118,42 @@ export async function savePatient(formData: FormData, id?: string) {
     status: formData.get("status") as string,
     address: formData.get("address") as string,
     bloodGroup: formData.get("bloodGroup") as string,
+    allergies: formData.get("allergies") as string,
     role: formData.get("role") as string,
     dateOfBirth: new Date(formData.get("dateOfBirth") as string),
-    visitCount: visitCountStr ? Number(visitCountStr) : 0,
+    visitCount: visitCount,
+    isOld: visitCount > 1
+  };
+
+  const medicalRecordData = {
+    insurance: formData.get("insurance") as string,
+    insuranceNo: formData.get("insuranceNo") as string,
+    emergencyContactName: formData.get("emergencyContactName") as string,
+    emergencyContactNo: formData.get("emergencyContactNo") as string,
   };
 
   if (id) {
-    await prisma.patient.update({ where: { id }, data });
+    await prisma.patient.update({
+      where: { id },
+      data: {
+        ...patientData,
+        medicalRecord: {
+          upsert: {
+            create: medicalRecordData,
+            update: medicalRecordData
+          }
+        }
+      }
+    });
   } else {
-    await prisma.patient.create({ data });
+    await prisma.patient.create({
+      data: {
+        ...patientData,
+        medicalRecord: {
+          create: medicalRecordData
+        }
+      }
+    });
   }
   revalidatePath("/");
 }
@@ -133,6 +161,15 @@ export async function savePatient(formData: FormData, id?: string) {
 export async function deletePatient(id: string) {
   await prisma.patient.delete({ where: { id } });
   revalidatePath("/");
+}
+
+export async function transferPatientDoctor(patientId: string, doctorId: string) {
+  await prisma.medicalRecord.update({
+    where: { patientId },
+    data: { assignedDoctorId: doctorId }
+  });
+  revalidatePath("/");
+  revalidatePath("/doctor");
 }
 
 // EXPORT FUNCTIONALITY
