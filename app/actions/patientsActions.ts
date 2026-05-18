@@ -168,14 +168,20 @@ export async function savePatient(formData: FormData, id?: string) {
     });
 
     // Auto-create a default appointment for new registrations to put them in the queue
-    await prisma.appointment.create({
-      data: {
-        patientId: patient.id,
-        appointmentDate: new Date(),
-        status: "SCHEDULED",
-        treatments: "Consultation"
-      }
-    });
+    // ONLY if not being called from a custom flow that creates its own appointment
+    const skipAutoAppt = formData.get("skipAutoAppt") === "true";
+    if (!skipAutoAppt) {
+        await prisma.appointment.create({
+          data: {
+            patientId: patient.id,
+            appointmentDate: new Date(),
+            status: "SCHEDULED",
+            treatments: "Consultation"
+          }
+        });
+    }
+    revalidatePath("/");
+    return patient;
   }
   revalidatePath("/");
 }

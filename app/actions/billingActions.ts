@@ -54,14 +54,16 @@ export async function finalizeBilling(procedureId: string, billedCost: number) {
 }
 
 export async function markPatientProceduresPaid(patientId: string) {
-  await prisma.procedure.updateMany({
+  const procedures = await prisma.procedure.findMany({
     where: {
       patientId,
       status: { in: ["PENDING", "BILLED"] },
     },
     data: { status: "PAID" },
   });
+
   revalidatePath("/");
+  revalidatePath("/appointments");
 }
 
 export async function saveCatalogItem(formData: FormData, id?: string) {
@@ -90,5 +92,7 @@ export async function markAsPaid(procedureId: string) {
     where: { id: procedureId },
     data: { status: "PAID" },
   });
+
   revalidatePath("/");
+  revalidatePath("/appointments");
 }

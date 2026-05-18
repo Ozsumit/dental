@@ -92,6 +92,11 @@ export async function searchPatientsForDropdown(query: string) {
 export async function saveAppointment(formData: FormData, id?: string) {
   const patientId = formData.get("patientId") as string;
   const doctorId = formData.get("doctorId") as string;
+
+  if (!doctorId) {
+    throw new Error("Doctor assignment is compulsory.");
+  }
+
   const appointmentDate = new Date(formData.get("appointmentDate") as string);
 
   // GRAB ALL CHECKED BOXES AS AN ARRAY
@@ -100,11 +105,17 @@ export async function saveAppointment(formData: FormData, id?: string) {
   const billAmount = parseFloat(formData.get("billAmount") as string || "0");
   const isPaid = formData.get("isPaid") === "true";
 
+  // If billAmount > 0 and not paid, status should be PENDING_PAYMENT
+  let status = formData.get("status") as string;
+  if (billAmount > 0 && !isPaid && status !== "CANCELLED" && status !== "COMPLETED") {
+    status = "PENDING_PAYMENT";
+  }
+
   const data = {
     patientId,
-    doctorId: doctorId || null,
+    doctorId,
     appointmentDate,
-    status: formData.get("status") as string,
+    status,
     treatments, // Save the string to the database
     billAmount,
     isPaid
@@ -129,29 +140,88 @@ export async function saveAppointment(formData: FormData, id?: string) {
     });
 
     if (existingAppointment) {
-       // Optional: Log or return error. For now, we update the existing one or just skip
-       await prisma.appointment.update({
+       const updatedAppt = await prisma.appointment.update({
          where: { id: existingAppointment.id },
          data: {
            ...data,
-           status: data.status === "COMPLETED" ? "COMPLETED" : existingAppointment.status
+           status: data.status === "COMPLETED" ? "COMPLETED" : (data.billAmount > 0 && !data.isPaid ? "PENDING_PAYMENT" : data.status)
          }
        });
+
+       // Create or Update Billing Procedure
+       if (data.billAmount > 0) {
+         await prisma.procedure.upsert({
+           where: { id: `appt-bill-${updatedAppt.id}` }, // Fixed ID for appointment-linked bill
+           create: {
+             id: `appt-bill-${updatedAppt.id}`,
+             patientId,
+             appointmentId: updatedAppt.id,
+             name: `Appointment Fee: ${treatments}`,
+             type: "Appointment",
+             cost: billAmount,
+             procedureDate: appointmentDate,
+             status: isPaid ? "PAID" : "PENDING"
+           },
+           update: {
+             cost: billAmount,
+             status: isPaid ? "PAID" : "PENDING"
+           }
+         });
+       }
+
+       revalidatePath("/appointments");
        return;
     }
 
-    await prisma.$transaction([
-      prisma.appointment.create({ data }),
-      prisma.patient.update({
+    const [newAppt] = await prisma.$transaction(async (tx) => {
+      const appt = await tx.appointment.create({ data });
+      await tx.patient.update({
         where: { id: patientId },
         data: {
           visitCount: { increment: 1 },
           lastVisitDate: appointmentDate,
         },
-      }),
-    ]);
+      });
+      return [appt];
+    });
+
+    if (billAmount > 0) {
+      await prisma.procedure.create({
+        data: {
+          id: `appt-bill-${newAppt.id}`,
+          patientId,
+          appointmentId: newAppt.id,
+          name: `Appointment Fee: ${treatments}`,
+          type: "Appointment",
+          cost: billAmount,
+          procedureDate: appointmentDate,
+          status: isPaid ? "PAID" : "PENDING"
+        }
+      });
+    }
   } else {
-    await prisma.appointment.update({ where: { id }, data });
+    const updatedAppt = await prisma.appointment.update({ where: { id }, data });
+
+    if (billAmount > 0) {
+      await prisma.procedure.upsert({
+        where: { id: `appt-bill-${updatedAppt.id}` },
+        create: {
+          id: `appt-bill-${updatedAppt.id}`,
+          patientId,
+          appointmentId: updatedAppt.id,
+          name: `Appointment Fee: ${treatments}`,
+          type: "Appointment",
+          cost: billAmount,
+          procedureDate: appointmentDate,
+          status: isPaid ? "PAID" : "PENDING"
+        },
+        update: {
+          cost: billAmount,
+          status: isPaid ? "PAID" : "PENDING",
+          name: `Appointment Fee: ${treatments}`
+        }
+      });
+    }
   }
 
   revalidatePath("/appointments");

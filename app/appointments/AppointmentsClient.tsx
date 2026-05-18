@@ -58,6 +58,8 @@ export default function AppointmentsClient({
     }[]
   >([]);
   const [selectedPatientId, setSelectedPatientId] = useState("");
+  const [isCreatingPatient, setIsCreatingPatient] = useState(false);
+  const [newPatientData, setNewPatientData] = useState({ firstName: "", lastName: "", phone: "" });
 
   const updateQuery = useCallback(
     (name: string, value: string) => {
@@ -79,6 +81,14 @@ export default function AppointmentsClient({
     if (term.length > 1) {
       const results = await searchPatientsForDropdown(term);
       setPatientResults(results);
+      if (results.length === 0) {
+        const parts = term.trim().split(/\s+/);
+        setNewPatientData({
+          firstName: parts[0] || "",
+          lastName: parts.slice(1).join(" ") || "",
+          phone: ""
+        });
+      }
     } else {
       setPatientResults([]);
     }
@@ -89,6 +99,7 @@ export default function AppointmentsClient({
     setSelectedPatientId("");
     setPatientSearchQuery("");
     setPatientResults([]);
+    setIsCreatingPatient(false);
     setIsFormOpen(true);
   };
 
@@ -251,6 +262,8 @@ export default function AppointmentsClient({
                   statusColor = "bg-green-50 text-green-700 border-green-200";
                 if (appt.status === "SCHEDULED")
                   statusColor = "bg-blue-50 text-blue-700 border-blue-200";
+                if (appt.status === "PENDING_PAYMENT")
+                  statusColor = "bg-amber-50 text-amber-700 border-amber-200";
                 if (appt.status === "CANCELLED")
                   statusColor = "bg-red-50 text-red-700 border-red-200";
 
@@ -368,30 +381,57 @@ export default function AppointmentsClient({
 
             <form
               action={async (formData) => {
-                if (!selectedPatientId)
+                if (!selectedPatientId && !isCreatingPatient)
                   return alert("Please select a patient first.");
-                formData.append("patientId", selectedPatientId);
-                await saveAppointment(formData, selectedAppt?.id);
-                setIsFormOpen(false);
+
+                if (isCreatingPatient) {
+                    const { savePatient } = await import("@/app/actions/patientsActions");
+                    const pForm = new FormData();
+                    pForm.append("firstName", newPatientData.firstName);
+                    pForm.append("lastName", newPatientData.lastName);
+                    pForm.append("phone", newPatientData.phone);
+                    pForm.append("skipAutoAppt", "true");
+
+                    try {
+                        const newPatient = await savePatient(pForm);
+                        if (newPatient && newPatient.id) {
+                            formData.append("patientId", newPatient.id);
+                        } else {
+                            return alert("Error creating patient.");
+                        }
+                    } catch (err: any) {
+                        return alert(err.message);
+                    }
+                } else {
+                    formData.append("patientId", selectedPatientId);
+                }
+
+                try {
+                  await saveAppointment(formData, selectedAppt?.id);
+                  setIsFormOpen(false);
+                } catch (e: any) {
+                  alert(e.message);
+                }
               }}
               className="p-6 space-y-5"
             >
               {/* Async Patient Search Input */}
-              <div className="relative">
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  Search Patient
-                </label>
-                <input
-                  type="text"
-                  disabled={!!selectedAppt} // Disable if editing
-                  value={patientSearchQuery}
-                  onChange={(e) => {
-                    setPatientSearchQuery(e.target.value);
-                    handlePatientSearch(e.target.value);
-                  }}
-                  placeholder="Type a name to search..."
-                  className={`mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none ${selectedPatientId ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" : ""}`}
-                />
+              {!isCreatingPatient ? (
+                <div className="relative">
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Search Patient
+                  </label>
+                  <input
+                    type="text"
+                    disabled={!!selectedAppt} // Disable if editing
+                    value={patientSearchQuery}
+                    onChange={(e) => {
+                      setPatientSearchQuery(e.target.value);
+                      handlePatientSearch(e.target.value);
+                    }}
+                    placeholder="Type a name to search..."
+                    className={`mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none ${selectedPatientId ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" : ""}`}
+                  />
 
                 {/* Dropdown Results */}
                 {patientResults.length > 0 && !selectedPatientId && (
@@ -414,26 +454,64 @@ export default function AppointmentsClient({
                             {p.role}
                           </span>
                         </div>
-                        <span className="text-xs text-slate-500">
-                          {p.phone}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {selectedPatientId && !selectedAppt && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedPatientId("");
-                      setPatientSearchQuery("");
-                    }}
-                    className="text-xs text-indigo-600 font-bold mt-2"
-                  >
-                    Change Patient
-                  </button>
-                )}
-              </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {patientSearchQuery.length > 1 && patientResults.length === 0 && !selectedPatientId && (
+                    <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                        <p className="text-xs text-slate-500 mb-2 font-medium">No patient found matching &quot;{patientSearchQuery}&quot;</p>
+                        <button
+                          type="button"
+                          onClick={() => setIsCreatingPatient(true)}
+                          className="w-full py-2 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition"
+                        >
+                          + Create New Patient
+                        </button>
+                    </div>
+                  )}
+
+                  {selectedPatientId && !selectedAppt && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedPatientId("");
+                        setPatientSearchQuery("");
+                      }}
+                      className="text-xs text-indigo-600 font-bold mt-2"
+                    >
+                      Change Patient
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-4">
+                    <div className="flex justify-between items-center">
+                        <h3 className="text-xs font-black text-indigo-600 uppercase">New Patient Info</h3>
+                        <button type="button" onClick={() => setIsCreatingPatient(false)} className="text-[10px] font-bold text-slate-400 hover:text-slate-600">Cancel</button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <input
+                            placeholder="First Name"
+                            value={newPatientData.firstName}
+                            onChange={(e) => setNewPatientData({...newPatientData, firstName: e.target.value})}
+                            className="p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
+                        />
+                        <input
+                            placeholder="Last Name"
+                            value={newPatientData.lastName}
+                            onChange={(e) => setNewPatientData({...newPatientData, lastName: e.target.value})}
+                            className="p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
+                        />
+                    </div>
+                    <input
+                        placeholder="Phone Number"
+                        value={newPatientData.phone}
+                        onChange={(e) => setNewPatientData({...newPatientData, phone: e.target.value})}
+                        className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
+                    />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-5">
                 <div>
@@ -508,9 +586,10 @@ export default function AppointmentsClient({
               <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">
-                    Assign Doctor
+                    Assign Doctor <span className="text-red-500">*</span>
                   </label>
                   <select
+                    required
                     name="doctorId"
                     defaultValue={selectedAppt?.doctorId || ""}
                     className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white"

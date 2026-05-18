@@ -60,7 +60,7 @@ export default function DoctorClient({
     (Patient & { currentAppointmentId?: string }) | null
   >(null);
   const [activeTab, setActiveTab] = useState<DoctorTab>("Subjective");
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "workspace">("list");
 
   // Local state for form fields
   const [vasScore, setVasScore] = useState(0);
@@ -150,6 +150,7 @@ export default function DoctorClient({
   ) => {
     setSelectedPatient(p);
     setActiveTab("Subjective");
+    setViewMode("workspace");
 
     // Get latest diagnosis from history if available
     const latestDiagnosis = p.diagnoses?.[0] || p.diagnosis;
@@ -1358,6 +1359,7 @@ export default function DoctorClient({
           </div>
         )}
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
 }

@@ -42,8 +42,6 @@ export default function DashboardClient({
   totalPages,
   currentPage,
 }: DashboardClientProps) {
-  const [isApptFormOpen, setIsApptFormOpen] = useState(false);
-  const [apptPatient, setAppointmentPatient] = useState<Patient | null>(null); // Holds patient for the new appt
   const router = useRouter();
   const params = useSearchParams();
 
