@@ -59,9 +59,11 @@ export async function getAppointments(searchParams: { [key: string]: string | st
 }
 
 export async function searchPatientsForDropdown(query: string) {
-  if (!query) return [];
-  const tokens = query.trim().split(/\s+/);
+  if (!query || query.trim() === "") return [];
 
+  const tokens = query.toLowerCase().trim().split(/\s+/);
+
+  // Use findMany with simple contains (since it's SQLite, it's case-insensitive by default for ASCII)
   return prisma.patient.findMany({
     where: {
       AND: tokens.map(token => ({
@@ -73,8 +75,17 @@ export async function searchPatientsForDropdown(query: string) {
       })),
     },
     take: 20,
-    select: { id: true, firstName: true, lastName: true, phone: true, role: true },
-    orderBy: { firstName: 'asc' }
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      role: true
+    },
+    orderBy: [
+      { firstName: 'asc' },
+      { lastName: 'asc' }
+    ]
   });
 }
 
@@ -86,15 +97,49 @@ export async function saveAppointment(formData: FormData, id?: string) {
   // GRAB ALL CHECKED BOXES AS AN ARRAY
   const treatments = formData.getAll("treatments").join(", ") || (formData.get("treatmentType") as string) || "Checkup";
 
+  const billAmount = parseFloat(formData.get("billAmount") as string || "0");
+  const isPaid = formData.get("isPaid") === "true";
+
   const data = {
     patientId,
     doctorId: doctorId || null,
     appointmentDate,
     status: formData.get("status") as string,
     treatments, // Save the string to the database
+    billAmount,
+    isPaid
   };
 
   if (!id) {
+    // Prevent duplicate appointments for the same patient on the same day
+    const todayStart = new Date(appointmentDate);
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date(appointmentDate);
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const existingAppointment = await prisma.appointment.findFirst({
+      where: {
+        patientId,
+        appointmentDate: {
+          gte: todayStart,
+          lte: todayEnd
+        },
+        status: { not: "CANCELLED" }
+      }
+    });
+
+    if (existingAppointment) {
+       // Optional: Log or return error. For now, we update the existing one or just skip
+       await prisma.appointment.update({
+         where: { id: existingAppointment.id },
+         data: {
+           ...data,
+           status: data.status === "COMPLETED" ? "COMPLETED" : existingAppointment.status
+         }
+       });
+       return;
+    }
+
     await prisma.$transaction([
       prisma.appointment.create({ data }),
       prisma.patient.update({

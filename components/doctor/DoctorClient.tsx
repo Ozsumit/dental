@@ -8,7 +8,6 @@ import {
   Plus,
   ChevronRight,
   Stethoscope,
-  Calendar,
   ClipboardList,
   ChevronLeft,
   User,
@@ -17,11 +16,10 @@ import {
   History,
   CheckCircle2,
   AlertCircle,
-  ShieldCheck,
   Heart,
   FileText,
-  UserPlus
 } from "lucide-react";
+import Image from "next/image";
 
 const MEDICAL_CONDITIONS = [
   { id: "CORD", label: "CORD" },
@@ -38,7 +36,7 @@ const MEDICAL_CONDITIONS = [
   { id: "Other", label: "Other" },
 ];
 
-type DoctorTab = "Subjective" | "Medical Record" | "Diagnosis";
+type DoctorTab = "Subjective" | "Objective" | "Medical Record" | "Diagnosis";
 
 export default function DoctorClient({
   patients,
@@ -60,6 +58,38 @@ export default function DoctorClient({
   const [nextVisitDate, setNextVisitDate] = useState("");
   const [referredDoctorId, setReferredDoctorId] = useState("");
   const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
+
+  // Objective Data State
+  const [objectiveData, setObjectiveData] = useState({
+    mobility: "Independent",
+    transfer: "Independent",
+    pinsNeedles: "None",
+    numbness: "None",
+    adl: {
+      dressing: "Independent",
+      walking: "Independent",
+      toileting: "Independent",
+      bathing: "Independent",
+      stairClimbing: "Independent",
+      cooking: "Independent"
+    } as Record<string, string>,
+    rom: {
+      flexion: "0",
+      extension: "0",
+      lLatFlex: "0",
+      rLatFlex: "0",
+      lRotation: "0",
+      rRotation: "0"
+    } as Record<string, string>,
+    strength: {
+      hipFlexors: 5,
+      kneeExtensors: 5,
+      ankleDF: 5,
+      hipAbductors: 5,
+      kneeFlexors: 5,
+      anklePF: 5
+    } as Record<string, number>
+  });
 
   const filteredPatients = useMemo(() => {
     const tokens = searchTerm.toLowerCase().trim().split(/\s+/);
@@ -121,6 +151,47 @@ export default function DoctorClient({
     // Reset session-specific fields
     setNextVisitDate("");
     setSelectedProcedures([]);
+
+    // Autofill or Reset Objective Data
+    try {
+      const objData = JSON.parse(latestDiagnosis?.objectiveData || "{}");
+      if (Object.keys(objData).length > 0) {
+        setObjectiveData(prev => ({ ...prev, ...objData }));
+      } else {
+        setObjectiveData({
+          pinsNeedles: "None",
+          numbness: "None",
+          mobility: "Independent",
+          transfer: "Independent",
+          adl: {
+            dressing: "Independent",
+            walking: "Independent",
+            toileting: "Independent",
+            bathing: "Independent",
+            stairClimbing: "Independent",
+            cooking: "Independent"
+          },
+          rom: {
+            flexion: "0",
+            extension: "0",
+            lLatFlex: "0",
+            rLatFlex: "0",
+            lRotation: "0",
+            rRotation: "0"
+          },
+          strength: {
+            hipFlexors: 5,
+            kneeExtensors: 5,
+            ankleDF: 5,
+            hipAbductors: 5,
+            kneeFlexors: 5,
+            anklePF: 5
+          }
+        });
+      }
+    } catch {
+       // fallback
+    }
   };
 
   const toggleCondition = (id: string) => {
@@ -263,7 +334,7 @@ export default function DoctorClient({
 
             {/* Sub-Header / Navigation Tabs */}
             <div className="bg-white border-b border-slate-200 px-8 flex gap-10 shrink-0">
-               {(["Subjective", "Medical Record", "Diagnosis"] as DoctorTab[]).map((tab) => (
+               {(["Subjective", "Objective", "Medical Record", "Diagnosis"] as DoctorTab[]).map((tab) => (
                  <button
                    key={tab}
                    onClick={() => setActiveTab(tab)}
@@ -287,6 +358,7 @@ export default function DoctorClient({
                       formData.append("nextVisitDate", nextVisitDate);
                       formData.append("referredDoctorId", referredDoctorId);
                       formData.append("selectedProcedures", JSON.stringify(selectedProcedures));
+                      formData.append("objectiveData", JSON.stringify(objectiveData));
                       await updateDiagnosis(selectedPatient.id, formData);
                       alert("Assessment saved successfully!");
                       if (formData.get("finalize") === "true") {
@@ -368,6 +440,209 @@ export default function DoctorClient({
                                       <span className={`text-[10px] font-black ${vasScore === n ? "text-slate-900 scale-125" : "text-slate-400"}`}>{n}</span>
                                    </div>
                                  ))}
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-4">
+                           <button type="submit" className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all">Save Draft</button>
+                           <button type="button" onClick={() => setActiveTab("Objective")} className="bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
+                             Next: Objective <ChevronRight className="w-4 h-4" />
+                           </button>
+                        </div>
+                     </div>
+
+                     {/* Objective Tab Content */}
+                     <div className={`${activeTab !== "Objective" ? "hidden" : "block"} space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500`}>
+                        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col md:flex-row">
+                           {/* Body Chart Sidebar */}
+                           <div className="w-full md:w-80 border-r border-slate-100 p-6 bg-slate-50/30">
+                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">Body Chart</label>
+                              <div className="aspect-[3/4] bg-slate-200 rounded-2xl mb-6 flex items-center justify-center overflow-hidden relative group">
+                                 <Image
+                                   src="https://images.unsplash.com/photo-1559757175-0eb30cd8c063?q=80&w=2000&auto=format&fit=crop"
+                                   className="w-full h-full object-cover mix-blend-multiply opacity-50"
+                                   alt="Body Chart"
+                                   fill
+                                   sizes="320px"
+                                 />
+                                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <div className="w-2 h-2 bg-red-500 rounded-full shadow-[0_0_10px_rgba(239,68,68,0.8)] animate-ping" style={{ top: '65%', left: '45%', position: 'absolute' }} />
+                                    <div className="w-2 h-2 bg-red-500 rounded-full" style={{ top: '65%', left: '45%', position: 'absolute' }} />
+                                 </div>
+                              </div>
+
+                              <div className="space-y-4">
+                                 <div>
+                                    <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Pins & Needles Location</label>
+                                    <select
+                                      value={objectiveData.pinsNeedles}
+                                      onChange={(e) => setObjectiveData({...objectiveData, pinsNeedles: e.target.value})}
+                                      className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:border-emerald-500 outline-none"
+                                    >
+                                       <option>None</option>
+                                       <option>Left Lumbar, L4-L5</option>
+                                       <option>Right Lumbar, L4-L5</option>
+                                       <option>Cervical C5-C6</option>
+                                    </select>
+                                 </div>
+                                 <div>
+                                    <label className="text-[9px] font-black text-slate-400 uppercase mb-2 block">Numbness Location</label>
+                                    <select
+                                      value={objectiveData.numbness}
+                                      onChange={(e) => setObjectiveData({...objectiveData, numbness: e.target.value})}
+                                      className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:border-emerald-500 outline-none"
+                                    >
+                                       <option>None</option>
+                                       <option>Left leg (lateral)</option>
+                                       <option>Right leg (lateral)</option>
+                                       <option>Arm (medial)</option>
+                                    </select>
+                                 </div>
+                              </div>
+                           </div>
+
+                           {/* Objective Metrics */}
+                           <div className="flex-1 p-8 space-y-10">
+                              {/* Function & ADLs */}
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+                                 <div className="space-y-6">
+                                    <div>
+                                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">Function</label>
+                                       <div className="space-y-4">
+                                          {["Mobility", "Transfer"].map(type => (
+                                             <div key={type} className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-slate-600">{type}</span>
+                                                <div className="flex bg-slate-100 p-1 rounded-lg">
+                                                   {["Independent", "Assisted", "Dependent"].map(val => (
+                                                      <button
+                                                        key={val}
+                                                        type="button"
+                                                        onClick={() => setObjectiveData({
+                                                          ...objectiveData,
+                                                          [type.toLowerCase()]: val
+                                                        })}
+                                                        className={`px-3 py-1.5 rounded-md text-[10px] font-bold transition-all ${
+                                                          objectiveData[type.toLowerCase() as keyof typeof objectiveData] === val
+                                                          ? "bg-white text-emerald-600 shadow-sm"
+                                                          : "text-slate-400 hover:text-slate-600"
+                                                        }`}
+                                                      >
+                                                         {val}
+                                                      </button>
+                                                   ))}
+                                                </div>
+                                             </div>
+                                          ))}
+                                       </div>
+                                    </div>
+
+                                    <div>
+                                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">ADLs — Activities of Daily Living</label>
+                                       <div className="grid grid-cols-1 gap-4">
+                                          {[
+                                            { id: "dressing", label: "Dressing" },
+                                            { id: "walking", label: "Walking" },
+                                            { id: "toileting", label: "Toileting" },
+                                            { id: "bathing", label: "Bathing" },
+                                            { id: "stairClimbing", label: "Stair Climbing" },
+                                            { id: "cooking", label: "Cooking" }
+                                          ].map(item => (
+                                             <div key={item.id} className="flex items-center justify-between">
+                                                <span className="text-xs font-bold text-slate-600">{item.label}</span>
+                                                <div className="flex bg-slate-100 p-0.5 rounded-lg scale-90 origin-right">
+                                                   {["Independent", "Assisted", "Dependent"].map(val => (
+                                                      <button
+                                                        key={val}
+                                                        type="button"
+                                                        onClick={() => setObjectiveData({
+                                                          ...objectiveData,
+                                                          adl: { ...objectiveData.adl, [item.id]: val }
+                                                        })}
+                                                        className={`px-2.5 py-1.5 rounded-md text-[9px] font-bold transition-all ${
+                                                          objectiveData.adl[item.id] === val
+                                                          ? "bg-white text-emerald-600 shadow-sm"
+                                                          : "text-slate-400 hover:text-slate-600"
+                                                        }`}
+                                                      >
+                                                         {val}
+                                                      </button>
+                                                   ))}
+                                                </div>
+                                             </div>
+                                          ))}
+                                       </div>
+                                    </div>
+                                 </div>
+
+                                 {/* Joint ROM */}
+                                 <div className="space-y-6">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">Joint ROM (Range of Motion)</label>
+                                    <div className="grid grid-cols-2 gap-4">
+                                       {[
+                                         { id: "flexion", label: "Flexion" },
+                                         { id: "extension", label: "Extension" },
+                                         { id: "lLatFlex", label: "L. Lat. Flex" },
+                                         { id: "rLatFlex", label: "R. Lat. Flex" },
+                                         { id: "lRotation", label: "L. Rotation" },
+                                         { id: "rRotation", label: "R. Rotation" }
+                                       ].map(item => (
+                                          <div key={item.id} className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                             <span className="text-[10px] font-bold text-slate-500 uppercase">{item.label}</span>
+                                             <div className="flex items-center gap-1">
+                                                <input
+                                                  type="text"
+                                                  value={objectiveData.rom[item.id]}
+                                                  onChange={(e) => setObjectiveData({
+                                                    ...objectiveData,
+                                                    rom: { ...objectiveData.rom, [item.id]: e.target.value }
+                                                  })}
+                                                  className="w-12 text-right bg-transparent font-black text-emerald-600 outline-none"
+                                                />
+                                                <span className="text-slate-300 font-bold">°</span>
+                                             </div>
+                                          </div>
+                                       ))}
+                                    </div>
+                                 </div>
+                              </div>
+
+                              {/* Muscle Strength */}
+                              <div>
+                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6 block">Muscle Strength (MRC Scale)</label>
+                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-12 gap-y-6">
+                                    {[
+                                      { id: "hipFlexors", label: "Hip Flexors" },
+                                      { id: "kneeExtensors", label: "Knee Extensors" },
+                                      { id: "ankleDF", label: "Ankle DF" },
+                                      { id: "hipAbductors", label: "Hip Abductors" },
+                                      { id: "kneeFlexors", label: "Knee Flexors" },
+                                      { id: "anklePF", label: "Ankle PF" }
+                                    ].map(item => (
+                                       <div key={item.id} className="flex items-center justify-between">
+                                          <span className="text-xs font-bold text-slate-600">{item.label}</span>
+                                          <div className="flex gap-1.5">
+                                             {[0, 1, 2, 3, 4, 5].map(score => (
+                                                <button
+                                                  key={score}
+                                                  type="button"
+                                                  onClick={() => setObjectiveData({
+                                                    ...objectiveData,
+                                                    strength: { ...objectiveData.strength, [item.id]: score }
+                                                  })}
+                                                  className={`w-8 h-8 rounded-lg flex items-center justify-center text-[11px] font-black transition-all border ${
+                                                    objectiveData.strength[item.id] === score
+                                                    ? "bg-slate-900 border-slate-900 text-white"
+                                                    : "bg-white border-slate-200 text-slate-400 hover:border-slate-300"
+                                                  }`}
+                                                >
+                                                   {score}
+                                                </button>
+                                             ))}
+                                          </div>
+                                       </div>
+                                    ))}
+                                 </div>
                               </div>
                            </div>
                         </div>

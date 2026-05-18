@@ -68,7 +68,6 @@ export default function AppointmentsClient({
 
   // Dynamically search patients in the form
   const handlePatientSearch = useDebouncedCallback(async (term: string) => {
-    setPatientSearchQuery(term);
     if (term.length > 1) {
       const results = await searchPatientsForDropdown(term);
       setPatientResults(results);
@@ -362,8 +361,11 @@ export default function AppointmentsClient({
                 <input
                   type="text"
                   disabled={!!selectedAppt} // Disable if editing
-                  defaultValue={patientSearchQuery}
-                  onChange={(e) => handlePatientSearch(e.target.value)}
+                  value={patientSearchQuery}
+                  onChange={(e) => {
+                    setPatientSearchQuery(e.target.value);
+                    handlePatientSearch(e.target.value);
+                  }}
                   placeholder="Type a name to search..."
                   className={`mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none ${selectedPatientId ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" : ""}`}
                 />
@@ -487,6 +489,33 @@ export default function AppointmentsClient({
                     ))}
                   </select>
                 </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    Bill Amount
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    name="billAmount"
+                    placeholder="0.00"
+                    defaultValue={selectedAppt?.billAmount || ""}
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="isPaid"
+                  name="isPaid"
+                  value="true"
+                  defaultChecked={selectedAppt?.isPaid || false}
+                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="isPaid" className="text-sm font-bold text-slate-600">
+                  Mark as Paid
+                </label>
               </div>
 
               <div className="pt-2 flex justify-end gap-3 mt-4">

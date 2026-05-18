@@ -149,6 +149,15 @@ export async function savePatient(formData: FormData, id?: string) {
       }
     });
   } else {
+    // Check for duplicate patient by phone number
+    const existingPatient = await prisma.patient.findFirst({
+        where: { phone: patientData.phone }
+    });
+
+    if (existingPatient) {
+        throw new Error("A patient with this phone number already exists.");
+    }
+
     const patient = await prisma.patient.create({
       data: {
         ...patientData,
