@@ -247,7 +247,7 @@ export async function savePatient(formData: FormData, id?: string) {
           where: { patientId: patient.id },
           data: { assignedDoctorId: doctorId },
         });
-        a;
+
         await prisma.patient.update({
           where: { id: patient.id },
           data: { visitCount: 1, lastVisitDate: appointmentDate },
