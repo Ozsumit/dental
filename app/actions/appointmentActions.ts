@@ -13,49 +13,40 @@ export async function getAppointments(searchParams: {
 
   const where: Prisma.AppointmentWhereInput = {};
 
+  // 1. Handle Text Search (Name/Phone)
   if (searchParams?.q) {
     const q = (searchParams.q as string).trim();
-
     where.OR = [
-      {
-        patient: {
-          firstName: { contains: q, mode: "insensitive" },
-        },
-      },
-      {
-        patient: {
-          lastName: { contains: q, mode: "insensitive" },
-        },
-      },
-      {
-        patient: {
-          phone: { contains: q },
-        },
-      },
-      // optional: full name match in one shot
-      {
-        patient: {
-          AND: [
-            {
-              firstName: {
-                contains: q.split(/\s+/)[0],
-                mode: "insensitive" as Prisma.QueryMode,
-              },
-            },
-            ...(q.split(/\s+/)[1]
-              ? [
-                  {
-                    lastName: {
-                      contains: q.split(/\s+/)[1],
-                      mode: "insensitive" as Prisma.QueryMode,
-                    },
-                  },
-                ]
-              : []),
-          ],
-        },
-      },
+      { patient: { firstName: { contains: q, mode: "insensitive" } } },
+      { patient: { lastName: { contains: q, mode: "insensitive" } } },
+      { patient: { phone: { contains: q } } },
     ];
+  }
+
+  // 2. Handle Status Filter (FIX)
+  if (searchParams?.status) {
+    where.status = searchParams.status as string;
+  }
+
+  // 3. Handle Treatment Filter (FIX)
+  if (searchParams?.treatment) {
+    where.treatments = {
+      contains: searchParams.treatment as string,
+    };
+  }
+
+  // 4. Handle Date Range Filters (FIX)
+  if (searchParams?.dateFrom || searchParams?.dateTo) {
+    where.appointmentDate = {};
+    if (searchParams.dateFrom) {
+      where.appointmentDate.gte = new Date(searchParams.dateFrom as string);
+    }
+    if (searchParams.dateTo) {
+      // Set to end of day to include appointments on that date
+      const endOfDay = new Date(searchParams.dateTo as string);
+      endOfDay.setHours(23, 59, 59, 999);
+      where.appointmentDate.lte = endOfDay;
+    }
   }
 
   const [totalCount, data] = await Promise.all([
@@ -64,7 +55,10 @@ export async function getAppointments(searchParams: {
       where,
       skip,
       take: limit,
-      include: { patient: true },
+      include: {
+        patient: true,
+        doctor: true, // Added to ensure doctor names show up in the list
+      },
       orderBy: { appointmentDate: "desc" },
     }),
   ]);
