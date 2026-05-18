@@ -81,28 +81,51 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
     treatmentPlan: formData.get("treatmentPlan")?.toString() || null,
     homeExercise: formData.get("homeExercise")?.toString() || null,
     medicines: formData.get("medicines")?.toString() || null,
+    objectiveData: formData.get("objectiveData")?.toString() || null,
     nextVisitDate: nextVisitDate,
   };
 
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
   try {
-    await prisma.$transaction([
-      prisma.diagnosis.create({
+    // Check if a diagnosis was already started today for this patient to prevent duplication
+    const existingDiagnosis = await prisma.diagnosis.findFirst({
+      where: {
+        patientId,
+        createdAt: {
+          gte: today,
+          lt: tomorrow
+        }
+      }
+    });
+
+    if (existingDiagnosis) {
+      await prisma.diagnosis.update({
+        where: { id: existingDiagnosis.id },
+        data: diagnosisData
+      });
+    } else {
+      await prisma.diagnosis.create({
         data: {
           patientId,
-          ...diagnosisData,
-        },
-      }),
-      prisma.medicalRecord.upsert({
-        where: { patientId },
-        update: {
-          complaints: formData.get("complaints")?.toString() || undefined,
-        },
-        create: {
-          patientId,
-          complaints: formData.get("complaints")?.toString() || null,
+          ...diagnosisData
         }
-      }),
-    ]);
+      });
+    }
+
+    await prisma.medicalRecord.upsert({
+      where: { patientId },
+      update: {
+        complaints: formData.get("complaints")?.toString() || undefined,
+      },
+      create: {
+        patientId,
+        complaints: formData.get("complaints")?.toString() || null,
+      }
+    });
 
     if (finalize) {
       // Process selected procedures
@@ -133,13 +156,6 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
     }
   } catch (error) {
     console.error("Failed to save diagnosis:", error);
-    // Fallback - just try to create it anyway or handle specific error
-    await prisma.diagnosis.create({
-      data: {
-        patientId,
-        ...diagnosisData,
-      },
-    });
   }
 
   if (finalize) {

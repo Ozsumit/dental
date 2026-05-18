@@ -41,6 +41,8 @@ export interface Appointment {
   appointmentDate: Date;
   status: string;
   treatments: string;
+  isPaid: boolean;
+  billAmount: number;
   patient?: Patient;
   createdAt: Date;
 }
@@ -90,6 +92,7 @@ export interface Diagnosis {
   treatmentPlan?: string | null;
   homeExercise?: string | null;
   medicines?: string | null;
+  objectiveData?: string | null;
   nextVisitDate?: Date | null;
   createdAt: Date;
   updatedAt: Date;
