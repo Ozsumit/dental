@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 export async function getBillingCatalog() {
   return await prisma.billingCatalog.findMany({
-    orderBy: { category: "asc" }
+    orderBy: { category: "asc" },
   });
 }
 
@@ -14,15 +14,17 @@ export async function getSystemSettings() {
   return await prisma.systemSettings.upsert({
     where: { id: "default" },
     update: {},
-    create: { id: "default", appointmentFee: 0 }
+    create: { id: "default", appointmentFee: 0 },
   });
 }
 
 export async function saveSystemSettings(formData: FormData) {
-  const appointmentFee = parseFloat(formData.get("appointmentFee") as string || "0");
+  const appointmentFee = parseFloat(
+    (formData.get("appointmentFee") as string) || "0",
+  );
   await prisma.systemSettings.update({
     where: { id: "default" },
-    data: { appointmentFee }
+    data: { appointmentFee },
   });
   revalidatePath("/admin");
 }
@@ -37,35 +39,35 @@ export async function getAdminStats() {
     appointmentCount,
     pendingPayments,
     recentProcedures,
-    revenueByCategory
+    revenueByCategory,
   ] = await Promise.all([
     prisma.patient.count(),
     prisma.procedure.aggregate({
       where: { status: "PAID" },
-      _sum: { cost: true }
+      _sum: { cost: true },
     }),
     prisma.appointment.count({
       where: {
         appointmentDate: {
           gte: todayStart,
-          lte: todayEnd
-        }
-      }
+          lte: todayEnd,
+        },
+      },
     }),
     prisma.procedure.aggregate({
       where: { status: { in: ["PENDING", "BILLED"] } },
-      _sum: { cost: true }
+      _sum: { cost: true },
     }),
     prisma.procedure.findMany({
       take: 5,
       orderBy: { createdAt: "desc" },
-      include: { patient: true }
+      include: { patient: true },
     }),
     prisma.procedure.groupBy({
       by: ["type"],
       where: { status: "PAID" },
-      _sum: { cost: true }
-    })
+      _sum: { cost: true },
+    }),
   ]);
 
   return {
@@ -74,10 +76,10 @@ export async function getAdminStats() {
     todaysAppointments: appointmentCount,
     totalPending: pendingPayments._sum.cost || 0,
     recentProcedures,
-    revenueByCategory: revenueByCategory.map(item => ({
+    revenueByCategory: revenueByCategory.map((item) => ({
       type: item.type || "Other",
-      amount: item._sum.cost || 0
-    }))
+      amount: item._sum.cost || 0,
+    })),
   };
 }
 
@@ -85,11 +87,13 @@ export async function getPendingBillings() {
   return await prisma.procedure.findMany({
     where: { status: "PENDING" },
     include: { patient: true },
-    orderBy: { procedureDate: "desc" }
+    orderBy: { procedureDate: "desc" },
   });
 }
 
-export async function getAllBillings(searchParams: { [key: string]: string | string[] | undefined }) {
+export async function getAllBillings(searchParams: {
+  [key: string]: string | string[] | undefined;
+}) {
   const page = Number(searchParams?.page) || 1;
   const limit = 20;
   const skip = (page - 1) * limit;
@@ -97,19 +101,20 @@ export async function getAllBillings(searchParams: { [key: string]: string | str
   const where: any = {};
 
   if (searchParams?.q) {
-    const q = (searchParams.q as string).trim().toLowerCase();
+    const q = (searchParams.q as string).trim();
+
     where.OR = [
-      { name: { contains: q } },
-      { type: { contains: q } },
+      { name: { contains: q, mode: "insensitive" } },
+      { type: { contains: q, mode: "insensitive" } },
       {
         patient: {
           OR: [
-            { firstName: { contains: q } },
-            { lastName: { contains: q } },
-            { phone: { contains: q } }
-          ]
-        }
-      }
+            { firstName: { contains: q, mode: "insensitive" } },
+            { lastName: { contains: q, mode: "insensitive" } },
+            { phone: { contains: q } },
+          ],
+        },
+      },
     ];
   }
 
@@ -123,15 +128,15 @@ export async function getAllBillings(searchParams: { [key: string]: string | str
       skip,
       take: limit,
       include: { patient: true },
-      orderBy: { procedureDate: "desc" }
-    })
+      orderBy: { procedureDate: "desc" },
+    }),
   ]);
 
   return {
     data,
     totalPages: Math.ceil(totalCount / limit),
     currentPage: page,
-    totalCount
+    totalCount,
   };
 }
 
@@ -140,8 +145,8 @@ export async function finalizeBilling(procedureId: string, billedCost: number) {
     where: { id: procedureId },
     data: {
       cost: billedCost,
-      status: "BILLED"
-    }
+      status: "BILLED",
+    },
   });
   revalidatePath("/");
 }
@@ -150,31 +155,33 @@ export async function markPatientProceduresPaid(patientId: string) {
   const procedures = await prisma.procedure.findMany({
     where: {
       patientId,
-      status: { in: ["PENDING", "BILLED"] }
-    }
+      status: { in: ["PENDING", "BILLED"] },
+    },
   });
 
   await prisma.$transaction(async (tx) => {
     for (const proc of procedures) {
       await tx.procedure.update({
         where: { id: proc.id },
-        data: { status: "PAID" }
+        data: { status: "PAID" },
       });
 
       if (proc.appointmentId) {
-        const appt = await tx.appointment.findUnique({ where: { id: proc.appointmentId } });
+        const appt = await tx.appointment.findUnique({
+          where: { id: proc.appointmentId },
+        });
         if (appt && appt.status === "PENDING_PAYMENT") {
           await tx.appointment.update({
             where: { id: proc.appointmentId },
             data: {
               isPaid: true,
-              status: "SCHEDULED" // Transition from PENDING_PAYMENT
-            }
+              status: "SCHEDULED", // Transition from PENDING_PAYMENT
+            },
           });
         } else if (appt) {
           await tx.appointment.update({
             where: { id: proc.appointmentId },
-            data: { isPaid: true }
+            data: { isPaid: true },
           });
         }
       }
@@ -184,12 +191,32 @@ export async function markPatientProceduresPaid(patientId: string) {
   revalidatePath("/");
   revalidatePath("/appointments");
 }
+export async function reviseBill(procedureId: string, formData: FormData) {
+  const cost = parseFloat(formData.get("cost") as string);
+  const status = formData.get("status") as string;
+
+  if (isNaN(cost)) {
+    throw new Error("Invalid bill amount provided.");
+  }
+
+  // Update the procedure record in the database
+  await prisma.procedure.update({
+    where: { id: procedureId },
+    data: {
+      cost,
+      status,
+    },
+  });
+
+  // Revalidate the billing history page so the frontend gets the new data instantly
+  revalidatePath("/billing-history"); // CHANGE THIS if your route URL is different (e.g. /history)
+}
 
 export async function saveCatalogItem(formData: FormData, id?: string) {
   const data = {
     name: formData.get("name") as string,
     category: formData.get("category") as string,
-    baseCost: parseFloat(formData.get("baseCost") as string || "0"),
+    baseCost: parseFloat((formData.get("baseCost") as string) || "0"),
     description: formData.get("description") as string,
   };
 
@@ -208,7 +235,7 @@ export async function deleteCatalogItem(id: string) {
 
 export async function markAsPaid(procedureId: string) {
   const procedure = await prisma.procedure.findUnique({
-    where: { id: procedureId }
+    where: { id: procedureId },
   });
 
   if (!procedure) return;
@@ -216,23 +243,25 @@ export async function markAsPaid(procedureId: string) {
   await prisma.$transaction(async (tx) => {
     await tx.procedure.update({
       where: { id: procedureId },
-      data: { status: "PAID" }
+      data: { status: "PAID" },
     });
 
     if (procedure.appointmentId) {
-      const appt = await tx.appointment.findUnique({ where: { id: procedure.appointmentId } });
+      const appt = await tx.appointment.findUnique({
+        where: { id: procedure.appointmentId },
+      });
       if (appt && appt.status === "PENDING_PAYMENT") {
         await tx.appointment.update({
           where: { id: procedure.appointmentId },
           data: {
             isPaid: true,
-            status: "SCHEDULED"
-          }
+            status: "SCHEDULED",
+          },
         });
       } else if (appt) {
         await tx.appointment.update({
           where: { id: procedure.appointmentId },
-          data: { isPaid: true }
+          data: { isPaid: true },
         });
       }
     }

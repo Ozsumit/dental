@@ -39,7 +39,7 @@ export default function AppointmentsClient({
   totalPages,
   currentPage,
   doctors: initialDoctors,
-  defaultFee = 0
+  defaultFee = 0,
 }: AppointmentsClientProps) {
   const router = useRouter();
   const params = useSearchParams();
@@ -49,12 +49,27 @@ export default function AppointmentsClient({
   const [isExporting, setIsExporting] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
 
+  // New Doctor State to enforce correct selection
+  const [selectedDoctorId, setSelectedDoctorId] = useState("");
+
   // Patient Search State for the Form
   const [patientSearchQuery, setPatientSearchQuery] = useState("");
-  const [patientResults, setPatientResults] = useState<{ id: string; firstName: string; lastName: string; phone: string; role?: string | null }[]>([]);
+  const [patientResults, setPatientResults] = useState<
+    {
+      id: string;
+      firstName: string;
+      lastName: string;
+      phone: string;
+      role?: string | null;
+    }[]
+  >([]);
   const [selectedPatientId, setSelectedPatientId] = useState("");
   const [isCreatingPatient, setIsCreatingPatient] = useState(false);
-  const [newPatientData, setNewPatientData] = useState({ firstName: "", lastName: "", phone: "" });
+  const [newPatientData, setNewPatientData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+  });
 
   const updateQuery = useCallback(
     (name: string, value: string) => {
@@ -85,7 +100,7 @@ export default function AppointmentsClient({
         setNewPatientData({
           firstName: parts[0] || "",
           lastName: parts.slice(1).join(" ") || "",
-          phone: ""
+          phone: "",
         });
       }
     } else {
@@ -98,6 +113,7 @@ export default function AppointmentsClient({
   const openAdd = () => {
     setSelectedAppt(null);
     setSelectedPatientId("");
+    setSelectedDoctorId(""); // Reset doctor ID
     setPatientSearchQuery("");
     setPatientResults([]);
     setIsCreatingPatient(false);
@@ -108,6 +124,7 @@ export default function AppointmentsClient({
   const openEdit = (appt: Appointment) => {
     setSelectedAppt(appt);
     setSelectedPatientId(appt.patientId);
+    setSelectedDoctorId(appt.doctorId || ""); // Set doctor ID for editing
     setPatientSearchQuery(
       `${appt.patient?.firstName} ${appt.patient?.lastName}`,
     );
@@ -125,20 +142,23 @@ export default function AppointmentsClient({
 
       const formattedData = dataToExport.map((a: Appointment) => ({
         "Appointment Date": new Date(a.appointmentDate).toLocaleDateString(),
-        "Status": a.status,
-        "Treatments": a.treatments,
+        Status: a.status,
+        Treatments: a.treatments,
         "Patient Name": `${a.patient?.firstName} ${a.patient?.lastName}`,
         "Patient Phone": a.patient?.phone,
         "Patient Category": a.patient?.role || "Regular",
         "Assigned Doctor": a.doctor?.username || "Not Assigned",
-        "Insurance": a.patient?.medicalRecord?.insurance || "N/A",
-        "Created At": new Date(a.createdAt).toLocaleString()
+        Insurance: a.patient?.medicalRecord?.insurance || "N/A",
+        "Created At": new Date(a.createdAt).toLocaleString(),
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(formattedData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Appointments_Export");
-      XLSX.writeFile(workbook, `Appointments_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.writeFile(
+        workbook,
+        `Appointments_Export_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
     } catch (e) {
       console.error(e);
       alert("Failed to export data.");
@@ -167,6 +187,8 @@ export default function AppointmentsClient({
           className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-700"
         >
           <option value="">All Statuses</option>
+
+          <option value="PENDING_PAYMENT">Pending</option>
           <option value="COMPLETED">Completed</option>
           <option value="SCHEDULED">Scheduled</option>
           <option value="CANCELLED">Cancelled</option>
@@ -214,7 +236,8 @@ export default function AppointmentsClient({
           disabled={isExporting}
           className="px-5 py-3 bg-emerald-50 text-emerald-700 rounded-xl font-medium flex items-center gap-2 hover:bg-emerald-100 transition disabled:opacity-50"
         >
-          <Download className="w-5 h-5" /> {isExporting ? "Exporting..." : "Export Excel"}
+          <Download className="w-5 h-5" />{" "}
+          {isExporting ? "Exporting..." : "Export Excel"}
         </button>
 
         <button
@@ -277,7 +300,11 @@ export default function AppointmentsClient({
                         {dateStr}
                       </div>
                       <div className="text-[10px] text-slate-400 font-medium ml-6 uppercase">
-                        Scheduled at {new Date(appt.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        Scheduled at{" "}
+                        {new Date(appt.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -286,12 +313,27 @@ export default function AppointmentsClient({
                         {appt.patient?.firstName} {appt.patient?.lastName}
                       </div>
                       <div className="text-xs text-slate-500 ml-6">
-                        {appt.patient?.phone} • <span className="text-indigo-600 font-bold">{appt.patient?.role}</span>
+                        {appt.patient?.phone} •{" "}
+                        <span className="text-indigo-600 font-bold">
+                          {appt.patient?.role}
+                        </span>
+                        {appt.doctor && (
+                          <>
+                            <span className="mx-1">•</span>
+                            <span className="text-emerald-600 font-bold">
+                              Dr. {appt.doctor.username}
+                            </span>
+                          </>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-medium text-slate-800">{appt.treatments}</div>
-                      <div className="text-[10px] text-slate-400 italic">Previous visits: {appt.patient?.visitCount}</div>
+                      <div className="font-medium text-slate-800">
+                        {appt.treatments}
+                      </div>
+                      <div className="text-[10px] text-slate-400 italic">
+                        Previous visits: {appt.patient?.visitCount}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -372,26 +414,30 @@ export default function AppointmentsClient({
                 if (!selectedPatientId && !isCreatingPatient)
                   return alert("Please select a patient first.");
 
-                if (isCreatingPatient) {
-                    const { savePatient } = await import("@/app/actions/patientsActions");
-                    const pForm = new FormData();
-                    pForm.append("firstName", newPatientData.firstName);
-                    pForm.append("lastName", newPatientData.lastName);
-                    pForm.append("phone", newPatientData.phone);
-                    pForm.append("skipAutoAppt", "true");
+                // ENFORCE EXACT DOCTOR ID
+                formData.set("doctorId", selectedDoctorId);
 
-                    try {
-                        const newPatient = await savePatient(pForm);
-                        if (newPatient && newPatient.id) {
-                            formData.append("patientId", newPatient.id);
-                        } else {
-                            return alert("Error creating patient.");
-                        }
-                    } catch (err: any) {
-                        return alert(err.message);
+                if (isCreatingPatient) {
+                  const { savePatient } =
+                    await import("@/app/actions/patientsActions");
+                  const pForm = new FormData();
+                  pForm.append("firstName", newPatientData.firstName);
+                  pForm.append("lastName", newPatientData.lastName);
+                  pForm.append("phone", newPatientData.phone);
+                  pForm.append("skipAutoAppt", "true");
+
+                  try {
+                    const newPatient = await savePatient(pForm);
+                    if (newPatient && newPatient.id) {
+                      formData.append("patientId", newPatient.id);
+                    } else {
+                      return alert("Error creating patient.");
                     }
+                  } catch (err: any) {
+                    return alert(err.message);
+                  }
                 } else {
-                    formData.append("patientId", selectedPatientId);
+                  formData.append("patientId", selectedPatientId);
                 }
 
                 try {
@@ -429,16 +475,20 @@ export default function AppointmentsClient({
                           key={p.id}
                           onClick={() => {
                             setSelectedPatientId(p.id);
-                            setPatientSearchQuery(`${p.firstName} ${p.lastName}`);
+                            setPatientSearchQuery(
+                              `${p.firstName} ${p.lastName}`,
+                            );
                             setPatientResults([]);
                           }}
                           className="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 flex flex-col"
                         >
                           <div className="flex justify-between items-center">
-                             <span className="font-bold text-slate-800">
-                               {p.firstName} {p.lastName}
-                             </span>
-                             <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">{p.role}</span>
+                            <span className="font-bold text-slate-800">
+                              {p.firstName} {p.lastName}
+                            </span>
+                            <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">
+                              {p.role}
+                            </span>
                           </div>
                           <span className="text-xs text-slate-500">
                             {p.phone}
@@ -448,9 +498,14 @@ export default function AppointmentsClient({
                     </div>
                   )}
 
-                  {patientSearchQuery.length > 1 && patientResults.length === 0 && !selectedPatientId && (
-                    <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                        <p className="text-xs text-slate-500 mb-2 font-medium">No patient found matching &quot;{patientSearchQuery}&quot;</p>
+                  {patientSearchQuery.length > 1 &&
+                    patientResults.length === 0 &&
+                    !selectedPatientId && (
+                      <div className="mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                        <p className="text-xs text-slate-500 mb-2 font-medium">
+                          No patient found matching &quot;{patientSearchQuery}
+                          &quot;
+                        </p>
                         <button
                           type="button"
                           onClick={() => setIsCreatingPatient(true)}
@@ -458,8 +513,8 @@ export default function AppointmentsClient({
                         >
                           + Create New Patient
                         </button>
-                    </div>
-                  )}
+                      </div>
+                    )}
 
                   {selectedPatientId && !selectedAppt && (
                     <button
@@ -476,30 +531,53 @@ export default function AppointmentsClient({
                 </div>
               ) : (
                 <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-4">
-                    <div className="flex justify-between items-center">
-                        <h3 className="text-xs font-black text-indigo-600 uppercase">New Patient Info</h3>
-                        <button type="button" onClick={() => setIsCreatingPatient(false)} className="text-[10px] font-bold text-slate-400 hover:text-slate-600">Cancel</button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
-                        <input
-                            placeholder="First Name"
-                            value={newPatientData.firstName}
-                            onChange={(e) => setNewPatientData({...newPatientData, firstName: e.target.value})}
-                            className="p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
-                        />
-                        <input
-                            placeholder="Last Name"
-                            value={newPatientData.lastName}
-                            onChange={(e) => setNewPatientData({...newPatientData, lastName: e.target.value})}
-                            className="p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
-                        />
-                    </div>
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-xs font-black text-indigo-600 uppercase">
+                      New Patient Info
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreatingPatient(false)}
+                      className="text-[10px] font-bold text-slate-400 hover:text-slate-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <input
-                        placeholder="Phone Number"
-                        value={newPatientData.phone}
-                        onChange={(e) => setNewPatientData({...newPatientData, phone: e.target.value})}
-                        className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
+                      placeholder="First Name"
+                      value={newPatientData.firstName}
+                      onChange={(e) =>
+                        setNewPatientData({
+                          ...newPatientData,
+                          firstName: e.target.value,
+                        })
+                      }
+                      className="p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
                     />
+                    <input
+                      placeholder="Last Name"
+                      value={newPatientData.lastName}
+                      onChange={(e) =>
+                        setNewPatientData({
+                          ...newPatientData,
+                          lastName: e.target.value,
+                        })
+                      }
+                      className="p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <input
+                    placeholder="Phone Number"
+                    value={newPatientData.phone}
+                    onChange={(e) =>
+                      setNewPatientData({
+                        ...newPatientData,
+                        phone: e.target.value,
+                      })
+                    }
+                    className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
+                  />
                 </div>
               )}
 
@@ -543,26 +621,33 @@ export default function AppointmentsClient({
                   Select Procedures
                 </label>
                 <div className="grid grid-cols-2 gap-3 mt-2">
-                  {["Cleaning", "Filling", "Root Canal", "Checkup", "Whitening", "Extraction"].map(
-                    (proc) => {
-                      const isChecked = selectedAppt?.treatments?.includes(proc);
-                      return (
-                        <label
-                          key={proc}
-                          className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200"
-                        >
-                          <input
-                            type="checkbox"
-                            name="treatments"
-                            value={proc}
-                            defaultChecked={isChecked}
-                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
-                          />
-                          <span className="text-xs font-bold text-slate-600">{proc}</span>
-                        </label>
-                      )
-                    },
-                  )}
+                  {[
+                    "Cleaning",
+                    "Filling",
+                    "Root Canal",
+                    "Checkup",
+                    "Whitening",
+                    "Extraction",
+                  ].map((proc) => {
+                    const isChecked = selectedAppt?.treatments?.includes(proc);
+                    return (
+                      <label
+                        key={proc}
+                        className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200"
+                      >
+                        <input
+                          type="checkbox"
+                          name="treatments"
+                          value={proc}
+                          defaultChecked={isChecked}
+                          className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="text-xs font-bold text-slate-600">
+                          {proc}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -574,12 +659,15 @@ export default function AppointmentsClient({
                   <select
                     required
                     name="doctorId"
-                    defaultValue={selectedAppt?.doctorId || ""}
+                    value={selectedDoctorId} // Controlled input
+                    onChange={(e) => setSelectedDoctorId(e.target.value)}
                     className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white"
                   >
                     <option value="">Select Doctor...</option>
-                    {initialDoctors.map(d => (
-                      <option key={d.id} value={d.id}>{d.username}</option>
+                    {initialDoctors.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.username}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -608,7 +696,10 @@ export default function AppointmentsClient({
                   defaultChecked={selectedAppt?.isPaid || false}
                   className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
                 />
-                <label htmlFor="isPaid" className="text-sm font-bold text-slate-600">
+                <label
+                  htmlFor="isPaid"
+                  className="text-sm font-bold text-slate-600"
+                >
                   Mark as Paid
                 </label>
               </div>

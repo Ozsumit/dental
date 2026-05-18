@@ -1,10 +1,12 @@
 generator client {
   provider = "prisma-client-js"
+  experimentalFeatures = ["clientExtensions"]
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = "file:./dev.db"
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+
 }
 
 model User {
@@ -20,10 +22,10 @@ model User {
 
 model Patient {
   id            String         @id @default(uuid())
-  firstName     String
-  lastName      String
-  phone         String
-  email         String?
+  firstName     String         @db.Citext
+  lastName      String         @db.Citext
+  phone         String         @db.Citext @unique
+  email         String?        @db.Citext @unique
   dateOfBirth   DateTime
   gender        String?
   status        String         @default("ACTIVE")

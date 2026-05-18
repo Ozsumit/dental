@@ -4,7 +4,9 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 
-export async function getAppointments(searchParams: { [key: string]: string | string[] | undefined }) {
+export async function getAppointments(searchParams: {
+  [key: string]: string | string[] | undefined;
+}) {
   const page = Number(searchParams?.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
@@ -12,44 +14,51 @@ export async function getAppointments(searchParams: { [key: string]: string | st
   const where: Prisma.AppointmentWhereInput = {};
 
   if (searchParams?.q) {
-    const q = (searchParams.q as string).trim().toLowerCase();
+    const q = (searchParams.q as string).trim();
 
     where.OR = [
       {
         patient: {
-          OR: [
-            { firstName: { contains: q } },
-            { lastName: { contains: q } },
-            { phone: { contains: q } },
+          firstName: { contains: q, mode: "insensitive" },
+        },
+      },
+      {
+        patient: {
+          lastName: { contains: q, mode: "insensitive" },
+        },
+      },
+      {
+        patient: {
+          phone: { contains: q },
+        },
+      },
+      // optional: full name match in one shot
+      {
+        patient: {
+          AND: [
             {
-              AND: q.split(/\s+/).map(token => ({
-                OR: [
-                  { firstName: { contains: token } },
-                  { lastName: { contains: token } },
+              firstName: {
+                contains: q.split(/\s+/)[0],
+                mode: "insensitive" as Prisma.QueryMode,
+              },
+            },
+            ...(q.split(/\s+/)[1]
+              ? [
+                  {
+                    lastName: {
+                      contains: q.split(/\s+/)[1],
+                      mode: "insensitive" as Prisma.QueryMode,
+                    },
+                  },
                 ]
-              }))
-            }
-          ]
-        }
-      }
+              : []),
+          ],
+        },
+      },
     ];
   }
 
-  if (searchParams?.status) where.status = searchParams.status as string;
-
-  // SEARCH INSIDE ARRAY OF PROCEDURES using Postgres 'has'
-  if (searchParams?.treatment) {
-    where.treatments = { contains: searchParams.treatment as string };
-  }
-  if (searchParams?.dateFrom || searchParams?.dateTo) {
-    where.appointmentDate = {};
-    if (searchParams.dateFrom)
-      where.appointmentDate.gte = new Date(searchParams.dateFrom as string);
-    if (searchParams.dateTo)
-      where.appointmentDate.lte = new Date(searchParams.dateTo as string);
-  }
-
-  const [totalCount, appointments] = await Promise.all([
+  const [totalCount, data] = await Promise.all([
     prisma.appointment.count({ where }),
     prisma.appointment.findMany({
       where,
@@ -61,7 +70,7 @@ export async function getAppointments(searchParams: { [key: string]: string | st
   ]);
 
   return {
-    data: appointments,
+    data,
     totalPages: Math.ceil(totalCount / limit),
     currentPage: page,
     totalCount,
@@ -76,7 +85,7 @@ export async function searchPatientsForDropdown(query: string) {
   // Use findMany with simple contains (since it's SQLite, it's case-insensitive by default for ASCII)
   return prisma.patient.findMany({
     where: {
-      AND: tokens.map(token => ({
+      AND: tokens.map((token) => ({
         OR: [
           { firstName: { contains: token } },
           { lastName: { contains: token } },
@@ -90,12 +99,9 @@ export async function searchPatientsForDropdown(query: string) {
       firstName: true,
       lastName: true,
       phone: true,
-      role: true
+      role: true,
     },
-    orderBy: [
-      { firstName: 'asc' },
-      { lastName: 'asc' }
-    ]
+    orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
   });
 }
 
@@ -122,14 +128,22 @@ export async function saveAppointment(formData: FormData, id?: string) {
   }
 
   // GRAB ALL CHECKED BOXES AS AN ARRAY
-  const treatments = formData.getAll("treatments").join(", ") || (formData.get("treatmentType") as string) || "Checkup";
+  const treatments =
+    formData.getAll("treatments").join(", ") ||
+    (formData.get("treatmentType") as string) ||
+    "Checkup";
 
-  const billAmount = parseFloat(formData.get("billAmount") as string || "0");
+  const billAmount = parseFloat((formData.get("billAmount") as string) || "0");
   const isPaid = formData.get("isPaid") === "true";
 
   // If billAmount > 0 and not paid, status should be PENDING_PAYMENT
   let status = formData.get("status") as string;
-  if (billAmount > 0 && !isPaid && status !== "CANCELLED" && status !== "COMPLETED") {
+  if (
+    billAmount > 0 &&
+    !isPaid &&
+    status !== "CANCELLED" &&
+    status !== "COMPLETED"
+  ) {
     status = "PENDING_PAYMENT";
   }
 
@@ -140,7 +154,7 @@ export async function saveAppointment(formData: FormData, id?: string) {
     status,
     treatments, // Save the string to the database
     billAmount,
-    isPaid
+    isPaid,
   };
 
   if (!id) {
@@ -155,44 +169,49 @@ export async function saveAppointment(formData: FormData, id?: string) {
         patientId,
         appointmentDate: {
           gte: todayStart,
-          lte: todayEnd
+          lte: todayEnd,
         },
-        status: { not: "CANCELLED" }
-      }
+        status: { not: "CANCELLED" },
+      },
     });
 
     if (existingAppointment) {
-       const updatedAppt = await prisma.appointment.update({
-         where: { id: existingAppointment.id },
-         data: {
-           ...data,
-           status: data.status === "COMPLETED" ? "COMPLETED" : (data.billAmount > 0 && !data.isPaid ? "PENDING_PAYMENT" : data.status)
-         }
-       });
+      const updatedAppt = await prisma.appointment.update({
+        where: { id: existingAppointment.id },
+        data: {
+          ...data,
+          status:
+            data.status === "COMPLETED"
+              ? "COMPLETED"
+              : data.billAmount > 0 && !data.isPaid
+                ? "PENDING_PAYMENT"
+                : data.status,
+        },
+      });
 
-       // Create or Update Billing Procedure
-       if (data.billAmount > 0) {
-         await prisma.procedure.upsert({
-           where: { id: `appt-bill-${updatedAppt.id}` }, // Fixed ID for appointment-linked bill
-           create: {
-             id: `appt-bill-${updatedAppt.id}`,
-             patientId,
-             appointmentId: updatedAppt.id,
-             name: `Appointment Fee: ${treatments}`,
-             type: "Appointment",
-             cost: billAmount,
-             procedureDate: appointmentDate,
-             status: isPaid ? "PAID" : "PENDING"
-           },
-           update: {
-             cost: billAmount,
-             status: isPaid ? "PAID" : "PENDING"
-           }
-         });
-       }
+      // Create or Update Billing Procedure
+      if (data.billAmount > 0) {
+        await prisma.procedure.upsert({
+          where: { id: `appt-bill-${updatedAppt.id}` }, // Fixed ID for appointment-linked bill
+          create: {
+            id: `appt-bill-${updatedAppt.id}`,
+            patientId,
+            appointmentId: updatedAppt.id,
+            name: `Appointment Fee: ${treatments}`,
+            type: "Appointment",
+            cost: billAmount,
+            procedureDate: appointmentDate,
+            status: isPaid ? "PAID" : "PENDING",
+          },
+          update: {
+            cost: billAmount,
+            status: isPaid ? "PAID" : "PENDING",
+          },
+        });
+      }
 
-       revalidatePath("/appointments");
-       return;
+      revalidatePath("/appointments");
+      return;
     }
 
     const [newAppt] = await prisma.$transaction(async (tx) => {
@@ -217,12 +236,15 @@ export async function saveAppointment(formData: FormData, id?: string) {
           type: "Appointment",
           cost: billAmount,
           procedureDate: appointmentDate,
-          status: isPaid ? "PAID" : "PENDING"
-        }
+          status: isPaid ? "PAID" : "PENDING",
+        },
       });
     }
   } else {
-    const updatedAppt = await prisma.appointment.update({ where: { id }, data });
+    const updatedAppt = await prisma.appointment.update({
+      where: { id },
+      data,
+    });
 
     if (billAmount > 0) {
       await prisma.procedure.upsert({
@@ -235,13 +257,13 @@ export async function saveAppointment(formData: FormData, id?: string) {
           type: "Appointment",
           cost: billAmount,
           procedureDate: appointmentDate,
-          status: isPaid ? "PAID" : "PENDING"
+          status: isPaid ? "PAID" : "PENDING",
         },
         update: {
           cost: billAmount,
           status: isPaid ? "PAID" : "PENDING",
-          name: `Appointment Fee: ${treatments}`
-        }
+          name: `Appointment Fee: ${treatments}`,
+        },
       });
     }
   }
@@ -264,14 +286,16 @@ export async function getAppointmentsByDateRange(start: Date, end: Date) {
   });
 }
 
-export async function getAppointmentsForExport(searchParams: { [key: string]: string | string[] | undefined }) {
+export async function getAppointmentsForExport(searchParams: {
+  [key: string]: string | string[] | undefined;
+}) {
   const where: Prisma.AppointmentWhereInput = {};
 
   if (searchParams?.q) {
     const q = (searchParams.q as string).trim();
     const tokens = q.split(/\s+/);
     where.patient = {
-      AND: tokens.map(token => ({
+      AND: tokens.map((token) => ({
         OR: [
           { firstName: { contains: token } },
           { lastName: { contains: token } },
@@ -297,9 +321,9 @@ export async function getAppointmentsForExport(searchParams: { [key: string]: st
     where,
     include: {
       patient: {
-        include: { medicalRecord: true }
+        include: { medicalRecord: true },
       },
-      doctor: true
+      doctor: true,
     },
     orderBy: { appointmentDate: "desc" },
   });
