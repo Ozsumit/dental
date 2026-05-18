@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, CalendarDays, Activity, Shield, Stethoscope, LogOut, Receipt } from "lucide-react";
+import {
+  Users,
+  CalendarDays,
+  Activity,
+  Shield,
+  Stethoscope,
+  LogOut,
+  Receipt,
+} from "lucide-react";
 import { handleLogout } from "@/app/actions/authActions";
 import { UserSession } from "@/lib/types";
 
@@ -10,14 +18,36 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
   const pathname = usePathname();
 
   const allItems = [
-    { name: "Patients", href: "/", icon: Users, roles: ["RECEPTIONIST", "ADMIN", "DOCTOR"] },
-    { name: "Appointments", href: "/appointments", icon: CalendarDays, roles: ["RECEPTIONIST", "ADMIN"] },
-    { name: "Billing", href: "/billing", icon: Receipt, roles: ["RECEPTIONIST", "ADMIN"] },
-    { name: "Doctor View", href: "/doctor", icon: Stethoscope, roles: ["DOCTOR", "ADMIN"] },
+    {
+      name: "Patients",
+      href: "/",
+      icon: Users,
+      roles: ["RECEPTIONIST", "ADMIN", "DOCTOR"],
+    },
+    {
+      name: "Appointments",
+      href: "/appointments",
+      icon: CalendarDays,
+      roles: ["RECEPTIONIST", "ADMIN"],
+    },
+    {
+      name: "Billing",
+      href: "/billing",
+      icon: Receipt,
+      roles: ["RECEPTIONIST", "ADMIN"],
+    },
+    {
+      name: "Doctor View",
+      href: "/doctor",
+      icon: Stethoscope,
+      roles: ["DOCTOR", "ADMIN"],
+    },
     { name: "Admin Panel", href: "/admin", icon: Shield, roles: ["ADMIN"] },
   ];
 
-  const navItems = allItems.filter(item => session?.role && item.roles.includes(session.role));
+  const navItems = allItems.filter(
+    (item) => session?.role && item.roles.includes(session.role),
+  );
 
   return (
     <div className="w-64 bg-white border-r border-slate-200 h-screen flex flex-col shadow-sm">
@@ -29,7 +59,9 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
       </div>
 
       <div className="p-4 flex-1 space-y-2 overflow-y-auto">
-        <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Main Menu</p>
+        <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">
+          Main Menu
+        </p>
         {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -54,9 +86,15 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
 
       <div className="p-4 border-t border-slate-100 space-y-2">
         <div className="px-4 py-3 bg-slate-50 rounded-xl mb-4">
-           <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Logged in as</p>
-           <p className="text-sm font-bold text-slate-900 truncate">{session?.username}</p>
-           <p className="text-[10px] font-bold text-indigo-600 uppercase">{session?.role}</p>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+            Logged in as
+          </p>
+          <p className="text-sm font-bold text-slate-900 truncate">
+            {session?.username}
+          </p>
+          <p className="text-[10px] font-bold text-indigo-600 uppercase">
+            {session?.role}
+          </p>
         </div>
         <button
           onClick={() => handleLogout()}
