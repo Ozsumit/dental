@@ -80,15 +80,14 @@ export async function getAppointments(searchParams: {
 export async function searchPatientsForDropdown(query: string) {
   if (!query || query.trim() === "") return [];
 
-  const tokens = query.toLowerCase().trim().split(/\s+/);
+  const tokens = query.trim().split(/\s+/);
 
-  // Use findMany with simple contains (since it's SQLite, it's case-insensitive by default for ASCII)
   return prisma.patient.findMany({
     where: {
       AND: tokens.map((token) => ({
         OR: [
-          { firstName: { contains: token } },
-          { lastName: { contains: token } },
+          { firstName: { contains: token, mode: "insensitive" } },
+          { lastName: { contains: token, mode: "insensitive" } },
           { phone: { contains: token } },
         ],
       })),
@@ -297,8 +296,8 @@ export async function getAppointmentsForExport(searchParams: {
     where.patient = {
       AND: tokens.map((token) => ({
         OR: [
-          { firstName: { contains: token } },
-          { lastName: { contains: token } },
+          { firstName: { contains: token, mode: "insensitive" } },
+          { lastName: { contains: token, mode: "insensitive" } },
           { phone: { contains: token } },
         ],
       })),

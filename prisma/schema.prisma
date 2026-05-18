@@ -46,6 +46,11 @@ model Patient {
   @@index([firstName, lastName])
   @@index([phone])
   @@index([status])
+  @@index([role])
+  @@index([gender])
+  @@index([bloodGroup])
+  @@index([visitCount])
+  @@index([createdAt])
 }
 
 model MedicalRecord {

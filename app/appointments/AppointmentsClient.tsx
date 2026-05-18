@@ -428,7 +428,7 @@ export default function AppointmentsClient({
 
                   try {
                     const newPatient = await savePatient(pForm);
-                    if (newPatient && newPatient.id) {
+                    if (newPatient && 'id' in newPatient) {
                       formData.append("patientId", newPatient.id);
                     } else {
                       return alert("Error creating patient.");

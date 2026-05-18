@@ -9,6 +9,7 @@ import {
   deletePatient,
   getPatientsForExport,
   createAppointmentAction,
+  getPatientById,
 } from "./actions/patientsActions";
 import ReceptionistPatientView from "@/components/ReceptionistPatientView";
 import { Patient, Appointment } from "@/lib/types/index";
@@ -71,6 +72,7 @@ export default function DashboardClient({
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [isLoadingPatient, setIsLoadingPatient] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
@@ -102,11 +104,19 @@ export default function DashboardClient({
     setIsFormOpen(true);
   };
 
-  const openEdit = (p: Patient) => {
-    setSelectedPatient(p);
+  const openEdit = async (p: Patient) => {
+    setIsLoadingPatient(true);
     setPatientError(null);
     setCreateApptToggle(false); // Hide toggle on edit
-    setIsFormOpen(true);
+    try {
+      const fullPatient = await getPatientById(p.id);
+      setSelectedPatient(fullPatient as unknown as Patient);
+      setIsFormOpen(true);
+    } catch (error) {
+      console.error("Error fetching patient details:", error);
+    } finally {
+      setIsLoadingPatient(false);
+    }
   };
 
   const openDelete = (p: Patient) => {
@@ -114,9 +124,17 @@ export default function DashboardClient({
     setIsDeleteOpen(true);
   };
 
-  const openProfile = (p: Patient) => {
-    setSelectedPatient(p);
-    setIsProfileOpen(true);
+  const openProfile = async (p: Patient) => {
+    setIsLoadingPatient(true);
+    try {
+      const fullPatient = await getPatientById(p.id);
+      setSelectedPatient(fullPatient as unknown as Patient);
+      setIsProfileOpen(true);
+    } catch (error) {
+      console.error("Error fetching patient details:", error);
+    } finally {
+      setIsLoadingPatient(false);
+    }
   };
 
   const handleExport = async () => {
@@ -254,12 +272,14 @@ export default function DashboardClient({
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-2">
                     <button
+                      disabled={isLoadingPatient}
                       onClick={() => openProfile(patient)}
-                      className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg transition-all"
+                      className="p-2 text-indigo-600 bg-indigo-50 hover:bg-indigo-600 hover:text-white rounded-lg transition-all disabled:opacity-50"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
+                      disabled={isLoadingPatient}
                       onClick={() => openEdit(patient)}
                       className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                     >
@@ -385,8 +405,8 @@ export default function DashboardClient({
                     formData,
                     selectedPatient?.id,
                   );
-                  if (result?.error) {
-                    setPatientError(result.error);
+                  if (result && 'error' in result) {
+                    setPatientError(result.error as string);
                   } else {
                     setIsFormOpen(false);
                   }
@@ -776,8 +796,8 @@ export default function DashboardClient({
                 formData.append("patientId", apptPatient.id);
                 try {
                   const result = await createAppointmentAction(formData);
-                  if (result?.error) {
-                    setApptError(result.error);
+                  if (result && typeof result === 'object' && 'error' in result) {
+                    setApptError(result.error as string);
                   } else {
                     setIsApptFormOpen(false);
                   }

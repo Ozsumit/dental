@@ -13,15 +13,15 @@ export async function getPatients(searchParams: {
 
   const where: Prisma.PatientWhereInput = {};
 
-  // 1. BULLETPROOF SEARCH
+  // 1. BULLETPROOF SEARCH (Optimized for PostgreSQL with Citext and mode: insensitive)
   if (searchParams?.q) {
-    const q = (searchParams.q as string).trim().toLowerCase();
+    const q = (searchParams.q as string).trim();
     const terms = q.split(/\s+/);
     where.AND = terms.map((term: string) => ({
       OR: [
-        { firstName: { contains: term } },
-        { lastName: { contains: term } },
-        { email: { contains: term } },
+        { firstName: { contains: term, mode: "insensitive" } },
+        { lastName: { contains: term, mode: "insensitive" } },
+        { email: { contains: term, mode: "insensitive" } },
         { phone: { contains: term } },
       ],
     }));
@@ -78,7 +78,7 @@ export async function getPatients(searchParams: {
     orderBy = [{ firstName: "desc" }, { lastName: "desc" }];
   if (searchParams?.sort === "mostVisits") orderBy = { visitCount: "desc" };
 
-  // 6. FETCH DATA (Added 'include' to fetch history for the Profile View)
+  // 6. FETCH DATA (Optimized for performance - removed heavy relations)
   const [totalCount, patients] = await Promise.all([
     prisma.patient.count({ where }),
     prisma.patient.findMany({
@@ -86,20 +86,24 @@ export async function getPatients(searchParams: {
       skip,
       take: limit,
       orderBy,
-      include: {
-        appointments: {
-          orderBy: { appointmentDate: "desc" }, // Orders history from newest to oldest
-        },
-        procedures: {
-          orderBy: { procedureDate: "desc" },
-        },
-        medicalRecord: {
-          include: { assignedDoctor: true },
-        },
-        diagnoses: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        email: true,
+        gender: true,
+        status: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
+        dateOfBirth: true,
+        visitCount: true,
+        isOld: true,
+        lastVisitDate: true,
+        bloodGroup: true,
+        allergies: true,
+        address: true,
       },
     }),
   ]);
@@ -247,7 +251,6 @@ export async function savePatient(formData: FormData, id?: string) {
           where: { patientId: patient.id },
           data: { assignedDoctorId: doctorId },
         });
-        a;
         await prisma.patient.update({
           where: { id: patient.id },
           data: { visitCount: 1, lastVisitDate: appointmentDate },
@@ -281,6 +284,26 @@ export async function transferPatientDoctor(
   });
   revalidatePath("/");
   revalidatePath("/doctor");
+}
+
+export async function getPatientById(id: string) {
+  return await prisma.patient.findUnique({
+    where: { id },
+    include: {
+      appointments: {
+        orderBy: { appointmentDate: "desc" },
+      },
+      procedures: {
+        orderBy: { procedureDate: "desc" },
+      },
+      medicalRecord: {
+        include: { assignedDoctor: true },
+      },
+      diagnoses: {
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
 }
 
 export async function createAppointmentAction(formData: FormData) {
@@ -338,6 +361,7 @@ export async function createAppointmentAction(formData: FormData) {
 
   revalidatePath("/");
   revalidatePath("/appointments");
+    return { success: true };
 }
 
 // EXPORT FUNCTIONALITY
@@ -346,13 +370,13 @@ export async function getPatientsForExport(searchParams: {
 }) {
   const where: Prisma.PatientWhereInput = {};
   if (searchParams?.q) {
-    const q = (searchParams.q as string).trim().toLowerCase();
+    const q = (searchParams.q as string).trim();
     const terms = q.split(/\s+/);
     where.AND = terms.map((term: string) => ({
       OR: [
-        { firstName: { contains: term } },
-        { lastName: { contains: term } },
-        { email: { contains: term } },
+        { firstName: { contains: term, mode: "insensitive" } },
+        { lastName: { contains: term, mode: "insensitive" } },
+        { email: { contains: term, mode: "insensitive" } },
         { phone: { contains: term } },
       ],
     }));
