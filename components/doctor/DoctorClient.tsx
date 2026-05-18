@@ -50,7 +50,7 @@ export default function DoctorClient({
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<(Patient & { currentAppointmentId?: string }) | null>(null);
   const [activeTab, setActiveTab] = useState<DoctorTab>("Subjective");
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "workspace">("list");
 
   // Local state for form fields
   const [vasScore, setVasScore] = useState(0);
@@ -130,6 +130,7 @@ export default function DoctorClient({
   const handlePatientSelect = (p: Patient & { currentAppointmentId?: string }) => {
     setSelectedPatient(p);
     setActiveTab("Subjective");
+    setViewMode("workspace");
 
     // Get latest diagnosis from history if available
     const latestDiagnosis = p.diagnoses?.[0] || p.diagnosis;
@@ -207,127 +208,146 @@ export default function DoctorClient({
   };
 
   return (
-    <div className="flex h-full bg-[#f8fafc]">
-      {/* Integrated Patient List (Left Column) */}
-      <div className={`flex flex-col border-r border-slate-200 bg-white transition-all duration-300 ${isSidebarCollapsed && selectedPatient ? 'w-0 overflow-hidden' : 'w-80 lg:w-96'}`}>
-         <div className="p-6 border-b border-slate-100 shrink-0">
-            <h2 className="text-lg font-bold text-slate-800 mb-4">Clinical Queue</h2>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search assigned patients..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
-              />
-            </div>
-         </div>
-
-         <div className="flex-1 overflow-y-auto p-4 space-y-6">
-            {/* Pending Section */}
-            <div>
-               <div className="flex items-center gap-2 mb-3 px-2">
-                  <AlertCircle className="w-4 h-4 text-amber-500" />
-                  <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Waiting for Review ({filteredPatients.pending.length})</h3>
-               </div>
-               <div className="space-y-2">
-                  {filteredPatients.pending.map(p => (
-                    <button
-                      key={p.id + (p.currentAppointmentId || '')}
-                      onClick={() => handlePatientSelect(p)}
-                      className={`w-full p-4 rounded-2xl text-left transition-all border ${selectedPatient?.id === p.id ? "bg-emerald-50 border-emerald-200 shadow-sm" : "bg-white border-slate-100 hover:border-slate-200 hover:shadow-sm"}`}
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                         <div className="flex items-center gap-2">
-                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs ${selectedPatient?.id === p.id ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'}`}>
-                               {p.firstName[0]}{p.lastName[0]}
-                            </div>
-                            <div>
-                               <p className={`font-bold text-sm ${selectedPatient?.id === p.id ? "text-emerald-900" : "text-slate-900"}`}>{p.firstName} {p.lastName}</p>
-                               <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{p.role || 'Regular'}</p>
-                            </div>
-                         </div>
-                         {p.role === 'VIP' && <div className="bg-amber-400 w-2 h-2 rounded-full" />}
-                      </div>
-                      <div className="flex items-center gap-3 text-[11px] text-slate-500 font-medium">
-                         <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {p.phone}</span>
-                         <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {p.appointments?.[0] ? new Date(p.appointments[0].appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:30 AM'}</span>
-                      </div>
-                    </button>
-                  ))}
-               </div>
-            </div>
-
-            {/* Today's History Section */}
-            {filteredPatients.completedToday.length > 0 && (
-               <div>
-                  <div className="flex items-center gap-2 mb-3 px-2">
-                     <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                     <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Finalized Today ({filteredPatients.completedToday.length})</h3>
-                  </div>
-                  <div className="space-y-2 opacity-75">
-                     {filteredPatients.completedToday.map(p => (
-                       <button
-                         key={p.id}
-                         onClick={() => handlePatientSelect(p)}
-                         className={`w-full p-4 rounded-2xl text-left transition-all border ${selectedPatient?.id === p.id ? "bg-emerald-50 border-emerald-200" : "bg-slate-50 border-slate-100 hover:bg-white hover:border-slate-200"}`}
-                       >
-                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center font-bold text-xs">
-                               {p.firstName[0]}{p.lastName[0]}
-                            </div>
-                            <div>
-                               <p className="font-bold text-sm text-slate-700">{p.firstName} {p.lastName}</p>
-                               <p className="text-[10px] text-emerald-600 font-bold uppercase">Assessment Complete</p>
-                            </div>
-                         </div>
-                       </button>
-                     ))}
-                  </div>
-               </div>
-            )}
-
-            {filteredPatients.pending.length === 0 && filteredPatients.completedToday.length === 0 && (
-              <div className="py-20 text-center opacity-40">
-                 <User className="w-12 h-12 mx-auto mb-2" />
-                 <p className="text-sm font-medium">No assigned patients</p>
+    <div className="h-full bg-[#f8fafc]">
+      {viewMode === "list" ? (
+        <div className="p-8 space-y-6 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+           <div className="flex justify-between items-center mb-2">
+              <div>
+                 <h1 className="text-3xl font-black text-slate-900">Doctor Dashboard</h1>
+                 <p className="text-slate-500 font-medium mt-1">Reviewing today&apos;s scheduled clinical queue.</p>
               </div>
-            )}
-         </div>
-      </div>
+              <div className="flex gap-4">
+                 <div className="bg-white px-6 py-3 rounded-2xl border border-slate-200 shadow-sm text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Pending</p>
+                    <p className="text-xl font-black text-amber-600">{filteredPatients.pending.length}</p>
+                 </div>
+                 <div className="bg-white px-6 py-3 rounded-2xl border border-slate-200 shadow-sm text-center">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Completed Today</p>
+                    <p className="text-xl font-black text-emerald-600">{filteredPatients.completedToday.length}</p>
+                 </div>
+              </div>
+           </div>
 
-      {/* Main Clinical Workspace (Right Column) */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+             <div className="relative">
+               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+               <input
+                 type="text"
+                 placeholder="Search by name or phone..."
+                 value={searchTerm}
+                 onChange={(e) => setSearchTerm(e.target.value)}
+                 className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-base focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+               />
+             </div>
+           </div>
+
+           <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+             <table className="min-w-full text-left text-sm text-slate-600">
+                <thead className="bg-slate-50 text-slate-700 uppercase font-bold text-[10px] tracking-widest border-b border-slate-200">
+                   <tr>
+                      <th className="px-8 py-6">Patient Details</th>
+                      <th className="px-8 py-6">Appt Time</th>
+                      <th className="px-8 py-6">Contact</th>
+                      <th className="px-8 py-6">Status</th>
+                      <th className="px-8 py-6 text-right">Actions</th>
+                   </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                   {[...filteredPatients.pending, ...filteredPatients.completedToday].map((p) => {
+                      const isCompleted = filteredPatients.completedToday.some(cp => cp.id === p.id);
+                      return (
+                        <tr key={p.id} className="hover:bg-slate-50/50 transition group">
+                           <td className="px-8 py-5">
+                              <div className="flex items-center gap-4">
+                                 <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shadow-sm ${isCompleted ? 'bg-emerald-100 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                                    {p.firstName[0]}{p.lastName[0]}
+                                 </div>
+                                 <div>
+                                    <p className="font-black text-slate-900 text-base">{p.firstName} {p.lastName}</p>
+                                    <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">{p.gender} • {calculateAge(p.dateOfBirth)} YRS</p>
+                                 </div>
+                              </div>
+                           </td>
+                           <td className="px-8 py-5 font-bold text-slate-700">
+                              <div className="flex items-center gap-2">
+                                 <Clock className="w-4 h-4 text-slate-400" />
+                                 {p.appointments?.[0] ? new Date(p.appointments[0].appointmentDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A'}
+                              </div>
+                           </td>
+                           <td className="px-8 py-5 font-medium text-slate-600">
+                              {p.phone}
+                           </td>
+                           <td className="px-8 py-5">
+                              <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${
+                                 isCompleted
+                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                                 : 'bg-amber-50 text-amber-700 border-amber-100'
+                              }`}>
+                                 {isCompleted ? 'Finalized' : 'Pending Review'}
+                              </span>
+                           </td>
+                           <td className="px-8 py-5 text-right">
+                              <button
+                                 onClick={() => handlePatientSelect(p)}
+                                 className={`px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+                                    isCompleted
+                                    ? 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                                    : 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-100'
+                                 }`}
+                              >
+                                 {isCompleted ? 'View Assessment' : 'Start Review'}
+                              </button>
+                           </td>
+                        </tr>
+                      );
+                   })}
+                   {filteredPatients.pending.length === 0 && filteredPatients.completedToday.length === 0 && (
+                      <tr>
+                         <td colSpan={5} className="px-8 py-24 text-center">
+                            <div className="opacity-20 flex flex-col items-center">
+                               <User className="w-16 h-16 mb-4" />
+                               <p className="text-xl font-black uppercase tracking-tighter">No patients in queue</p>
+                            </div>
+                         </td>
+                      </tr>
+                   )}
+                </tbody>
+             </table>
+           </div>
+        </div>
+      ) : (
+        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative animate-in slide-in-from-right duration-500">
         {selectedPatient ? (
           <>
             {/* Header / Patient Summary */}
-            <div className="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between shrink-0">
-               <div className="flex items-center gap-4">
+            <div className="bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between shrink-0">
+               <div className="flex items-center gap-6">
                   <button
-                    onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-                    className="p-2 hover:bg-slate-50 rounded-lg text-slate-400 transition-colors"
-                    title={isSidebarCollapsed ? "Show List" : "Hide List"}
+                    onClick={() => {
+                        setViewMode("list");
+                        setSelectedPatient(null);
+                    }}
+                    className="p-3 bg-slate-50 hover:bg-slate-100 rounded-2xl text-slate-600 transition-all border border-slate-200 flex items-center gap-2 font-bold text-sm"
                   >
-                    {isSidebarCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+                    <ChevronLeft className="w-5 h-5" /> Back to Queue
                   </button>
-                  <div className="h-8 w-[1px] bg-slate-100 mx-2" />
+                  <div className="h-8 w-[1px] bg-slate-100" />
                   <div>
-                    <h1 className="text-xl font-bold text-slate-900">{selectedPatient.firstName} {selectedPatient.lastName}</h1>
-                    <div className="flex items-center gap-3 text-xs text-slate-500 font-medium mt-0.5">
-                       <span>{selectedPatient.gender || 'Unknown'}, {calculateAge(selectedPatient.dateOfBirth)} yrs</span>
-                       <span className="w-1 h-1 bg-slate-300 rounded-full" />
-                       <span>Patient ID: #{selectedPatient.id.slice(-6).toUpperCase()}</span>
+                    <h1 className="text-2xl font-black text-slate-900 leading-none">{selectedPatient.firstName} {selectedPatient.lastName}</h1>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-400 font-black uppercase tracking-widest mt-2">
+                       <span>{selectedPatient.gender}, {calculateAge(selectedPatient.dateOfBirth)} YRS</span>
+                       <span className="w-1.5 h-1.5 bg-slate-200 rounded-full" />
+                       <span className="text-emerald-500">ID: #{selectedPatient.id.slice(-6).toUpperCase()}</span>
                     </div>
                   </div>
                </div>
                <div className="flex items-center gap-4">
                   <div className="text-right hidden md:block">
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Session</p>
-                     <p className="text-sm font-bold text-slate-700">Clinical Assessment</p>
+                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Assessment</p>
+                     <p className="text-sm font-black text-slate-900">Dr. {selectedPatient.medicalRecord?.assignedDoctor?.username || 'Medical Officer'}</p>
                   </div>
-                  <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-100 flex items-center gap-2">
-                     <History className="w-4 h-4" /> Full History
+                  <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-2xl text-sm font-black transition-all shadow-xl shadow-emerald-100 flex items-center gap-3 uppercase tracking-widest">
+                     <History className="w-4 h-4" /> Full Dossier
                   </button>
                </div>
             </div>
@@ -363,6 +383,7 @@ export default function DoctorClient({
                       alert("Assessment saved successfully!");
                       if (formData.get("finalize") === "true") {
                           setSelectedPatient(null);
+                          setViewMode("list");
                       }
                   }}>
                      {/* Subjective Tab Content */}
@@ -936,6 +957,7 @@ export default function DoctorClient({
           </div>
         )}
       </div>
-    </div>
-  );
+    )}
+  </div>
+);
 }

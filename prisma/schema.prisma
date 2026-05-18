@@ -96,6 +96,7 @@ model Appointment {
   createdAt       DateTime @default(now())
   doctor          User?    @relation("DoctorAppointments", fields: [doctorId], references: [id])
   patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  procedures      Procedure[]
 }
 
 model BillingCatalog {
@@ -111,6 +112,7 @@ model BillingCatalog {
 model Procedure {
   id            String   @id @default(uuid())
   patientId     String
+  appointmentId String?
   name          String
   type          String?
   description   String?
@@ -123,6 +125,7 @@ model Procedure {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
   patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  appointment   Appointment? @relation(fields: [appointmentId], references: [id])
 }
 
 enum Role {

@@ -42,8 +42,6 @@ export default function DashboardClient({
   totalPages,
   currentPage,
 }: DashboardClientProps) {
-  const [isApptFormOpen, setIsApptFormOpen] = useState(false);
-  const [apptPatient, setAppointmentPatient] = useState<Patient | null>(null); // Holds patient for the new appt
   const router = useRouter();
   const params = useSearchParams();
 
@@ -419,15 +417,6 @@ export default function DashboardClient({
               </div>
               <div className="flex gap-3 w-full md:w-auto">
                  <button
-                   onClick={() => {
-                     setAppointmentPatient(selectedPatient);
-                     setIsApptFormOpen(true);
-                   }}
-                   className="flex-1 md:flex-none bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
-                 >
-                   <Calendar className="w-4 h-4" /> New Appointment
-                 </button>
-                 <button
                    onClick={() => setIsProfileOpen(false)}
                    className="p-3 bg-white text-slate-400 hover:text-slate-800 rounded-xl border border-slate-200 transition-all"
                  >
@@ -686,72 +675,6 @@ export default function DashboardClient({
         </div>
       )}
 
-      {/* APPOINTMENT ADD MODAL */}
-      {isApptFormOpen && apptPatient && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-8 border-b border-slate-50 bg-slate-50/30 text-center">
-               <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center justify-center gap-2">
-                 <Calendar className="w-5 h-5 text-indigo-500" /> New Session
-               </h2>
-               <p className="text-xs text-slate-400 font-bold mt-1 uppercase">Scheduling for: {apptPatient.firstName} {apptPatient.lastName}</p>
-            </div>
-
-            <form
-              action={async (formData) => {
-                formData.append("patientId", apptPatient.id);
-                formData.append("status", "SCHEDULED"); // Ensure status is set
-                await createAppointmentAction(formData);
-                setIsApptFormOpen(false);
-              }}
-              className="p-8 space-y-6"
-            >
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Preferred Date</label>
-                <input
-                  required
-                  type="date"
-                  name="appointmentDate"
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-bold text-slate-700"
-                />
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Select Procedures</label>
-                <div className="grid grid-cols-2 gap-3 mt-2">
-                  {["Cleaning", "Filling", "Root Canal", "Checkup", "Whitening", "Extraction"].map(
-                    (proc) => (
-                      <label
-                        key={proc}
-                        className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200"
-                      >
-                        <input type="checkbox" name="treatments" value={proc} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
-                        <span className="text-xs font-bold text-slate-600">{proc}</span>
-                      </label>
-                    ),
-                  )}
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-4">
-                <button
-                  type="button"
-                  onClick={() => setIsApptFormOpen(false)}
-                  className="flex-1 py-4 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition"
-                >
-                  Create Session
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
