@@ -179,12 +179,12 @@ export default function DashboardClient({
             {isExporting ? "Exporting..." : "Export Excel"}
           </button>
 
-          <Link
+          {/* <Link
             href="/billing"
             className="px-5 py-3 bg-amber-50 text-amber-700 rounded-xl font-medium flex items-center gap-2 hover:bg-amber-100 transition"
           >
             <Receipt className="w-5 h-5" /> Billing
-          </Link>
+          </Link> */}
 
           <button
             onClick={openAdd}

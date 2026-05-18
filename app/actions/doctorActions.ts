@@ -4,7 +4,10 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getSession } from "@/lib/auth/session";
 
-export async function updateMedicalRecord(patientId: string, formData: FormData) {
+export async function updateMedicalRecord(
+  patientId: string,
+  formData: FormData,
+) {
   await prisma.medicalRecord.upsert({
     where: { patientId },
     update: {
@@ -36,8 +39,8 @@ export async function updateMedicalRecord(patientId: string, formData: FormData)
       where: { id: patientId },
       data: {
         bloodGroup: bloodGroup || undefined,
-        address: address || undefined
-      }
+        address: address || undefined,
+      },
     });
   }
 
@@ -52,7 +55,9 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
 
   // If it's sent as a comma-separated string from a simple input, convert to JSON array string
   if (medicalHistoryRaw && !medicalHistoryRaw.startsWith("[")) {
-    medicalHistory = JSON.stringify(medicalHistoryRaw.split(",").map(s => s.trim()));
+    medicalHistory = JSON.stringify(
+      medicalHistoryRaw.split(",").map((s) => s.trim()),
+    );
   }
 
   const nextVisitDateRaw = formData.get("nextVisitDate")?.toString();
@@ -65,7 +70,8 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
   }
 
   const referredDoctorId = formData.get("referredDoctorId")?.toString() || null;
-  const selectedProceduresRaw = formData.get("selectedProcedures")?.toString() || "[]";
+  const selectedProceduresRaw =
+    formData.get("selectedProcedures")?.toString() || "[]";
   const finalize = formData.get("finalize") === "true";
 
   const rawVasScore = formData.get("vasScore")?.toString();
@@ -97,22 +103,22 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
         patientId,
         createdAt: {
           gte: today,
-          lt: tomorrow
-        }
-      }
+          lt: tomorrow,
+        },
+      },
     });
 
     if (existingDiagnosis) {
       await prisma.diagnosis.update({
         where: { id: existingDiagnosis.id },
-        data: diagnosisData
+        data: diagnosisData,
       });
     } else {
       await prisma.diagnosis.create({
         data: {
           patientId,
-          ...diagnosisData
-        }
+          ...diagnosisData,
+        },
       });
     }
 
@@ -124,7 +130,7 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
       create: {
         patientId,
         complaints: formData.get("complaints")?.toString() || null,
-      }
+      },
     });
 
     if (finalize) {
@@ -133,7 +139,7 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
         const procedureNames = JSON.parse(selectedProceduresRaw) as string[];
         if (procedureNames.length > 0) {
           const catalogItems = await prisma.billingCatalog.findMany({
-            where: { name: { in: procedureNames } }
+            where: { name: { in: procedureNames } },
           });
 
           for (const item of catalogItems) {
@@ -145,8 +151,8 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
                 cost: item.baseCost,
                 status: "PENDING",
                 procedureDate: new Date(),
-                description: `Recommended by doctor during assessment.`
-              }
+                description: `Recommended by doctor during assessment.`,
+              },
             });
           }
         }
@@ -170,13 +176,13 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
         patientId,
         appointmentDate: {
           gte: today,
-          lt: tomorrow
+          lt: tomorrow,
         },
-        status: { not: "COMPLETED" }
+        status: { not: "COMPLETED" },
       },
       data: {
-        status: "COMPLETED"
-      }
+        status: "COMPLETED",
+      },
     });
 
     // Create follow-up appointment if date is set
@@ -187,7 +193,7 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
       if (!doctorId) {
         const patient = await prisma.patient.findUnique({
           where: { id: patientId },
-          include: { medicalRecord: true }
+          include: { medicalRecord: true },
         });
         doctorId = patient?.medicalRecord?.assignedDoctorId || null;
       }
@@ -199,7 +205,7 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
           appointmentDate: nextVisitDate,
           status: "SCHEDULED",
           treatments: "Follow-up",
-        }
+        },
       });
 
       // Update patient's primary doctor assignment
@@ -208,15 +214,15 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
       if (finalDoctorId) {
         await prisma.medicalRecord.update({
           where: { patientId },
-          data: { assignedDoctorId: finalDoctorId }
+          data: { assignedDoctorId: finalDoctorId },
         });
       }
     } else if (session?.id) {
-        // Even if no follow-up, ensure the current doctor is assigned if they are the one finalizing
-        await prisma.medicalRecord.update({
-          where: { patientId },
-          data: { assignedDoctorId: session.id }
-        });
+      // Even if no follow-up, ensure the current doctor is assigned if they are the one finalizing
+      await prisma.medicalRecord.update({
+        where: { patientId },
+        data: { assignedDoctorId: session.id },
+      });
     }
   }
 
@@ -224,15 +230,18 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
   revalidatePath("/");
 }
 
-export async function addBatchProcedures(patientId: string, procedures: {
-  name: string;
-  type: string;
-  cost: string;
-  description: string;
-  medicine: string[];
-  suggestions: string[];
-  procedureDate?: string;
-}[]) {
+export async function addBatchProcedures(
+  patientId: string,
+  procedures: {
+    name: string;
+    type: string;
+    cost: string;
+    description: string;
+    medicine: string[];
+    suggestions: string[];
+    procedureDate?: string;
+  }[],
+) {
   for (const proc of procedures) {
     await prisma.procedure.create({
       data: {
@@ -250,10 +259,18 @@ export async function addBatchProcedures(patientId: string, procedures: {
 
   // Update patient last visit stats based on the latest procedure date
   if (procedures.length > 0) {
-    const latestDate = new Date(Math.max(...procedures.map(p => new Date(p.procedureDate || new Date()).getTime())));
+    const latestDate = new Date(
+      Math.max(
+        ...procedures.map((p) =>
+          new Date(p.procedureDate || new Date()).getTime(),
+        ),
+      ),
+    );
 
     // Check if patient becomes "old"
-    const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+    const patient = await prisma.patient.findUnique({
+      where: { id: patientId },
+    });
     const newVisitCount = (patient?.visitCount || 0) + 1;
 
     await prisma.patient.update({
@@ -261,8 +278,8 @@ export async function addBatchProcedures(patientId: string, procedures: {
       data: {
         lastVisitDate: latestDate,
         visitCount: newVisitCount,
-        isOld: newVisitCount > 1
-      }
+        isOld: newVisitCount > 1,
+      },
     });
 
     // Mark today's appointment as COMPLETED
@@ -276,12 +293,12 @@ export async function addBatchProcedures(patientId: string, procedures: {
         patientId,
         appointmentDate: {
           gte: today,
-          lt: tomorrow
-        }
+          lt: tomorrow,
+        },
       },
       data: {
-        status: "COMPLETED"
-      }
+        status: "COMPLETED",
+      },
     });
   }
 
@@ -300,10 +317,14 @@ export async function addProcedure(patientId: string, formData: FormData) {
       patientId,
       name: formData.get("name") as string,
       description: formData.get("description") as string,
-      cost: parseFloat(formData.get("cost") as string || "0"),
+      cost: parseFloat((formData.get("cost") as string) || "0"),
       procedureDate: new Date(formData.get("procedureDate") as string),
-      medicine: medicineRaw ? JSON.stringify(medicineRaw.split(",").map(s => s.trim())) : "[]",
-      suggestions: suggestionsRaw ? JSON.stringify(suggestionsRaw.split(",").map(s => s.trim())) : "[]",
+      medicine: medicineRaw
+        ? JSON.stringify(medicineRaw.split(",").map((s) => s.trim()))
+        : "[]",
+      suggestions: suggestionsRaw
+        ? JSON.stringify(suggestionsRaw.split(",").map((s) => s.trim()))
+        : "[]",
     },
   });
 
@@ -311,8 +332,8 @@ export async function addProcedure(patientId: string, formData: FormData) {
     where: { id: patientId },
     data: {
       lastVisitDate: new Date(formData.get("procedureDate") as string),
-      visitCount: { increment: 1 }
-    }
+      visitCount: { increment: 1 },
+    },
   });
 
   revalidatePath("/doctor");
