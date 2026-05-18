@@ -600,7 +600,7 @@ export default function DoctorClient({
                         </label>
                         <div className="aspect-[3/4] bg-slate-200 rounded-2xl mb-6 flex items-center justify-center overflow-hidden relative group">
                           <Image
-                            src="https://media.sciencephoto.com/image/c0214555/800wm/C0214555-Anatomy.jpg"
+                            src="/image.jpg"
                             width={100}
                             height={150}
                             className="w-full h-full object-contain mix-blend-multiply opacity-50"
