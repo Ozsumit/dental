@@ -113,10 +113,18 @@ export async function savePatient(formData: FormData, id?: string) {
   const visitCount = visitCountStr ? Number(visitCountStr) : 0;
   const doctorId = formData.get("doctorId") as string || null;
 
+  const firstName = formData.get("firstName")?.toString().trim();
+  const lastName = formData.get("lastName")?.toString().trim();
+  const phone = formData.get("phone")?.toString().trim();
+
+  if (!firstName || !lastName || !phone) {
+    throw new Error("First Name, Last Name, and Phone are required.");
+  }
+
   const patientData = {
-    firstName: formData.get("firstName")?.toString() || "",
-    lastName: formData.get("lastName")?.toString() || "",
-    phone: formData.get("phone")?.toString() || "",
+    firstName,
+    lastName,
+    phone,
     email: formData.get("email")?.toString() || null,
     gender: formData.get("gender")?.toString() || null,
     status: formData.get("status")?.toString() || "ACTIVE",

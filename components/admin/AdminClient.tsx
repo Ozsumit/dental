@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { saveUser, deleteUser } from "@/app/actions/userActions";
-import { saveCatalogItem, deleteCatalogItem } from "@/app/actions/billingActions";
-import { Plus, Edit2, Trash2, X, Shield, User as UserIcon, Receipt, Briefcase } from "lucide-react";
-import { User, BillingCatalog } from "@prisma/client";
+import { saveCatalogItem, deleteCatalogItem, saveSystemSettings } from "@/app/actions/billingActions";
+import { Plus, Edit2, Trash2, X, Shield, User as UserIcon, Receipt, Briefcase, Settings, Save } from "lucide-react";
+import { User, BillingCatalog, SystemSettings } from "@prisma/client";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
 
-export default function AdminClient({ users, catalog }: { users: User[], catalog: BillingCatalog[] }) {
-  const [activeTab, setActiveTab] = useState<"Users" | "Catalog">("Users");
+export default function AdminClient({ users, catalog, settings }: { users: User[], catalog: BillingCatalog[], settings: SystemSettings }) {
+  const [activeTab, setActiveTab] = useState<"Users" | "Catalog" | "Settings">("Users");
 
   // User states
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
@@ -16,6 +17,8 @@ export default function AdminClient({ users, catalog }: { users: User[], catalog
   // Catalog states
   const [isCatalogFormOpen, setIsCatalogFormOpen] = useState(false);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<BillingCatalog | null>(null);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   return (
     <div className="space-y-6 p-6">
@@ -39,6 +42,12 @@ export default function AdminClient({ users, catalog }: { users: User[], catalog
                >
                   Billing Catalog
                </button>
+               <button
+                 onClick={() => setActiveTab("Settings")}
+                 className={`text-xs font-bold uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === "Settings" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+               >
+                  Settings
+               </button>
             </div>
           </div>
         </div>
@@ -50,17 +59,17 @@ export default function AdminClient({ users, catalog }: { users: User[], catalog
           >
             <Plus className="w-5 h-5" /> Add New User
           </button>
-        ) : (
+        ) : activeTab === "Catalog" ? (
           <button
             onClick={() => { setSelectedCatalogItem(null); setIsCatalogFormOpen(true); }}
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
           >
             <Plus className="w-5 h-5" /> Add Procedure
           </button>
-        )}
+        ) : null}
       </div>
 
-      {activeTab === "Users" ? (
+      {activeTab === "Users" && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
           <table className="min-w-full text-left text-sm text-slate-600">
             <thead className="bg-slate-50 text-slate-700 uppercase font-bold text-xs border-b border-slate-200">
@@ -97,7 +106,7 @@ export default function AdminClient({ users, catalog }: { users: User[], catalog
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={async () => { if(confirm("Are you sure?")) await deleteUser(user.id); }}
+                        onClick={() => { setSelectedUser(user); setIsDeleteModalOpen(true); }}
                         className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -109,7 +118,9 @@ export default function AdminClient({ users, catalog }: { users: User[], catalog
             </tbody>
           </table>
         </div>
-      ) : (
+      )}
+
+      {activeTab === "Catalog" && (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
           <table className="min-w-full text-left text-sm text-slate-600">
             <thead className="bg-slate-50 text-slate-700 uppercase font-bold text-xs border-b border-slate-200">
@@ -146,7 +157,7 @@ export default function AdminClient({ users, catalog }: { users: User[], catalog
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={async () => { if(confirm("Delete this procedure?")) await deleteCatalogItem(item.id); }}
+                        onClick={() => { setSelectedCatalogItem(item); setIsDeleteModalOpen(true); }}
                         className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -162,6 +173,42 @@ export default function AdminClient({ users, catalog }: { users: User[], catalog
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {activeTab === "Settings" && (
+        <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-sm animate-in fade-in duration-300">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="p-2 bg-slate-100 text-slate-600 rounded-lg">
+              <Settings className="w-5 h-5" />
+            </div>
+            <h2 className="text-xl font-bold text-slate-800">System Configuration</h2>
+          </div>
+
+          <form action={saveSystemSettings} className="max-w-md space-y-6">
+            <div>
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Default Appointment Fee ($)</label>
+              <div className="relative">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">$</span>
+                <input
+                  required
+                  name="appointmentFee"
+                  type="number"
+                  step="0.01"
+                  defaultValue={settings.appointmentFee}
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-black text-slate-700"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-2 font-medium">This fee will be automatically pre-filled when creating new appointments.</p>
+            </div>
+
+            <button
+              type="submit"
+              className="w-full bg-indigo-600 text-white px-6 py-4 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
+            >
+              <Save className="w-5 h-5" /> Update Settings
+            </button>
+          </form>
         </div>
       )}
 
@@ -238,6 +285,22 @@ export default function AdminClient({ users, catalog }: { users: User[], catalog
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={async () => {
+          if (activeTab === "Users" && selectedUser) {
+            await deleteUser(selectedUser.id);
+          } else if (activeTab === "Catalog" && selectedCatalogItem) {
+            await deleteCatalogItem(selectedCatalogItem.id);
+          }
+        }}
+        title={`Delete ${activeTab === "Users" ? "User" : "Procedure"}?`}
+        message={`Are you sure you want to remove this ${activeTab === "Users" ? "user account" : "catalog item"}? This action cannot be undone.`}
+        confirmText="Yes, Delete"
+        variant="danger"
+      />
 
       {isCatalogFormOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">

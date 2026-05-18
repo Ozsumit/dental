@@ -10,8 +10,35 @@ export async function getBillingCatalog() {
   });
 }
 
+export async function getSystemSettings() {
+  return await prisma.systemSettings.upsert({
+    where: { id: "default" },
+    update: {},
+    create: { id: "default", appointmentFee: 0 }
+  });
+}
+
+export async function saveSystemSettings(formData: FormData) {
+  const appointmentFee = parseFloat(formData.get("appointmentFee") as string || "0");
+  await prisma.systemSettings.update({
+    where: { id: "default" },
+    data: { appointmentFee }
+  });
+  revalidatePath("/admin");
+}
+
 export async function getAdminStats() {
-  const [patientCount, revenueData, appointmentCount] = await Promise.all([
+  const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
+  const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
+
+  const [
+    patientCount,
+    revenueData,
+    appointmentCount,
+    pendingPayments,
+    recentProcedures,
+    revenueByCategory
+  ] = await Promise.all([
     prisma.patient.count(),
     prisma.procedure.aggregate({
       where: { status: "PAID" },
@@ -20,17 +47,37 @@ export async function getAdminStats() {
     prisma.appointment.count({
       where: {
         appointmentDate: {
-          gte: new Date(new Date().setHours(0,0,0,0)),
-          lt: new Date(new Date().setHours(23,59,59,999))
+          gte: todayStart,
+          lte: todayEnd
         }
       }
+    }),
+    prisma.procedure.aggregate({
+      where: { status: { in: ["PENDING", "BILLED"] } },
+      _sum: { cost: true }
+    }),
+    prisma.procedure.findMany({
+      take: 5,
+      orderBy: { createdAt: "desc" },
+      include: { patient: true }
+    }),
+    prisma.procedure.groupBy({
+      by: ["type"],
+      where: { status: "PAID" },
+      _sum: { cost: true }
     })
   ]);
 
   return {
     totalPatients: patientCount,
     totalRevenue: revenueData._sum.cost || 0,
-    todaysAppointments: appointmentCount
+    todaysAppointments: appointmentCount,
+    totalPending: pendingPayments._sum.cost || 0,
+    recentProcedures,
+    revenueByCategory: revenueByCategory.map(item => ({
+      type: item.type || "Other",
+      amount: item._sum.cost || 0
+    }))
   };
 }
 
@@ -40,6 +87,52 @@ export async function getPendingBillings() {
     include: { patient: true },
     orderBy: { procedureDate: "desc" }
   });
+}
+
+export async function getAllBillings(searchParams: { [key: string]: string | string[] | undefined }) {
+  const page = Number(searchParams?.page) || 1;
+  const limit = 20;
+  const skip = (page - 1) * limit;
+
+  const where: any = {};
+
+  if (searchParams?.q) {
+    const q = (searchParams.q as string).trim().toLowerCase();
+    where.OR = [
+      { name: { contains: q } },
+      { type: { contains: q } },
+      {
+        patient: {
+          OR: [
+            { firstName: { contains: q } },
+            { lastName: { contains: q } },
+            { phone: { contains: q } }
+          ]
+        }
+      }
+    ];
+  }
+
+  if (searchParams?.status) where.status = searchParams.status;
+  if (searchParams?.type) where.type = searchParams.type;
+
+  const [totalCount, data] = await Promise.all([
+    prisma.procedure.count({ where }),
+    prisma.procedure.findMany({
+      where,
+      skip,
+      take: limit,
+      include: { patient: true },
+      orderBy: { procedureDate: "desc" }
+    })
+  ]);
+
+  return {
+    data,
+    totalPages: Math.ceil(totalCount / limit),
+    currentPage: page,
+    totalCount
+  };
 }
 
 export async function finalizeBilling(procedureId: string, billedCost: number) {

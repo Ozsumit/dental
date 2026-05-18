@@ -23,6 +23,7 @@ import {
   Download,
 } from "lucide-react";
 import * as XLSX from "xlsx";
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
 
 interface AppointmentsClientProps {
   appointments: Appointment[];
@@ -30,13 +31,15 @@ interface AppointmentsClientProps {
   currentPage: number;
   searchParams: { [key: string]: string | string[] | undefined };
   doctors: { id: string; username: string }[];
+  defaultFee?: number;
 }
 
 export default function AppointmentsClient({
   appointments,
   totalPages,
   currentPage,
-  doctors: initialDoctors
+  doctors: initialDoctors,
+  defaultFee = 0
 }: AppointmentsClientProps) {
   const router = useRouter();
   const params = useSearchParams();
@@ -58,7 +61,11 @@ export default function AppointmentsClient({
       const newParams = new URLSearchParams(params.toString());
       if (value) newParams.set(name, value);
       else newParams.delete(name);
-      newParams.set("page", "1");
+
+      if (name !== "page") {
+        newParams.set("page", "1");
+      }
+
       router.push(`?${newParams.toString()}`);
     },
     [params, router],
@@ -86,12 +93,15 @@ export default function AppointmentsClient({
     }
   }, 300);
 
+  const [billAmount, setBillAmount] = useState<string | number>("");
+
   const openAdd = () => {
     setSelectedAppt(null);
     setSelectedPatientId("");
     setPatientSearchQuery("");
     setPatientResults([]);
     setIsCreatingPatient(false);
+    setBillAmount(defaultFee);
     setIsFormOpen(true);
   };
 
@@ -101,6 +111,7 @@ export default function AppointmentsClient({
     setPatientSearchQuery(
       `${appt.patient?.firstName} ${appt.patient?.lastName}`,
     );
+    setBillAmount(appt.billAmount || "");
     setIsFormOpen(true);
   };
 
@@ -581,7 +592,8 @@ export default function AppointmentsClient({
                     step="0.01"
                     name="billAmount"
                     placeholder="0.00"
-                    defaultValue={selectedAppt?.billAmount || ""}
+                    value={billAmount}
+                    onChange={(e) => setBillAmount(e.target.value)}
                     className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none"
                   />
                 </div>
@@ -622,37 +634,20 @@ export default function AppointmentsClient({
       )}
 
       {/* DELETE MODAL */}
-      {isDeleteOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-sm shadow-2xl p-8 text-center">
-            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto mb-5">
-              <Trash2 className="w-8 h-8" />
-            </div>
-            <h2 className="text-xl font-bold text-slate-900">
-              Cancel/Delete Appointment?
-            </h2>
-            <div className="flex gap-3 mt-8">
-              <button
-                onClick={() => setIsDeleteOpen(false)}
-                className="flex-1 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold"
-              >
-                Close
-              </button>
-              <button
-                onClick={async () => {
-                  if (selectedAppt) {
-                    await deleteAppointment(selectedAppt.id);
-                  }
-                  setIsDeleteOpen(false);
-                }}
-                className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={async () => {
+          if (selectedAppt) {
+            await deleteAppointment(selectedAppt.id);
+          }
+        }}
+        title="Delete Appointment?"
+        message={`This will permanently remove the appointment for ${selectedAppt?.patient?.firstName} ${selectedAppt?.patient?.lastName}. This action cannot be undone.`}
+        confirmText="Yes, Delete"
+        cancelText="Keep Appointment"
+        variant="danger"
+      />
     </div>
   );
 }

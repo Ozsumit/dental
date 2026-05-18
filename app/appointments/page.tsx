@@ -1,5 +1,6 @@
 import { getAppointments } from "@/app/actions/appointmentActions";
 import { getDoctors } from "@/app/actions/userActions";
+import { getSystemSettings } from "@/app/actions/billingActions";
 import AppointmentsClient from "./AppointmentsClient";
 import { CalendarDays } from "lucide-react";
 
@@ -9,9 +10,12 @@ export default async function AppointmentsPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const resolvedParams = await searchParams;
-  const { data, totalPages, currentPage, totalCount } =
-    await getAppointments(resolvedParams);
-  const doctors = await getDoctors();
+  const [{ data, totalPages, currentPage, totalCount }, doctors, settings] =
+    await Promise.all([
+      getAppointments(resolvedParams),
+      getDoctors(),
+      getSystemSettings()
+    ]);
   const today = new Date();
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
@@ -49,6 +53,7 @@ export default async function AppointmentsPage({
           currentPage={currentPage}
           searchParams={resolvedParams}
           doctors={doctors}
+          defaultFee={settings.appointmentFee}
         />
       </div>
     </main>

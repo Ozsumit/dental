@@ -30,22 +30,26 @@ import {
   Receipt
 } from "lucide-react";
 import * as XLSX from "xlsx"; // Import Excel library
+import ConfirmationModal from "@/components/ui/ConfirmationModal";
 interface DashboardClientProps {
   patients: Patient[];
   totalPages: number;
   currentPage: number;
   searchParams: { [key: string]: string | string[] | undefined };
   initialDoctors?: { id: string; username: string }[];
+  defaultFee?: number;
 }
 
 export default function DashboardClient({
   patients,
   totalPages,
   currentPage,
-  initialDoctors = []
+  initialDoctors = [],
+  defaultFee = 0
 }: DashboardClientProps) {
   const [isApptFormOpen, setIsApptFormOpen] = useState(false);
   const [apptPatient, setAppointmentPatient] = useState<Patient | null>(null); // Holds patient for the new appt
+  const [apptBillAmount, setApptBillAmount] = useState<string | number>(defaultFee);
   const router = useRouter();
   const params = useSearchParams();
 
@@ -61,7 +65,12 @@ export default function DashboardClient({
       const newParams = new URLSearchParams(params.toString());
       if (value) newParams.set(name, value);
       else newParams.delete(name);
-      newParams.set("page", "1");
+
+      // Only reset to page 1 if we are NOT explicitly setting the page
+      if (name !== "page") {
+        newParams.set("page", "1");
+      }
+
       router.push(`?${newParams.toString()}`);
     },
     [params, router],
@@ -421,6 +430,16 @@ export default function DashboardClient({
               </div>
               <div className="flex gap-3 w-full md:w-auto">
                  <button
+                   onClick={() => {
+                     setAppointmentPatient(selectedPatient);
+                     setApptBillAmount(defaultFee);
+                     setIsApptFormOpen(true);
+                   }}
+                   className="flex-1 md:flex-none bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                 >
+                   <Calendar className="w-4 h-4" /> New Appointment
+                 </button>
+                 <button
                    onClick={() => setIsProfileOpen(false)}
                    className="p-3 bg-white text-slate-400 hover:text-slate-800 rounded-xl border border-slate-200 transition-all"
                  >
@@ -660,40 +679,20 @@ export default function DashboardClient({
       )}
 
       {/* DELETE MODAL */}
-      {isDeleteOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-sm shadow-2xl p-10 text-center animate-in zoom-in-95 duration-200">
-            <div className="w-20 h-20 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm">
-              <Trash2 className="w-10 h-10" />
-            </div>
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-              Delete Record
-            </h2>
-            <p className="text-slate-500 mt-3 text-sm leading-relaxed">
-              Are you sure you want to delete <strong>{selectedPatient?.firstName}</strong>? This action cannot be undone.
-            </p>
-            <div className="flex flex-col gap-2 mt-8">
-              <button
-                onClick={async () => {
-                  if (selectedPatient) {
-                    await deletePatient(selectedPatient.id);
-                  }
-                  setIsDeleteOpen(false);
-                }}
-                className="w-full py-4 bg-red-600 text-white rounded-xl hover:bg-red-700 shadow-lg shadow-red-100 transition font-bold"
-              >
-                Yes, Delete Patient
-              </button>
-              <button
-                onClick={() => setIsDeleteOpen(false)}
-                className="w-full py-4 text-slate-400 hover:text-slate-800 transition font-bold"
-              >
-                Keep Record
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={isDeleteOpen}
+        onClose={() => setIsDeleteOpen(false)}
+        onConfirm={async () => {
+          if (selectedPatient) {
+            await deletePatient(selectedPatient.id);
+          }
+        }}
+        title="Delete Patient Record?"
+        message={`Are you sure you want to delete ${selectedPatient?.firstName} ${selectedPatient?.lastName}? This will permanently remove all medical history and appointments. This action cannot be undone.`}
+        confirmText="Yes, Delete Record"
+        cancelText="Keep Record"
+        variant="danger"
+      />
 
       {/* APPOINTMENT ADD MODAL */}
       {isApptFormOpen && apptPatient && (
@@ -735,6 +734,8 @@ export default function DashboardClient({
                     step="0.01"
                     name="billAmount"
                     placeholder="0.00"
+                    value={apptBillAmount}
+                    onChange={(e) => setApptBillAmount(e.target.value)}
                     className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-bold text-slate-700"
                   />
                 </div>

@@ -12,6 +12,7 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
   const allItems = [
     { name: "Patients", href: "/", icon: Users, roles: ["RECEPTIONIST", "ADMIN", "DOCTOR"] },
     { name: "Appointments", href: "/appointments", icon: CalendarDays, roles: ["RECEPTIONIST", "ADMIN"] },
+    { name: "Billing History", href: "/billing-history", icon: Receipt, roles: ["RECEPTIONIST", "ADMIN"] },
     { name: "Billing", href: "/billing", icon: Receipt, roles: ["RECEPTIONIST", "ADMIN"] },
     { name: "Doctor View", href: "/doctor", icon: Stethoscope, roles: ["DOCTOR", "ADMIN"] },
     { name: "Admin Panel", href: "/admin", icon: Shield, roles: ["ADMIN"] },

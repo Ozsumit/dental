@@ -2,17 +2,17 @@
 > client-dashboard-8k@0.1.0 dev
 > next dev
 
-⚠ Port 3000 is in use by an unknown process, using available port 3001 instead.
 ▲ Next.js 16.2.6 (Turbopack)
-- Local:         http://localhost:3001
-- Network:       http://192.168.0.2:3001
-✓ Ready in 745ms
-⨯ Another next dev server is already running.
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+✓ Ready in 1088ms
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
 
-- Local:        http://localhost:3000
-- PID:          82029
-- Dir:          /app
-- Log:          .next/dev/logs/next-development.log
-
-Run kill 82029 to stop it.
-[?25h
+ GET /login 200 in 1399ms (next.js: 567ms, proxy.ts: 174ms, application-code: 657ms)
+ GET /admin 200 in 315ms (next.js: 40ms, proxy.ts: 11ms, application-code: 264ms)
+ POST /login 303 in 601ms (next.js: 11ms, proxy.ts: 14ms, application-code: 577ms)
+  └─ ƒ login({}) in 176ms actions/authActions.ts
+ GET /admin 200 in 205ms (next.js: 4ms, proxy.ts: 8ms, application-code: 193ms)
+ GET /billing-history 200 in 141ms (next.js: 25ms, proxy.ts: 9ms, application-code: 106ms)
+ GET /appointments 200 in 282ms (next.js: 28ms, proxy.ts: 6ms, application-code: 248ms)
+ GET /appointments?q=Test+Patient&page=1 200 in 53ms (next.js: 4ms, proxy.ts: 8ms, application-code: 41ms)
