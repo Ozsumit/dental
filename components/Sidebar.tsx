@@ -39,7 +39,7 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
       name: "Patients",
       href: "/",
       icon: Users,
-      roles: ["RECEPTIONIST", "ADMIN", "DOCTOR"],
+      roles: ["RECEPTIONIST", "ADMIN"],
     },
     {
       name: "Appointments",
@@ -51,7 +51,7 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
       name: "Billing History",
       href: "/billing-history",
       icon: Receipt,
-      roles: ["RECEPTIONIST", "ADMIN"],
+      roles: ["ADMIN"],
     },
     {
       name: "Billing",
