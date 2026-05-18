@@ -12,17 +12,27 @@ export async function getAppointments(searchParams: { [key: string]: string | st
   const where: Prisma.AppointmentWhereInput = {};
 
   if (searchParams?.q) {
-    const q = (searchParams.q as string).trim();
-    const tokens = q.split(/\s+/);
-    where.patient = {
-      AND: tokens.map(token => ({
-        OR: [
-          { firstName: { contains: token } },
-          { lastName: { contains: token } },
-          { phone: { contains: token } },
-        ],
-      })),
-    };
+    const q = (searchParams.q as string).trim().toLowerCase();
+
+    where.OR = [
+      {
+        patient: {
+          OR: [
+            { firstName: { contains: q } },
+            { lastName: { contains: q } },
+            { phone: { contains: q } },
+            {
+              AND: q.split(/\s+/).map(token => ({
+                OR: [
+                  { firstName: { contains: token } },
+                  { lastName: { contains: token } },
+                ]
+              }))
+            }
+          ]
+        }
+      }
+    ];
   }
 
   if (searchParams?.status) where.status = searchParams.status as string;
@@ -93,11 +103,23 @@ export async function saveAppointment(formData: FormData, id?: string) {
   const patientId = formData.get("patientId") as string;
   const doctorId = formData.get("doctorId") as string;
 
+  if (!patientId) {
+    throw new Error("Patient selection is required.");
+  }
+
   if (!doctorId) {
     throw new Error("Doctor assignment is compulsory.");
   }
 
-  const appointmentDate = new Date(formData.get("appointmentDate") as string);
+  const dateStr = formData.get("appointmentDate") as string;
+  if (!dateStr) {
+    throw new Error("Appointment date is required.");
+  }
+
+  const appointmentDate = new Date(dateStr);
+  if (isNaN(appointmentDate.getTime())) {
+    throw new Error("Invalid appointment date.");
+  }
 
   // GRAB ALL CHECKED BOXES AS AN ARRAY
   const treatments = formData.getAll("treatments").join(", ") || (formData.get("treatmentType") as string) || "Checkup";

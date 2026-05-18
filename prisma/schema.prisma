@@ -3,8 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model User {
@@ -126,6 +126,12 @@ model Procedure {
   updatedAt     DateTime @updatedAt
   patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+}
+
+model SystemSettings {
+  id             String   @id @default("default")
+  appointmentFee Float    @default(0)
+  updatedAt      DateTime @updatedAt
 }
 
 enum Role {
