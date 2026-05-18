@@ -4,7 +4,9 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 
-export async function getPatients(searchParams: { [key: string]: string | string[] | undefined }) {
+export async function getPatients(searchParams: {
+  [key: string]: string | string[] | undefined;
+}) {
   const page = Number(searchParams?.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
@@ -29,7 +31,8 @@ export async function getPatients(searchParams: { [key: string]: string | string
   if (searchParams?.status) where.status = searchParams.status as string;
   if (searchParams?.gender) where.gender = searchParams.gender as string;
   if (searchParams?.category) where.role = searchParams.category as string;
-  if (searchParams?.bloodGroup) where.bloodGroup = searchParams.bloodGroup as string;
+  if (searchParams?.bloodGroup)
+    where.bloodGroup = searchParams.bloodGroup as string;
   if (searchParams?.minVisits)
     where.visitCount = { gte: Number(searchParams.minVisits as string) };
 
@@ -65,7 +68,9 @@ export async function getPatients(searchParams: { [key: string]: string | string
   }
 
   // 5. SORTING LOGIC
-  let orderBy: Prisma.PatientOrderByWithRelationInput | Prisma.PatientOrderByWithRelationInput[] = { createdAt: "desc" };
+  let orderBy:
+    | Prisma.PatientOrderByWithRelationInput
+    | Prisma.PatientOrderByWithRelationInput[] = { createdAt: "desc" };
   if (searchParams?.sort === "oldest") orderBy = { createdAt: "asc" };
   if (searchParams?.sort === "nameAsc")
     orderBy = [{ firstName: "asc" }, { lastName: "asc" }];
@@ -89,12 +94,12 @@ export async function getPatients(searchParams: { [key: string]: string | string
           orderBy: { procedureDate: "desc" },
         },
         medicalRecord: {
-          include: { assignedDoctor: true }
+          include: { assignedDoctor: true },
         },
         diagnoses: {
           orderBy: { createdAt: "desc" },
-          take: 1
-        }
+          take: 1,
+        },
       },
     }),
   ]);
@@ -108,17 +113,18 @@ export async function getPatients(searchParams: { [key: string]: string | string
 }
 
 // CRUD OPERATIONS
+// CRUD OPERATIONS
 export async function savePatient(formData: FormData, id?: string) {
   const visitCountStr = formData.get("visitCount") as string;
   const visitCount = visitCountStr ? Number(visitCountStr) : 0;
-  const doctorId = formData.get("doctorId") as string || null;
 
   const firstName = formData.get("firstName")?.toString().trim();
   const lastName = formData.get("lastName")?.toString().trim();
   const phone = formData.get("phone")?.toString().trim();
 
+  // Return formatted JSON errors for the frontend UI to display gracefully
   if (!firstName || !lastName || !phone) {
-    throw new Error("First Name, Last Name, and Phone are required.");
+    return { error: "First Name, Last Name, and Phone are required." };
   }
 
   const patientData = {
@@ -132,68 +138,132 @@ export async function savePatient(formData: FormData, id?: string) {
     bloodGroup: formData.get("bloodGroup")?.toString() || null,
     allergies: formData.get("allergies")?.toString() || null,
     role: formData.get("role")?.toString() || "Regular",
-    dateOfBirth: new Date(formData.get("dateOfBirth")?.toString() || new Date().toISOString()),
+    dateOfBirth: new Date(
+      formData.get("dateOfBirth")?.toString() || new Date().toISOString(),
+    ),
     visitCount: visitCount,
-    isOld: visitCount > 1
+    isOld: visitCount > 1,
   };
 
   const medicalRecordData = {
-    assignedDoctorId: doctorId,
     insurance: formData.get("insurance")?.toString() || null,
     insuranceNo: formData.get("insuranceNo")?.toString() || null,
-    emergencyContactName: formData.get("emergencyContactName")?.toString() || null,
+    emergencyContactName:
+      formData.get("emergencyContactName")?.toString() || null,
     emergencyContactNo: formData.get("emergencyContactNo")?.toString() || null,
   };
 
-  if (id) {
-    await prisma.patient.update({
-      where: { id },
-      data: {
-        ...patientData,
-        medicalRecord: {
-          upsert: {
+  try {
+    if (id) {
+      await prisma.patient.update({
+        where: { id },
+        data: {
+          ...patientData,
+          medicalRecord: {
+            upsert: {
+              create: medicalRecordData,
+              update: medicalRecordData,
+            },
+          },
+        },
+      });
+    } else {
+      // Check for duplicate patient by phone number BEFORE attempting DB write
+      const existingPatient = await prisma.patient.findFirst({
+        where: { phone: patientData.phone },
+      });
+
+      if (existingPatient) {
+        return { error: "A patient with this phone number already exists." };
+      }
+
+      // Create Patient
+      const patient = await prisma.patient.create({
+        data: {
+          ...patientData,
+          medicalRecord: {
             create: medicalRecordData,
-            update: medicalRecordData
-          }
+          },
+        },
+      });
+
+      // =======================================================
+      // NEW DYNAMIC APPOINTMENT TOGGLE LOGIC
+      // =======================================================
+      const createAppointment = formData.get("createAppointment") === "true";
+
+      if (createAppointment) {
+        const doctorId = formData.get("doctorId") as string;
+        if (!doctorId)
+          return {
+            error:
+              "Doctor assignment is required when scheduling an appointment.",
+          };
+
+        const appointmentDate = new Date(
+          (formData.get("appointmentDate") as string) || new Date(),
+        );
+        const treatments =
+          formData.getAll("treatments").join(", ") || "Consultation";
+        const billAmount = parseFloat(
+          (formData.get("billAmount") as string) || "0",
+        );
+        const isPaid = formData.get("isPaid") === "true";
+
+        let status = "SCHEDULED";
+        if (billAmount > 0 && !isPaid) {
+          status = "PENDING_PAYMENT";
         }
-      }
-    });
-  } else {
-    // Check for duplicate patient by phone number
-    const existingPatient = await prisma.patient.findFirst({
-        where: { phone: patientData.phone }
-    });
 
-    if (existingPatient) {
-        throw new Error("A patient with this phone number already exists.");
-    }
-
-    const patient = await prisma.patient.create({
-      data: {
-        ...patientData,
-        medicalRecord: {
-          create: medicalRecordData
-        }
-      }
-    });
-
-    // Auto-create a default appointment for new registrations to put them in the queue
-    // ONLY if not being called from a custom flow that creates its own appointment
-    const skipAutoAppt = formData.get("skipAutoAppt") === "true";
-    if (!skipAutoAppt) {
-        await prisma.appointment.create({
+        const appt = await prisma.appointment.create({
           data: {
             patientId: patient.id,
-            appointmentDate: new Date(),
-            status: "SCHEDULED",
-            treatments: "Consultation"
-          }
+            doctorId,
+            appointmentDate,
+            status,
+            treatments,
+            billAmount,
+            isPaid,
+          },
         });
+
+        if (billAmount > 0) {
+          await prisma.procedure.create({
+            data: {
+              id: `appt-bill-${appt.id}`,
+              patientId: patient.id,
+              appointmentId: appt.id,
+              name: `Appointment Fee: ${treatments}`,
+              type: "Appointment",
+              cost: billAmount,
+              procedureDate: appointmentDate,
+              status: isPaid ? "PAID" : "PENDING",
+            },
+          });
+        }
+
+        // Update Patient's assigned doctor based on first appointment & increment visits
+        await prisma.medicalRecord.update({
+          where: { patientId: patient.id },
+          data: { assignedDoctorId: doctorId },
+        });
+        a;
+        await prisma.patient.update({
+          where: { id: patient.id },
+          data: { visitCount: 1, lastVisitDate: appointmentDate },
+        });
+      }
+
+      revalidatePath("/");
+      return patient; // Exited without an error property, frontend knows it's a success
     }
     revalidatePath("/");
-    return patient;
+  } catch (error: any) {
+    console.error("Database error creating patient:", error);
+    return {
+      error: "An unexpected error occurred while saving to the database.",
+    };
   }
-  revalidatePath("/");
 }
 
 export async function deletePatient(id: string) {
@@ -201,10 +271,13 @@ export async function deletePatient(id: string) {
   revalidatePath("/");
 }
 
-export async function transferPatientDoctor(patientId: string, doctorId: string) {
+export async function transferPatientDoctor(
+  patientId: string,
+  doctorId: string,
+) {
   await prisma.medicalRecord.update({
     where: { patientId },
-    data: { assignedDoctorId: doctorId }
+    data: { assignedDoctorId: doctorId },
   });
   revalidatePath("/");
   revalidatePath("/doctor");
@@ -217,7 +290,7 @@ export async function createAppointmentAction(formData: FormData) {
 
   const appointmentDate = new Date(formData.get("appointmentDate") as string);
   const treatments = formData.getAll("treatments").join(", ") || "Checkup";
-  const billAmount = parseFloat(formData.get("billAmount") as string || "0");
+  const billAmount = parseFloat((formData.get("billAmount") as string) || "0");
   const isPaid = formData.get("isPaid") === "true";
 
   let status = "SCHEDULED";
@@ -234,7 +307,7 @@ export async function createAppointmentAction(formData: FormData) {
         status,
         treatments,
         billAmount,
-        isPaid
+        isPaid,
       },
     });
 
@@ -258,8 +331,8 @@ export async function createAppointmentAction(formData: FormData) {
         type: "Appointment",
         cost: billAmount,
         procedureDate: appointmentDate,
-        status: isPaid ? "PAID" : "PENDING"
-      }
+        status: isPaid ? "PAID" : "PENDING",
+      },
     });
   }
 
@@ -268,7 +341,9 @@ export async function createAppointmentAction(formData: FormData) {
 }
 
 // EXPORT FUNCTIONALITY
-export async function getPatientsForExport(searchParams: { [key: string]: string | string[] | undefined }) {
+export async function getPatientsForExport(searchParams: {
+  [key: string]: string | string[] | undefined;
+}) {
   const where: Prisma.PatientWhereInput = {};
   if (searchParams?.q) {
     const q = (searchParams.q as string).trim().toLowerCase();
@@ -285,7 +360,8 @@ export async function getPatientsForExport(searchParams: { [key: string]: string
   if (searchParams?.status) where.status = searchParams.status as string;
   if (searchParams?.gender) where.gender = searchParams.gender as string;
   if (searchParams?.category) where.role = searchParams.category as string;
-  if (searchParams?.bloodGroup) where.bloodGroup = searchParams.bloodGroup as string;
+  if (searchParams?.bloodGroup)
+    where.bloodGroup = searchParams.bloodGroup as string;
 
   return await prisma.patient.findMany({
     where,
@@ -293,12 +369,12 @@ export async function getPatientsForExport(searchParams: { [key: string]: string
       medicalRecord: true,
       diagnoses: {
         orderBy: { createdAt: "desc" },
-        take: 1
+        take: 1,
       },
       appointments: {
         orderBy: { appointmentDate: "desc" },
-        take: 5
-      }
+        take: 5,
+      },
     },
     orderBy: { createdAt: "desc" },
   });

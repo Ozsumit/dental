@@ -27,10 +27,12 @@ import {
   ChevronRight,
   Phone,
   Mail,
-  Receipt
+  Receipt,
+  AlertCircle,
 } from "lucide-react";
-import * as XLSX from "xlsx"; // Import Excel library
+import * as XLSX from "xlsx";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
+
 interface DashboardClientProps {
   patients: Patient[];
   totalPages: number;
@@ -45,20 +47,32 @@ export default function DashboardClient({
   totalPages,
   currentPage,
   initialDoctors = [],
-  defaultFee = 0
+  defaultFee = 0,
 }: DashboardClientProps) {
-  const [isApptFormOpen, setIsApptFormOpen] = useState(false);
-  const [apptPatient, setAppointmentPatient] = useState<Patient | null>(null); // Holds patient for the new appt
-  const [apptBillAmount, setApptBillAmount] = useState<string | number>(defaultFee);
   const router = useRouter();
   const params = useSearchParams();
 
+  // Appointment Form States
+  const [isApptFormOpen, setIsApptFormOpen] = useState(false);
+  const [apptPatient, setAppointmentPatient] = useState<Patient | null>(null);
+  const [apptBillAmount, setApptBillAmount] = useState<string | number>(
+    defaultFee,
+  );
+  const [apptError, setApptError] = useState<string | null>(null);
+  const [isSavingAppt, setIsSavingAppt] = useState(false);
+
+  // Patient Form States
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [patientError, setPatientError] = useState<string | null>(null);
+  const [isSavingPatient, setIsSavingPatient] = useState(false);
+  const [createApptToggle, setCreateApptToggle] = useState(false); // NEW: Toggle state
+
+  // Other States
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false); // New Profile State
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [isExporting, setIsExporting] = useState(false); // Export Loading State
+  const [isExporting, setIsExporting] = useState(false);
 
   const updateQuery = useCallback(
     (name: string, value: string) => {
@@ -66,7 +80,6 @@ export default function DashboardClient({
       if (value) newParams.set(name, value);
       else newParams.delete(name);
 
-      // Only reset to page 1 if we are NOT explicitly setting the page
       if (name !== "page") {
         newParams.set("page", "1");
       }
@@ -83,30 +96,35 @@ export default function DashboardClient({
 
   const openAdd = () => {
     setSelectedPatient(null);
+    setPatientError(null);
+    setCreateApptToggle(false); // Reset toggle
+    setApptBillAmount(defaultFee);
     setIsFormOpen(true);
   };
+
   const openEdit = (p: Patient) => {
     setSelectedPatient(p);
+    setPatientError(null);
+    setCreateApptToggle(false); // Hide toggle on edit
     setIsFormOpen(true);
   };
+
   const openDelete = (p: Patient) => {
     setSelectedPatient(p);
     setIsDeleteOpen(true);
   };
+
   const openProfile = (p: Patient) => {
     setSelectedPatient(p);
     setIsProfileOpen(true);
   };
 
-  // EXPORT LOGIC
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      // Fetch all matching records from server
       const currentFilters = Object.fromEntries(params.entries());
       const dataToExport = await getPatientsForExport(currentFilters);
 
-      // Format data for Excel
       const formattedData = dataToExport.map((p: Patient) => ({
         "First Name": p.firstName,
         "Last Name": p.lastName,
@@ -115,27 +133,23 @@ export default function DashboardClient({
         Gender: p.gender || "N/A",
         Status: p.status,
         "Date of Birth": new Date(p.dateOfBirth).toLocaleDateString(),
-        "Category": p.role || "Regular",
+        Category: p.role || "Regular",
         "Blood Group": p.bloodGroup || "N/A",
-        "Allergies": p.allergies || "None",
-        "Address": p.address || "N/A",
+        Allergies: p.allergies || "None",
+        Address: p.address || "N/A",
         "Total Visits": p.visitCount,
         "Last Visit": p.lastVisitDate
           ? new Date(p.lastVisitDate).toLocaleDateString()
           : "None",
-        "Insurance": p.medicalRecord?.insurance || "N/A",
-        "Insurance No": p.medicalRecord?.insuranceNo || "N/A",
-        "Emergency Contact": p.medicalRecord?.emergencyContactName || "N/A",
-        "Emergency Phone": p.medicalRecord?.emergencyContactNo || "N/A",
-        "Latest Diagnosis": p.diagnoses?.[0]?.treatmentPlan || "N/A",
-        "Recent Appointments": p.appointments?.map((a: Appointment) => new Date(a.appointmentDate).toLocaleDateString()).join(", ") || "None"
       }));
 
-      // Generate Excel File
       const worksheet = XLSX.utils.json_to_sheet(formattedData);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Patients_Master_Export");
-      XLSX.writeFile(workbook, `Patients_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Patients_Export");
+      XLSX.writeFile(
+        workbook,
+        `Patients_Export_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
     } catch (e) {
       console.error(e);
       alert("Failed to export data.");
@@ -168,7 +182,6 @@ export default function DashboardClient({
             <Filter className="w-5 h-5" /> Filters
           </button>
 
-          {/* EXPORT BUTTON */}
           <button
             onClick={handleExport}
             disabled={isExporting}
@@ -178,12 +191,12 @@ export default function DashboardClient({
             {isExporting ? "Exporting..." : "Export Excel"}
           </button>
 
-          <Link
+          {/* <Link
             href="/billing"
             className="px-5 py-3 bg-amber-50 text-amber-700 rounded-xl font-medium flex items-center gap-2 hover:bg-amber-100 transition"
           >
             <Receipt className="w-5 h-5" /> Billing
-          </Link>
+          </Link> */}
 
           <button
             onClick={openAdd}
@@ -192,116 +205,6 @@ export default function DashboardClient({
             <Plus className="w-5 h-5" /> Add Patient
           </button>
         </div>
-
-        {showFilters && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t border-slate-100 animate-in fade-in slide-in-from-top-2 duration-200">
-            <select
-              onChange={(e) => updateQuery("status", e.target.value)}
-              defaultValue={params.get("status") || ""}
-              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
-            >
-              <option value="">All Statuses</option>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-            </select>
-
-            <select
-              onChange={(e) => updateQuery("category", e.target.value)}
-              defaultValue={params.get("category") || ""}
-              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
-            >
-              <option value="">All Categories</option>
-              <option value="Regular">Regular</option>
-              <option value="VIP">VIP</option>
-              <option value="New">New</option>
-            </select>
-
-            <select
-              onChange={(e) => updateQuery("bloodGroup", e.target.value)}
-              defaultValue={params.get("bloodGroup") || ""}
-              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
-            >
-              <option value="">All Blood Groups</option>
-              {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(bg => (
-                <option key={bg} value={bg}>{bg}</option>
-              ))}
-            </select>
-
-            <select
-              onChange={(e) => updateQuery("gender", e.target.value)}
-              defaultValue={params.get("gender") || ""}
-              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
-            >
-              <option value="">All Genders</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-            </select>
-
-            <select
-              onChange={(e) => updateQuery("sort", e.target.value)}
-              defaultValue={params.get("sort") || ""}
-              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
-            >
-              <option value="">Newest First</option>
-              <option value="oldest">Oldest First</option>
-              <option value="nameAsc">Name (A-Z)</option>
-              <option value="nameDesc">Name (Z-A)</option>
-              <option value="mostVisits">Most Visits</option>
-            </select>
-
-            <div className="flex gap-2">
-              <input
-                type="number"
-                placeholder="Min Age"
-                defaultValue={params.get("minAge") || ""}
-                onChange={(e) => updateQuery("minAge", e.target.value)}
-                className="w-1/2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
-              />
-              <input
-                type="number"
-                placeholder="Max Age"
-                defaultValue={params.get("maxAge") || ""}
-                onChange={(e) => updateQuery("maxAge", e.target.value)}
-                className="w-1/2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
-              />
-            </div>
-
-            <div className="flex gap-2">
-              <input
-                type="date"
-                title="From Date"
-                defaultValue={params.get("dateFrom") || ""}
-                onChange={(e) => updateQuery("dateFrom", e.target.value)}
-                className="w-1/2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-slate-500"
-              />
-              <input
-                type="date"
-                title="To Date"
-                defaultValue={params.get("dateTo") || ""}
-                onChange={(e) => updateQuery("dateTo", e.target.value)}
-                className="w-1/2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none text-slate-500"
-              />
-            </div>
-
-            <input
-              type="number"
-              placeholder="Min Visits"
-              defaultValue={params.get("minVisits") || ""}
-              onChange={(e) => updateQuery("minVisits", e.target.value)}
-              className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
-            />
-
-            {hasFilters && (
-              <button
-                onClick={() => router.push("/")}
-                className="px-5 py-3 bg-red-50 text-red-600 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-red-100 transition"
-              >
-                Clear Filters
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* TABLE */}
@@ -342,9 +245,9 @@ export default function DashboardClient({
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`py-1 px-3 rounded-full text-[10px] font-black uppercase border ${
-                    patient.status === "ACTIVE" ? "bg-green-50 text-green-700 border-green-100" : "bg-red-50 text-red-700 border-red-100"
-                  }`}>
+                  <span
+                    className={`py-1 px-3 rounded-full text-[10px] font-black uppercase border ${patient.status === "ACTIVE" ? "bg-green-50 text-green-700 border-green-100" : "bg-red-50 text-red-700 border-red-100"}`}
+                  >
                     {patient.status}
                   </span>
                 </td>
@@ -372,9 +275,6 @@ export default function DashboardClient({
                 </td>
               </tr>
             ))}
-            {patients.length === 0 && (
-               <tr><td colSpan={4} className="px-6 py-20 text-center text-slate-400 italic">No patients found.</td></tr>
-            )}
           </tbody>
         </table>
 
@@ -403,11 +303,10 @@ export default function DashboardClient({
         </div>
       </div>
 
-      {/* --- REFINED PATIENT PROFILE MODAL --- */}
+      {/* --- PATIENT PROFILE MODAL --- */}
       {isProfileOpen && selectedPatient && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-5xl max-h-[95vh] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-            {/* Profile Header */}
             <div className="bg-slate-50/50 p-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div className="flex gap-6 items-center">
                 <div className="w-16 h-16 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-100">
@@ -418,39 +317,34 @@ export default function DashboardClient({
                     {selectedPatient.firstName} {selectedPatient.lastName}
                   </h2>
                   <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">
-                    <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {selectedPatient.phone}</span>
-                    <span>•</span>
-                    <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {selectedPatient.email || "No Email"}</span>
-                    <span>•</span>
-                    <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
-                      {selectedPatient.status}
+                    <span className="flex items-center gap-1">
+                      <Phone className="w-3 h-3" /> {selectedPatient.phone}
                     </span>
                   </div>
                 </div>
               </div>
               <div className="flex gap-3 w-full md:w-auto">
-                 <button
-                   onClick={() => {
-                     setAppointmentPatient(selectedPatient);
-                     setApptBillAmount(defaultFee);
-                     setIsApptFormOpen(true);
-                   }}
-                   className="flex-1 md:flex-none bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
-                 >
-                   <Calendar className="w-4 h-4" /> New Appointment
-                 </button>
-                 <button
-                   onClick={() => setIsProfileOpen(false)}
-                   className="p-3 bg-white text-slate-400 hover:text-slate-800 rounded-xl border border-slate-200 transition-all"
-                 >
-                   <X className="w-6 h-6" />
-                 </button>
+                <button
+                  onClick={() => {
+                    setAppointmentPatient(selectedPatient);
+                    setApptBillAmount(defaultFee);
+                    setApptError(null);
+                    setIsApptFormOpen(true);
+                  }}
+                  className="flex-1 md:flex-none bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" /> New Appointment
+                </button>
+                <button
+                  onClick={() => setIsProfileOpen(false)}
+                  className="p-3 bg-white text-slate-400 hover:text-slate-800 rounded-xl border border-slate-200 transition-all"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </div>
             </div>
-
-            {/* Profile Body (Scrollable) */}
             <div className="p-8 overflow-y-auto flex-1 bg-white">
-               <ReceptionistPatientView patient={selectedPatient} />
+              <ReceptionistPatientView patient={selectedPatient} />
             </div>
           </div>
         </div>
@@ -459,218 +353,378 @@ export default function DashboardClient({
       {/* REGISTER / EDIT MODAL */}
       {isFormOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center p-8 border-b border-slate-50 bg-slate-50/30">
+          <div className="bg-white rounded-[2rem] w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50 shrink-0">
               <h2 className="text-2xl font-black text-slate-800 tracking-tight">
-                {selectedPatient
-                  ? "Update Record"
-                  : "New Patient Registration"}
+                {selectedPatient ? "Update Record" : "New Patient Registration"}
               </h2>
               <button
-                onClick={() => setIsFormOpen(false)}
-                className="text-slate-400 hover:text-slate-600 bg-slate-100 p-2 rounded-xl"
+                onClick={() => {
+                  setIsFormOpen(false);
+                  setPatientError(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 bg-white border border-slate-200 shadow-sm p-2 rounded-xl transition-all"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
 
+            {patientError && (
+              <div className="mx-6 mt-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-700 animate-in fade-in">
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="text-sm font-medium">{patientError}</div>
+              </div>
+            )}
+
             <form
               action={async (formData) => {
-                await savePatient(formData, selectedPatient?.id);
-                setIsFormOpen(false);
+                setPatientError(null);
+                setIsSavingPatient(true);
+                try {
+                  const result = await savePatient(
+                    formData,
+                    selectedPatient?.id,
+                  );
+                  if (result?.error) {
+                    setPatientError(result.error);
+                  } else {
+                    setIsFormOpen(false);
+                  }
+                } catch (error: any) {
+                  setPatientError(
+                    error.message || "A database error occurred.",
+                  );
+                } finally {
+                  setIsSavingPatient(false);
+                }
               }}
-              className="p-8 space-y-6"
+              className="flex flex-col flex-1 overflow-hidden"
             >
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">First Name</label>
-                  <input
-                    required
-                    name="firstName"
-                    defaultValue={selectedPatient?.firstName}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
-                  />
+              <div className="p-6 overflow-y-auto flex-1 space-y-8 bg-slate-50/30">
+                {/* Personal Details Section */}
+                <div className="space-y-5">
+                  <h3 className="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2">
+                    Personal Details
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                        First Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        required
+                        name="firstName"
+                        defaultValue={selectedPatient?.firstName}
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                        Last Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        required
+                        name="lastName"
+                        defaultValue={selectedPatient?.lastName}
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                        Birth Date <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        required
+                        type="date"
+                        name="dateOfBirth"
+                        defaultValue={
+                          selectedPatient?.dateOfBirth
+                            ? new Date(selectedPatient.dateOfBirth)
+                                .toISOString()
+                                .split("T")[0]
+                            : ""
+                        }
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all text-slate-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                        Gender
+                      </label>
+                      <select
+                        name="gender"
+                        defaultValue={selectedPatient?.gender || ""}
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium"
+                      >
+                        <option value="">Select...</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                        Blood Group
+                      </label>
+                      <select
+                        name="bloodGroup"
+                        defaultValue={selectedPatient?.bloodGroup || ""}
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium"
+                      >
+                        <option value="">Select...</option>
+                        {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
+                          (bg) => (
+                            <option key={bg} value={bg}>
+                              {bg}
+                            </option>
+                          ),
+                        )}
+                      </select>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Last Name</label>
-                  <input
-                    required
-                    name="lastName"
-                    defaultValue={selectedPatient?.lastName}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
-                  />
+
+                {/* Contact Information Section */}
+                <div className="space-y-5">
+                  <h3 className="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2">
+                    Contact Information
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                        Phone Number <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        required
+                        type="tel"
+                        name="phone"
+                        defaultValue={selectedPatient?.phone}
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                        Email Address
+                      </label>
+                      <input
+                        type="email"
+                        name="email"
+                        defaultValue={selectedPatient?.email || ""}
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                      Residential Address
+                    </label>
+                    <textarea
+                      name="address"
+                      defaultValue={selectedPatient?.address || ""}
+                      rows={2}
+                      className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all resize-none"
+                    />
+                  </div>
                 </div>
+
+                {/* Medical & Insurance Section */}
+                <div className="space-y-5">
+                  <h3 className="text-sm font-bold text-slate-800 border-b border-slate-200 pb-2">
+                    Medical & Insurance
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                        Patient Category
+                      </label>
+                      <select
+                        name="role"
+                        defaultValue={selectedPatient?.role || "Regular"}
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium"
+                      >
+                        <option value="Regular">Regular</option>
+                        <option value="VIP">VIP</option>
+                        <option value="New">New</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                        Known Allergies
+                      </label>
+                      <input
+                        name="allergies"
+                        defaultValue={selectedPatient?.allergies || ""}
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all"
+                        placeholder="e.g. Penicillin, Peanuts"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* ======================================================== */}
+                {/* DYNAMIC APPOINTMENT TOGGLE (ONLY FOR NEW PATIENTS)       */}
+                {/* ======================================================== */}
+                {!selectedPatient && (
+                  <div className="space-y-5 border-t border-slate-200 pt-6 mt-6">
+                    <label className="flex items-center gap-4 cursor-pointer p-4 bg-white border border-slate-200 rounded-2xl hover:border-indigo-300 transition-all shadow-sm">
+                      <div className="relative flex items-center">
+                        <input
+                          type="checkbox"
+                          name="createAppointment"
+                          value="true"
+                          className="sr-only"
+                          checked={createApptToggle}
+                          onChange={(e) =>
+                            setCreateApptToggle(e.target.checked)
+                          }
+                        />
+                        <div
+                          className={`block w-12 h-7 rounded-full transition-colors ${createApptToggle ? "bg-indigo-600" : "bg-slate-200"}`}
+                        ></div>
+                        <div
+                          className={`absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform ${createApptToggle ? "translate-x-5" : ""}`}
+                        ></div>
+                      </div>
+                      <div>
+                        <span className="text-sm font-bold text-slate-800 block">
+                          Schedule Initial Appointment
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium">
+                          Create a session immediately after registration
+                        </span>
+                      </div>
+                    </label>
+
+                    {createApptToggle && (
+                      <div className="p-6 bg-indigo-50/50 border border-indigo-100 rounded-2xl space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <h3 className="text-sm font-bold text-indigo-900 flex items-center gap-2 border-b border-indigo-100 pb-3">
+                          <Calendar className="w-4 h-4" /> Appointment
+                          Configuration
+                        </h3>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          <div>
+                            <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-2">
+                              Preferred Date{" "}
+                              <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              required={createApptToggle}
+                              type="date"
+                              name="appointmentDate"
+                              defaultValue={
+                                new Date().toISOString().split("T")[0]
+                              }
+                              className="w-full p-3.5 bg-white border border-indigo-100 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium text-slate-700"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-2">
+                              Assign Doctor{" "}
+                              <span className="text-red-500">*</span>
+                            </label>
+                            <select
+                              required={createApptToggle}
+                              name="doctorId"
+                              className="w-full p-3.5 bg-white border border-indigo-100 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium text-slate-700"
+                            >
+                              <option value="">Select Doctor...</option>
+                              {initialDoctors.map((d) => (
+                                <option key={d.id} value={d.id}>
+                                  Dr. {d.username}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                          <div>
+                            <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-2">
+                              Bill Amount
+                            </label>
+                            <input
+                              type="number"
+                              step="0.01"
+                              name="billAmount"
+                              value={apptBillAmount}
+                              onChange={(e) =>
+                                setApptBillAmount(e.target.value)
+                              }
+                              placeholder="0.00"
+                              className="w-full p-3.5 bg-white border border-indigo-100 rounded-xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all font-medium text-slate-700"
+                            />
+                          </div>
+                          <div className="flex items-end pb-3">
+                            <label className="flex items-center gap-3 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                name="isPaid"
+                                value="true"
+                                className="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                              />
+                              <span className="text-sm font-bold text-slate-700">
+                                Payment Received (Paid)
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-black text-indigo-400 uppercase tracking-widest block mb-2">
+                            Select Procedures
+                          </label>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                            {[
+                              "Consultation",
+                              "Cleaning",
+                              "Filling",
+                              "Root Canal",
+                              "Checkup",
+                              "Whitening",
+                              "Extraction",
+                            ].map((proc) => (
+                              <label
+                                key={proc}
+                                className="flex items-center gap-3 p-3 bg-white border border-indigo-50 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200 shadow-sm"
+                              >
+                                <input
+                                  type="checkbox"
+                                  name="treatments"
+                                  value={proc}
+                                  className="w-4 h-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                                />
+                                <span className="text-xs font-bold text-slate-700">
+                                  {proc}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Phone Number</label>
-                  <input
-                    required
-                    name="phone"
-                    defaultValue={selectedPatient?.phone}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Email Address</label>
-                  <input
-                    type="email"
-                    name="email"
-                    defaultValue={selectedPatient?.email || ""}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Assign Doctor <span className="text-red-500">*</span></label>
-                <select
-                  required
-                  name="doctorId"
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-bold text-slate-700"
-                >
-                  <option value="">Select Doctor...</option>
-                  {initialDoctors.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      Dr. {d.username}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Residential Address</label>
-                <textarea
-                  name="address"
-                  defaultValue={selectedPatient?.address || ""}
-                  rows={2}
-                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all resize-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-6 pt-4 border-t border-slate-50">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Birth Date</label>
-                  <input
-                    required
-                    type="date"
-                    name="dateOfBirth"
-                    defaultValue={
-                      selectedPatient?.dateOfBirth
-                        ? new Date(selectedPatient.dateOfBirth)
-                            .toISOString()
-                            .split("T")[0]
-                        : ""
-                    }
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-600"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Gender</label>
-                  <select
-                    name="gender"
-                    defaultValue={selectedPatient?.gender || ""}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none bg-white font-medium"
-                  >
-                    <option value="">Select...</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Blood Group</label>
-                  <select
-                    name="bloodGroup"
-                    defaultValue={selectedPatient?.bloodGroup || ""}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none bg-white font-medium"
-                  >
-                    <option value="">Select...</option>
-                    {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(bg => (
-                      <option key={bg} value={bg}>{bg}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-50">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Patient Category</label>
-                  <select
-                    name="role"
-                    defaultValue={selectedPatient?.role || "Regular"}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none bg-white font-medium"
-                  >
-                    <option value="Regular">Regular</option>
-                    <option value="VIP">VIP</option>
-                    <option value="New">New</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Known Allergies</label>
-                  <input
-                    name="allergies"
-                    defaultValue={selectedPatient?.allergies || ""}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
-                    placeholder="e.g. Penicillin, Peanuts"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-50">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Insurance Provider</label>
-                  <input
-                    name="insurance"
-                    defaultValue={selectedPatient?.medicalRecord?.insurance || ""}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
-                    placeholder="e.g. HealthCare Plus"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Insurance No.</label>
-                  <input
-                    name="insuranceNo"
-                    defaultValue={selectedPatient?.medicalRecord?.insuranceNo || ""}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
-                    placeholder="e.g. HCP-889900"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Emergency Name</label>
-                  <input
-                    name="emergencyContactName"
-                    defaultValue={selectedPatient?.medicalRecord?.emergencyContactName || ""}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Emergency Phone</label>
-                  <input
-                    name="emergencyContactNo"
-                    defaultValue={selectedPatient?.medicalRecord?.emergencyContactNo || ""}
-                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
-                  />
-                </div>
-              </div>
-
-              <div className="pt-4 flex justify-end gap-3 mt-4">
+              <div className="p-6 bg-white border-t border-slate-100 flex justify-end gap-3 shrink-0">
                 <button
                   type="button"
+                  disabled={isSavingPatient}
                   onClick={() => setIsFormOpen(false)}
-                  className="px-8 py-3.5 text-slate-500 font-bold hover:bg-slate-100 rounded-xl transition"
+                  className="px-6 py-3 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-8 py-3.5 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100 transition"
+                  disabled={isSavingPatient}
+                  className="px-8 py-3 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-xl shadow-lg shadow-indigo-100 transition disabled:opacity-70 flex items-center gap-2"
                 >
-                  Confirm & Save
+                  {isSavingPatient ? "Saving..." : "Confirm & Save"}
                 </button>
               </div>
             </form>
@@ -688,7 +742,7 @@ export default function DashboardClient({
           }
         }}
         title="Delete Patient Record?"
-        message={`Are you sure you want to delete ${selectedPatient?.firstName} ${selectedPatient?.lastName}? This will permanently remove all medical history and appointments. This action cannot be undone.`}
+        message={`Are you sure you want to delete ${selectedPatient?.firstName} ${selectedPatient?.lastName}? This will permanently remove all medical history and appointments.`}
         confirmText="Yes, Delete Record"
         cancelText="Keep Record"
         variant="danger"
@@ -698,37 +752,60 @@ export default function DashboardClient({
       {isApptFormOpen && apptPatient && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Note: Same UI code as before for the separate Appointment Modal */}
             <div className="p-8 border-b border-slate-50 bg-slate-50/30 text-center">
-               <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center justify-center gap-2">
-                 <Calendar className="w-5 h-5 text-indigo-500" /> New Session
-               </h2>
-               <p className="text-xs text-slate-400 font-bold mt-1 uppercase">Scheduling for: {apptPatient.firstName} {apptPatient.lastName}</p>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center justify-center gap-2">
+                <Calendar className="w-5 h-5 text-indigo-500" /> New Session
+              </h2>
+              <p className="text-xs text-slate-400 font-bold mt-1 uppercase">
+                Scheduling for: {apptPatient.firstName} {apptPatient.lastName}
+              </p>
             </div>
+
+            {apptError && (
+              <div className="mx-8 mt-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-700 animate-in fade-in">
+                <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
+                <div className="text-sm font-medium">{apptError}</div>
+              </div>
+            )}
 
             <form
               action={async (formData) => {
+                setApptError(null);
+                setIsSavingAppt(true);
                 formData.append("patientId", apptPatient.id);
                 try {
-                  await createAppointmentAction(formData);
-                  setIsApptFormOpen(false);
+                  const result = await createAppointmentAction(formData);
+                  if (result?.error) {
+                    setApptError(result.error);
+                  } else {
+                    setIsApptFormOpen(false);
+                  }
                 } catch (e: any) {
-                  alert(e.message);
+                  setApptError(e.message || "Failed to create appointment.");
+                } finally {
+                  setIsSavingAppt(false);
                 }
               }}
               className="p-8 space-y-6"
             >
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Preferred Date</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Preferred Date
+                  </label>
                   <input
                     required
                     type="date"
                     name="appointmentDate"
+                    defaultValue={new Date().toISOString().split("T")[0]}
                     className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-bold text-slate-700"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Bill Amount</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Bill Amount
+                  </label>
                   <input
                     type="number"
                     step="0.01"
@@ -742,7 +819,9 @@ export default function DashboardClient({
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Assign Doctor <span className="text-red-500">*</span></label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                  Assign Doctor <span className="text-red-500">*</span>
+                </label>
                 <select
                   required
                   name="doctorId"
@@ -758,25 +837,54 @@ export default function DashboardClient({
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Select Procedures</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                  Select Procedures
+                </label>
                 <div className="grid grid-cols-2 gap-3 mt-2">
-                  {["Cleaning", "Filling", "Root Canal", "Checkup", "Whitening", "Extraction"].map(
-                    (proc) => (
-                      <label
-                        key={proc}
-                        className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200"
-                      >
-                        <input type="checkbox" name="treatments" value={proc} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
-                        <span className="text-xs font-bold text-slate-600">{proc}</span>
-                      </label>
-                    ),
-                  )}
+                  {[
+                    "Cleaning",
+                    "Filling",
+                    "Root Canal",
+                    "Checkup",
+                    "Whitening",
+                    "Extraction",
+                  ].map((proc) => (
+                    <label
+                      key={proc}
+                      className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200"
+                    >
+                      <input
+                        type="checkbox"
+                        name="treatments"
+                        value={proc}
+                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-xs font-bold text-slate-600">
+                        {proc}
+                      </span>
+                    </label>
+                  ))}
                 </div>
+              </div>
+
+              <div className="flex items-end pb-3">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    name="isPaid"
+                    value="true"
+                    className="w-5 h-5 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                  />
+                  <span className="text-sm font-bold text-slate-700">
+                    Mark as Paid
+                  </span>
+                </label>
               </div>
 
               <div className="flex gap-3 mt-4">
                 <button
                   type="button"
+                  disabled={isSavingAppt}
                   onClick={() => setIsApptFormOpen(false)}
                   className="flex-1 py-4 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition"
                 >
@@ -784,9 +892,10 @@ export default function DashboardClient({
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition"
+                  disabled={isSavingAppt}
+                  className="flex-1 py-4 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-lg shadow-indigo-100 transition disabled:opacity-70"
                 >
-                  Create Session
+                  {isSavingAppt ? "Creating..." : "Create Session"}
                 </button>
               </div>
             </form>
