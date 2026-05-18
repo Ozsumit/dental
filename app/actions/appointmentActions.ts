@@ -12,7 +12,7 @@ export async function getAppointments(searchParams: { [key: string]: string | st
   const where: Prisma.AppointmentWhereInput = {};
 
   if (searchParams?.q) {
-    const q = (searchParams.q as string).trim();
+    const q = (searchParams.q as string).trim().toLowerCase();
     const tokens = q.split(/\s+/);
     where.patient = {
       AND: tokens.map(token => ({

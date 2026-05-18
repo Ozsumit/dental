@@ -7,7 +7,7 @@ export default async function DoctorPage() {
   const [patients, doctors, catalog] = await Promise.all([
     getDoctorPatients(),
     getDoctors(),
-    getBillingCatalog(),
+    getBillingCatalog()
   ]);
 
   return (

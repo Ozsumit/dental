@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 
 export async function getBillingCatalog() {
   return await prisma.billingCatalog.findMany({
-    orderBy: { category: "asc" },
+    orderBy: { category: "asc" }
   });
 }
 
@@ -15,22 +15,22 @@ export async function getAdminStats() {
     prisma.patient.count(),
     prisma.procedure.aggregate({
       where: { status: "PAID" },
-      _sum: { cost: true },
+      _sum: { cost: true }
     }),
     prisma.appointment.count({
       where: {
         appointmentDate: {
-          gte: new Date(new Date().setHours(0, 0, 0, 0)),
-          lt: new Date(new Date().setHours(23, 59, 59, 999)),
-        },
-      },
-    }),
+          gte: new Date(new Date().setHours(0,0,0,0)),
+          lt: new Date(new Date().setHours(23,59,59,999))
+        }
+      }
+    })
   ]);
 
   return {
     totalPatients: patientCount,
     totalRevenue: revenueData._sum.cost || 0,
-    todaysAppointments: appointmentCount,
+    todaysAppointments: appointmentCount
   };
 }
 
@@ -38,7 +38,7 @@ export async function getPendingBillings() {
   return await prisma.procedure.findMany({
     where: { status: "PENDING" },
     include: { patient: true },
-    orderBy: { procedureDate: "desc" },
+    orderBy: { procedureDate: "desc" }
   });
 }
 
@@ -47,8 +47,8 @@ export async function finalizeBilling(procedureId: string, billedCost: number) {
     where: { id: procedureId },
     data: {
       cost: billedCost,
-      status: "BILLED",
-    },
+      status: "BILLED"
+    }
   });
   revalidatePath("/");
 }
@@ -57,9 +57,35 @@ export async function markPatientProceduresPaid(patientId: string) {
   const procedures = await prisma.procedure.findMany({
     where: {
       patientId,
-      status: { in: ["PENDING", "BILLED"] },
-    },
-    data: { status: "PAID" },
+      status: { in: ["PENDING", "BILLED"] }
+    }
+  });
+
+  await prisma.$transaction(async (tx) => {
+    for (const proc of procedures) {
+      await tx.procedure.update({
+        where: { id: proc.id },
+        data: { status: "PAID" }
+      });
+
+      if (proc.appointmentId) {
+        const appt = await tx.appointment.findUnique({ where: { id: proc.appointmentId } });
+        if (appt && appt.status === "PENDING_PAYMENT") {
+          await tx.appointment.update({
+            where: { id: proc.appointmentId },
+            data: {
+              isPaid: true,
+              status: "SCHEDULED" // Transition from PENDING_PAYMENT
+            }
+          });
+        } else if (appt) {
+          await tx.appointment.update({
+            where: { id: proc.appointmentId },
+            data: { isPaid: true }
+          });
+        }
+      }
+    }
   });
 
   revalidatePath("/");
@@ -70,7 +96,7 @@ export async function saveCatalogItem(formData: FormData, id?: string) {
   const data = {
     name: formData.get("name") as string,
     category: formData.get("category") as string,
-    baseCost: parseFloat((formData.get("baseCost") as string) || "0"),
+    baseCost: parseFloat(formData.get("baseCost") as string || "0"),
     description: formData.get("description") as string,
   };
 
@@ -88,9 +114,35 @@ export async function deleteCatalogItem(id: string) {
 }
 
 export async function markAsPaid(procedureId: string) {
-  await prisma.procedure.update({
-    where: { id: procedureId },
-    data: { status: "PAID" },
+  const procedure = await prisma.procedure.findUnique({
+    where: { id: procedureId }
+  });
+
+  if (!procedure) return;
+
+  await prisma.$transaction(async (tx) => {
+    await tx.procedure.update({
+      where: { id: procedureId },
+      data: { status: "PAID" }
+    });
+
+    if (procedure.appointmentId) {
+      const appt = await tx.appointment.findUnique({ where: { id: procedure.appointmentId } });
+      if (appt && appt.status === "PENDING_PAYMENT") {
+        await tx.appointment.update({
+          where: { id: procedure.appointmentId },
+          data: {
+            isPaid: true,
+            status: "SCHEDULED"
+          }
+        });
+      } else if (appt) {
+        await tx.appointment.update({
+          where: { id: procedure.appointmentId },
+          data: { isPaid: true }
+        });
+      }
+    }
   });
 
   revalidatePath("/");

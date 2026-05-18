@@ -13,8 +13,8 @@ export async function getPatients(searchParams: { [key: string]: string | string
 
   // 1. BULLETPROOF SEARCH
   if (searchParams?.q) {
-    const q = searchParams.q as string;
-    const terms = q.trim().split(/\s+/);
+    const q = (searchParams.q as string).trim().toLowerCase();
+    const terms = q.split(/\s+/);
     where.AND = terms.map((term: string) => ({
       OR: [
         { firstName: { contains: term } },
@@ -111,6 +111,7 @@ export async function getPatients(searchParams: { [key: string]: string | string
 export async function savePatient(formData: FormData, id?: string) {
   const visitCountStr = formData.get("visitCount") as string;
   const visitCount = visitCountStr ? Number(visitCountStr) : 0;
+  const doctorId = formData.get("doctorId") as string || null;
 
   const patientData = {
     firstName: formData.get("firstName")?.toString() || "",
@@ -129,6 +130,7 @@ export async function savePatient(formData: FormData, id?: string) {
   };
 
   const medicalRecordData = {
+    assignedDoctorId: doctorId,
     insurance: formData.get("insurance")?.toString() || null,
     insuranceNo: formData.get("insuranceNo")?.toString() || null,
     emergencyContactName: formData.get("emergencyContactName")?.toString() || null,
@@ -203,27 +205,55 @@ export async function transferPatientDoctor(patientId: string, doctorId: string)
 export async function createAppointmentAction(formData: FormData) {
   const patientId = formData.get("patientId") as string;
   const doctorId = formData.get("doctorId") as string;
+  if (!doctorId) throw new Error("Doctor assignment is compulsory.");
+
   const appointmentDate = new Date(formData.get("appointmentDate") as string);
   const treatments = formData.getAll("treatments").join(", ") || "Checkup";
+  const billAmount = parseFloat(formData.get("billAmount") as string || "0");
+  const isPaid = formData.get("isPaid") === "true";
 
-  await prisma.$transaction([
-    prisma.appointment.create({
+  let status = "SCHEDULED";
+  if (billAmount > 0 && !isPaid) {
+    status = "PENDING_PAYMENT";
+  }
+
+  const [newAppt] = await prisma.$transaction(async (tx) => {
+    const appt = await tx.appointment.create({
       data: {
         patientId,
-        doctorId: doctorId || null,
+        doctorId,
         appointmentDate,
-        status: "SCHEDULED",
+        status,
         treatments,
+        billAmount,
+        isPaid
       },
-    }),
-    prisma.patient.update({
+    });
+
+    await tx.patient.update({
       where: { id: patientId },
       data: {
         visitCount: { increment: 1 },
         lastVisitDate: appointmentDate,
       },
-    }),
-  ]);
+    });
+    return [appt];
+  });
+
+  if (billAmount > 0) {
+    await prisma.procedure.create({
+      data: {
+        id: `appt-bill-${newAppt.id}`,
+        patientId,
+        appointmentId: newAppt.id,
+        name: `Appointment Fee: ${treatments}`,
+        type: "Appointment",
+        cost: billAmount,
+        procedureDate: appointmentDate,
+        status: isPaid ? "PAID" : "PENDING"
+      }
+    });
+  }
 
   revalidatePath("/");
   revalidatePath("/appointments");
@@ -233,8 +263,8 @@ export async function createAppointmentAction(formData: FormData) {
 export async function getPatientsForExport(searchParams: { [key: string]: string | string[] | undefined }) {
   const where: Prisma.PatientWhereInput = {};
   if (searchParams?.q) {
-    const q = searchParams.q as string;
-    const terms = q.trim().split(/\s+/);
+    const q = (searchParams.q as string).trim().toLowerCase();
+    const terms = q.split(/\s+/);
     where.AND = terms.map((term: string) => ({
       OR: [
         { firstName: { contains: term } },
