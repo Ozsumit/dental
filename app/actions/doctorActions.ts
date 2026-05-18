@@ -86,10 +86,8 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
 
   try {
     await prisma.$transaction([
-      prisma.diagnosis.upsert({
-        where: { patientId },
-        update: diagnosisData,
-        create: {
+      prisma.diagnosis.create({
+        data: {
           patientId,
           ...diagnosisData,
         },
@@ -134,14 +132,9 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
       }
     }
   } catch (error) {
-    console.error("Failed to upsert diagnosis:", error);
-    // Fallback if patientId index is having issues
-    const existing = await prisma.diagnosis.findUnique({ where: { patientId } });
-    if (existing) {
-      await prisma.diagnosis.update({ where: { patientId }, data: diagnosisData });
-    } else {
-      await prisma.diagnosis.create({ data: { patientId, ...diagnosisData } });
-    }
+    console.error("Failed to save diagnosis:", error);
+    // Fallback - just try to create it anyway or handle specific error
+    await prisma.diagnosis.create({ data: { patientId, ...diagnosisData } });
   }
 
   if (finalize) {
