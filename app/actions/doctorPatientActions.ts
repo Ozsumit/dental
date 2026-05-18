@@ -37,7 +37,10 @@ export async function getDoctorHistory() {
         orderBy: { procedureDate: "desc" }
       },
       medicalRecord: true,
-      diagnosis: true
+      diagnoses: {
+        orderBy: { createdAt: "desc" },
+        take: 1
+      }
     },
     orderBy: { updatedAt: "desc" }
   });
@@ -95,7 +98,10 @@ export async function getDoctorPatients() {
       medicalRecord: {
         include: { assignedDoctor: true }
       },
-      diagnosis: true
+      diagnoses: {
+        orderBy: { createdAt: "desc" },
+        take: 1
+      }
     },
     orderBy: { lastName: "asc" }
   });

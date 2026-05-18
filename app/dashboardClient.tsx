@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";
+import Link from "next/link";
 import {
   savePatient,
   deletePatient,
@@ -26,177 +27,14 @@ import {
   ChevronRight,
   Phone,
   Mail,
-  Receipt,
-  CreditCard,
-  DollarSign,
-  Briefcase,
-  CheckCircle2
+  Receipt
 } from "lucide-react";
 import * as XLSX from "xlsx"; // Import Excel library
-import { getPendingBillings, finalizeBilling, markAsPaid, markPatientProceduresPaid } from "./actions/billingActions";
-
 interface DashboardClientProps {
   patients: Patient[];
   totalPages: number;
   currentPage: number;
   searchParams: { [key: string]: string | string[] | undefined };
-}
-
-function BillingModal({ onClose }: { onClose: () => void }) {
-  const [pending, setPending] = useState<Procedure[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
-
-  const fetchPending = useCallback(async () => {
-    setLoading(true);
-    const data = await getPendingBillings();
-    setPending(data);
-    setLoading(false);
-  }, []);
-
-  useState(() => {
-    fetchPending();
-  });
-
-  const handleFinalize = async (id: string, cost: number) => {
-    await finalizeBilling(id, cost);
-    fetchPending();
-  };
-
-  const handlePaid = async (id: string) => {
-    await markAsPaid(id);
-    fetchPending();
-  };
-
-  const handleAllPaid = async (patientId: string) => {
-    if (confirm("Mark all pending procedures for this patient as paid?")) {
-      await markPatientProceduresPaid(patientId);
-      fetchPending();
-      if (selectedPatientId === patientId) setSelectedPatientId(null);
-    }
-  };
-
-  const grouped = useMemo(() => {
-    const map: Record<string, { patient: Patient, items: Procedure[], total: number }> = {};
-    pending.forEach(item => {
-      if (!item.patientId) return;
-      if (!map[item.patientId]) {
-        map[item.patientId] = {
-          patient: item.patient!,
-          items: [],
-          total: 0
-        };
-      }
-      map[item.patientId].items.push(item);
-      map[item.patientId].total += item.cost;
-    });
-    return Object.values(map);
-  }, [pending]);
-
-  return (
-    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[85vh] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
-        <div className="p-8 border-b border-slate-100 flex justify-between items-center bg-slate-50/30">
-          <div>
-            <h2 className="text-2xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-              <Receipt className="w-6 h-6 text-amber-500" /> Pending Billing
-            </h2>
-            <p className="text-xs text-slate-400 font-bold uppercase mt-1">Review and finalize procedure costs</p>
-          </div>
-          <button onClick={onClose} className="p-3 bg-white text-slate-400 hover:text-slate-800 rounded-xl border border-slate-200 transition-all">
-            <X className="w-6 h-6" />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-8">
-          {loading ? (
-            <div className="py-20 text-center animate-pulse">
-               <Receipt className="w-12 h-12 text-slate-200 mx-auto mb-4" />
-               <p className="text-slate-400 font-bold uppercase text-xs">Loading pending records...</p>
-            </div>
-          ) : grouped.length === 0 ? (
-            <div className="py-20 text-center">
-               <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                  <CheckCircle2 className="w-10 h-10 text-emerald-400" />
-               </div>
-               <h3 className="text-xl font-bold text-slate-800">All Billed!</h3>
-               <p className="text-slate-400 text-sm mt-2">There are no pending procedures waiting for billing.</p>
-            </div>
-          ) : (
-            <div className="space-y-6">
-               {grouped.map((group) => (
-                 <div key={group.patient.id} className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden transition-all hover:shadow-md">
-                    <div className="p-6 bg-slate-50/50 flex justify-between items-center border-b border-slate-100">
-                       <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-indigo-600 text-white rounded-xl flex items-center justify-center font-black text-sm">
-                             {group.patient.firstName[0]}{group.patient.lastName[0]}
-                          </div>
-                          <div>
-                             <p className="text-sm font-black text-slate-900">{group.patient.firstName} {group.patient.lastName}</p>
-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{group.items.length} Itemized Procedure{group.items.length > 1 ? 's' : ''}</p>
-                          </div>
-                       </div>
-                       <div className="text-right">
-                          <p className="text-[10px] font-black text-slate-400 uppercase mb-0.5">Total Amount</p>
-                          <p className="text-lg font-black text-slate-900">${group.total.toFixed(2)}</p>
-                       </div>
-                    </div>
-
-                    <div className="p-6 space-y-4">
-                       <div className="space-y-3">
-                          {group.items.map(item => (
-                            <div key={item.id} className="flex justify-between items-center p-4 bg-slate-50/30 rounded-2xl border border-slate-100">
-                               <div className="flex gap-3 items-center">
-                                  <div className="p-2 bg-white rounded-lg border border-slate-100 text-slate-400">
-                                     <Briefcase className="w-3 h-3" />
-                                  </div>
-                                  <div>
-                                     <p className="text-xs font-bold text-slate-700">{item.name}</p>
-                                     <p className="text-[9px] text-slate-400 font-medium uppercase">{new Date(item.procedureDate).toLocaleDateString()}</p>
-                                  </div>
-                               </div>
-                               <div className="flex items-center gap-3">
-                                  <div className="relative w-24">
-                                     <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">$</span>
-                                     <input
-                                       type="number"
-                                       defaultValue={item.cost}
-                                       onBlur={(e) => {
-                                         const val = parseFloat(e.target.value);
-                                         if (val !== item.cost) handleFinalize(item.id, val);
-                                       }}
-                                       className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-700 outline-none focus:border-amber-500"
-                                     />
-                                  </div>
-                                  <button
-                                    onClick={() => handlePaid(item.id)}
-                                    className="p-2 bg-emerald-50 text-emerald-600 rounded-lg hover:bg-emerald-600 hover:text-white transition-all"
-                                    title="Mark Item Paid"
-                                  >
-                                    <CheckCircle2 className="w-4 h-4" />
-                                  </button>
-                               </div>
-                            </div>
-                          ))}
-                       </div>
-
-                       <div className="pt-4 flex justify-end">
-                          <button
-                            onClick={() => handleAllPaid(group.patient.id)}
-                            className="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100"
-                          >
-                            <CreditCard className="w-4 h-4" /> Settle Full Balance
-                          </button>
-                       </div>
-                    </div>
-                 </div>
-               ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 }
 
 export default function DashboardClient({
@@ -205,7 +43,6 @@ export default function DashboardClient({
   currentPage,
 }: DashboardClientProps) {
   const [isApptFormOpen, setIsApptFormOpen] = useState(false);
-  const [isBillingOpen, setIsBillingOpen] = useState(false);
   const [apptPatient, setAppointmentPatient] = useState<Patient | null>(null); // Holds patient for the new appt
   const router = useRouter();
   const params = useSearchParams();
@@ -320,12 +157,12 @@ export default function DashboardClient({
             {isExporting ? "Exporting..." : "Export Excel"}
           </button>
 
-          <button
-            onClick={() => setIsBillingOpen(true)}
+          <Link
+            href="/billing"
             className="px-5 py-3 bg-amber-50 text-amber-700 rounded-xl font-medium flex items-center gap-2 hover:bg-amber-100 transition"
           >
             <Receipt className="w-5 h-5" /> Billing
-          </button>
+          </Link>
 
           <button
             onClick={openAdd}
@@ -664,6 +501,16 @@ export default function DashboardClient({
                 </div>
               </div>
 
+              <div>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Residential Address</label>
+                <textarea
+                  name="address"
+                  defaultValue={selectedPatient?.address || ""}
+                  rows={2}
+                  className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all resize-none"
+                />
+              </div>
+
               <div className="grid grid-cols-3 gap-6 pt-4 border-t border-slate-50">
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Birth Date</label>
@@ -706,6 +553,30 @@ export default function DashboardClient({
                       <option key={bg} value={bg}>{bg}</option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-50">
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Patient Category</label>
+                  <select
+                    name="role"
+                    defaultValue={selectedPatient?.role || "Regular"}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none bg-white font-medium"
+                  >
+                    <option value="Regular">Regular</option>
+                    <option value="VIP">VIP</option>
+                    <option value="New">New</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Known Allergies</label>
+                  <input
+                    name="allergies"
+                    defaultValue={selectedPatient?.allergies || ""}
+                    className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
+                    placeholder="e.g. Penicillin, Peanuts"
+                  />
                 </div>
               </div>
 
@@ -767,11 +638,6 @@ export default function DashboardClient({
             </form>
           </div>
         </div>
-      )}
-
-      {/* BILLING OVERLAY (NEW) */}
-      {isBillingOpen && (
-        <BillingModal onClose={() => setIsBillingOpen(false)} />
       )}
 
       {/* DELETE MODAL */}

@@ -28,6 +28,7 @@ export interface Patient {
   procedures?: Procedure[];
   medicalRecord?: MedicalRecord | null;
   diagnosis?: Diagnosis | null;
+  diagnoses?: Diagnosis[];
   createdAt: Date;
   updatedAt: Date;
 }

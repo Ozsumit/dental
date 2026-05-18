@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, CalendarDays, Activity, Shield, Stethoscope, LogOut } from "lucide-react";
+import { Users, CalendarDays, Activity, Shield, Stethoscope, LogOut, Receipt } from "lucide-react";
 import { handleLogout } from "@/app/actions/authActions";
 import { UserSession } from "@/lib/types";
 
@@ -12,6 +12,7 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
   const allItems = [
     { name: "Patients", href: "/", icon: Users, roles: ["RECEPTIONIST", "ADMIN", "DOCTOR"] },
     { name: "Appointments", href: "/appointments", icon: CalendarDays, roles: ["RECEPTIONIST", "ADMIN"] },
+    { name: "Billing", href: "/billing", icon: Receipt, roles: ["RECEPTIONIST", "ADMIN"] },
     { name: "Doctor View", href: "/doctor", icon: Stethoscope, roles: ["DOCTOR", "ADMIN"] },
     { name: "Admin Panel", href: "/admin", icon: Shield, roles: ["ADMIN"] },
   ];

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "./lib/auth/session";
 
-const protectedRoutes = ["/", "/admin", "/doctor", "/appointments"];
+const protectedRoutes = ["/", "/admin", "/doctor", "/appointments", "/billing"];
 const publicRoutes = ["/login"];
 
 export default async function middleware(req: NextRequest) {
@@ -30,6 +30,10 @@ export default async function middleware(req: NextRequest) {
 
   if (path.startsWith("/doctor") && session?.role !== "DOCTOR") {
     return NextResponse.redirect(new URL("/", req.nextUrl));
+  }
+
+  if (path.startsWith("/billing") && session?.role === "DOCTOR") {
+    return NextResponse.redirect(new URL("/doctor", req.nextUrl));
   }
 
   return NextResponse.next();

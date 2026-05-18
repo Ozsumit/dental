@@ -91,7 +91,10 @@ export async function getPatients(searchParams: { [key: string]: string | string
         medicalRecord: {
           include: { assignedDoctor: true }
         },
-        diagnosis: true,
+        diagnoses: {
+          orderBy: { createdAt: "desc" },
+          take: 1
+        }
       },
     }),
   ]);
@@ -146,12 +149,22 @@ export async function savePatient(formData: FormData, id?: string) {
       }
     });
   } else {
-    await prisma.patient.create({
+    const patient = await prisma.patient.create({
       data: {
         ...patientData,
         medicalRecord: {
           create: medicalRecordData
         }
+      }
+    });
+
+    // Auto-create a default appointment for new registrations to put them in the queue
+    await prisma.appointment.create({
+      data: {
+        patientId: patient.id,
+        appointmentDate: new Date(),
+        status: "SCHEDULED",
+        treatments: "Consultation"
       }
     });
   }

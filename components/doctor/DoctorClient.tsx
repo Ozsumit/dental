@@ -100,22 +100,26 @@ export default function DoctorClient({
   const handlePatientSelect = (p: Patient & { currentAppointmentId?: string }) => {
     setSelectedPatient(p);
     setActiveTab("Subjective");
-    setVasScore(p.diagnosis?.vasScore || 0);
+
+    // Get latest diagnosis from history if available
+    const latestDiagnosis = p.diagnoses?.[0] || p.diagnosis;
+
+    // Autofill ONLY non-changing/permanent clinical data
+    setVasScore(0); // Reset for new session
 
     try {
-      const historyArr = JSON.parse(p.diagnosis?.medicalHistory || "[]");
+      // Autofill Co-morbidities (Medical History)
+      const historyArr = JSON.parse(latestDiagnosis?.medicalHistory || "[]");
       setSelectedConditions(Array.isArray(historyArr) ? historyArr : []);
     } catch {
       setSelectedConditions([]);
     }
 
-    if (p.diagnosis?.nextVisitDate) {
-        setNextVisitDate(new Date(p.diagnosis.nextVisitDate).toISOString().split('T')[0]);
-    } else {
-        setNextVisitDate("");
-    }
-
+    // Autofill ICD-10 Code (often constant for chronic patients)
     setReferredDoctorId(p.medicalRecord?.assignedDoctorId || "");
+
+    // Reset session-specific fields
+    setNextVisitDate("");
     setSelectedProcedures([]);
   };
 
@@ -297,7 +301,6 @@ export default function DoctorClient({
                                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Chief Complaint & History</label>
                                  <textarea
                                    name="currentHistory"
-                                   defaultValue={selectedPatient.diagnosis?.currentHistory || ""}
                                    rows={6}
                                    className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
                                    placeholder="What brought the patient in today? Timeline of symptoms..."
@@ -382,60 +385,93 @@ export default function DoctorClient({
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                            <div className="lg:col-span-2 space-y-6">
                               <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                                 <div className="flex items-center gap-3 mb-4">
+                                 <div className="flex items-center gap-3 mb-6">
                                     <FileText className="w-5 h-5 text-emerald-500" />
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Clinical History & Past Diagnoses</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Comprehensive Clinical History</label>
                                  </div>
 
-                                 {selectedPatient.isOld ? (
-                                   <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                                      {/* Mock/Previous Diagnosis data if available, or just display pastHistory */}
-                                      <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                         <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Previous Assessment Summary</p>
-                                         <p className="text-sm text-slate-700 font-medium leading-relaxed">
-                                            {selectedPatient.diagnosis?.treatmentPlan || "No previous detailed clinical summary found."}
-                                         </p>
-                                      </div>
-                                      <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                         <p className="text-[10px] font-black text-slate-400 uppercase mb-2">ICD-10 Code History</p>
-                                         <p className="text-sm text-slate-700 font-bold">
-                                            {selectedPatient.diagnosis?.icd10Code || "N/A"}
-                                         </p>
-                                      </div>
-                                      <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-                                         <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Past Medical History (Reported)</p>
-                                         <p className="text-sm text-slate-600 italic">
-                                            {selectedPatient.diagnosis?.pastHistory || "None reported."}
-                                         </p>
-                                      </div>
+                                 <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
+                                    {/* Most Recent Assessment */}
+                                    <div className="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden">
+                                       <div className="bg-slate-900 px-4 py-2 flex justify-between items-center">
+                                          <span className="text-[10px] font-black text-white uppercase tracking-widest">Active/Latest Assessment</span>
+                                          <span className="text-[10px] font-bold text-slate-400">{(selectedPatient.diagnoses?.[0]?.updatedAt || selectedPatient.diagnosis?.updatedAt) ? new Date(selectedPatient.diagnoses?.[0]?.updatedAt || selectedPatient.diagnosis!.updatedAt).toLocaleDateString() : 'N/A'}</span>
+                                       </div>
+                                       <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                          <div className="space-y-3">
+                                             <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Chief Complaint (Prev)</p>
+                                                <p className="text-xs text-slate-700 font-medium leading-relaxed">{selectedPatient.diagnoses?.[0]?.currentHistory || selectedPatient.diagnosis?.currentHistory || "None recorded"}</p>
+                                             </div>
+                                             <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Diagnosis & Plan</p>
+                                                <p className="text-xs text-slate-800 font-bold leading-relaxed">{selectedPatient.diagnoses?.[0]?.treatmentPlan || selectedPatient.diagnosis?.treatmentPlan || "No treatment plan recorded"}</p>
+                                             </div>
+                                          </div>
+                                          <div className="space-y-3">
+                                             <div>
+                                                <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Medicines</p>
+                                                <p className="text-xs text-slate-700 font-medium">{selectedPatient.diagnoses?.[0]?.medicines || selectedPatient.diagnosis?.medicines || "None prescribed"}</p>
+                                             </div>
+                                             <div className="flex gap-4">
+                                                <div>
+                                                   <p className="text-[9px] font-black text-slate-400 uppercase mb-1">ICD-10</p>
+                                                   <p className="text-xs font-black text-emerald-600">{selectedPatient.diagnoses?.[0]?.icd10Code || selectedPatient.diagnosis?.icd10Code || "N/A"}</p>
+                                                </div>
+                                                <div>
+                                                   <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Pain (VAS)</p>
+                                                   <p className="text-xs font-black text-red-500">{selectedPatient.diagnoses?.[0]?.vasScore || selectedPatient.diagnosis?.vasScore || 0}/10</p>
+                                                </div>
+                                             </div>
+                                          </div>
+                                       </div>
+                                    </div>
 
-                                      {/* Visit/Procedure History */}
-                                      <div className="pt-4">
-                                         <p className="text-[10px] font-black text-slate-400 uppercase mb-3 px-1">Visit History</p>
-                                         <div className="space-y-2">
-                                            {selectedPatient.procedures?.map((proc, i) => (
-                                              <div key={i} className="p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
-                                                 <div className="flex justify-between items-start">
-                                                    <p className="text-xs font-bold text-slate-700">{proc.name}</p>
-                                                    <p className="text-[9px] font-black text-slate-400">{new Date(proc.procedureDate).toLocaleDateString()}</p>
-                                                 </div>
-                                                 {proc.description && <p className="text-[10px] text-slate-500 mt-1 line-clamp-2">{proc.description}</p>}
-                                              </div>
-                                            ))}
-                                            {(!selectedPatient.procedures || selectedPatient.procedures.length === 0) && (
-                                              <p className="text-[10px] text-slate-400 italic px-1">No clinical procedures recorded.</p>
-                                            )}
-                                         </div>
-                                      </div>
-                                   </div>
-                                 ) : (
-                                   <div className="py-12 text-center">
-                                      <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                         <UserPlus className="w-6 h-6 text-slate-300" />
-                                      </div>
-                                      <p className="text-sm text-slate-400 font-medium">New patient record. No history available.</p>
-                                   </div>
-                                 )}
+                                    {/* Patient Demographics & Baseline */}
+                                    <div className="grid grid-cols-2 gap-4">
+                                       <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Permanent Co-morbidities</p>
+                                          <div className="flex flex-wrap gap-1">
+                                             {selectedConditions.length > 0 ? selectedConditions.map(c => (
+                                                <span key={c} className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded text-[10px] font-bold border border-emerald-100">{c}</span>
+                                             )) : <span className="text-[10px] text-slate-400 italic">None reported</span>}
+                                          </div>
+                                       </div>
+                                       <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                                          <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Allergies</p>
+                                          <p className="text-xs font-bold text-red-600">{selectedPatient.allergies || "No known allergies"}</p>
+                                       </div>
+                                    </div>
+
+                                    {/* Procedure Timeline */}
+                                    <div>
+                                       <p className="text-[10px] font-black text-slate-400 uppercase mb-3 px-1 flex items-center gap-2">
+                                          <History className="w-3 h-3" /> Visit & Procedure History
+                                       </p>
+                                       <div className="space-y-2">
+                                          {selectedPatient.procedures?.map((proc, i) => (
+                                            <div key={i} className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm flex justify-between items-center group hover:border-emerald-200 transition-all">
+                                               <div>
+                                                  <div className="flex items-center gap-2 mb-1">
+                                                     <p className="text-xs font-bold text-slate-800">{proc.name}</p>
+                                                     <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[8px] font-black uppercase">{proc.type}</span>
+                                                  </div>
+                                                  <p className="text-[10px] text-slate-500 line-clamp-1">{proc.description || "Routine clinical procedure."}</p>
+                                               </div>
+                                               <div className="text-right">
+                                                  <p className="text-[10px] font-black text-slate-900 mb-0.5">${proc.cost.toFixed(2)}</p>
+                                                  <p className="text-[9px] font-bold text-slate-400 uppercase">{new Date(proc.procedureDate).toLocaleDateString()}</p>
+                                               </div>
+                                            </div>
+                                          ))}
+                                          {(!selectedPatient.procedures || selectedPatient.procedures.length === 0) && (
+                                            <div className="py-8 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                               <p className="text-xs text-slate-400 italic">No historical procedures found.</p>
+                                            </div>
+                                          )}
+                                       </div>
+                                    </div>
+                                 </div>
                               </div>
                            </div>
 
@@ -486,7 +522,6 @@ export default function DoctorClient({
                                  <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-3 block">Clinical Diagnosis</label>
                                  <textarea
                                    name="treatmentPlan"
-                                   defaultValue={selectedPatient.diagnosis?.treatmentPlan || ""}
                                    rows={8}
                                    className="w-full p-4 bg-emerald-50/30 border-2 border-emerald-100 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
                                    placeholder="Summary of clinical findings and definitive diagnosis..."
@@ -497,7 +532,7 @@ export default function DoctorClient({
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">ICD-10 Code</label>
                                     <input
                                       name="icd10Code"
-                                      defaultValue={selectedPatient.diagnosis?.icd10Code || ""}
+                                      defaultValue={selectedPatient.diagnoses?.[0]?.icd10Code || selectedPatient.diagnosis?.icd10Code || ""}
                                       className="w-full px-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all font-medium"
                                       placeholder="e.g. M54.5"
                                     />
@@ -550,7 +585,6 @@ export default function DoctorClient({
                               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 block">Medicines & Suggestions</label>
                               <textarea
                                 name="medicines"
-                                defaultValue={selectedPatient.diagnosis?.medicines || ""}
                                 rows={3}
                                 className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
                                 placeholder="Prescribed medicines, lifestyle changes..."
