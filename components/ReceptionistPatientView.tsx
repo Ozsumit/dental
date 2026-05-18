@@ -217,8 +217,8 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
                  <Stethoscope className="w-4 h-4 text-emerald-500" /> Current Assessment
                </h3>
-               {patient.diagnosis?.updatedAt && (
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Updated: {new Date(patient.diagnosis.updatedAt).toLocaleDateString()}</span>
+               {(patient.diagnoses?.[0]?.updatedAt || patient.diagnosis?.updatedAt) && (
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Updated: {new Date(patient.diagnoses?.[0]?.updatedAt || patient.diagnosis!.updatedAt).toLocaleDateString()}</span>
                )}
             </div>
 
@@ -227,13 +227,13 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Clinical Diagnosis</p>
                     <p className="text-sm text-slate-700 font-medium bg-slate-50 p-3 rounded-xl border border-slate-100 min-h-[60px]">
-                       {patient.diagnosis?.treatmentPlan || "No diagnosis recorded"}
+                       {patient.diagnoses?.[0]?.treatmentPlan || patient.diagnosis?.treatmentPlan || "No diagnosis recorded"}
                     </p>
                   </div>
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase mb-1">ICD-10 Code</p>
                     <p className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-1 rounded inline-block">
-                       {patient.diagnosis?.icd10Code || "N/A"}
+                       {patient.diagnoses?.[0]?.icd10Code || patient.diagnosis?.icd10Code || "N/A"}
                     </p>
                   </div>
                </div>
@@ -242,13 +242,13 @@ export default function ReceptionistPatientView({ patient }: { patient: Patient 
                     <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Medicines & Suggestions</p>
                     <div className="text-sm text-slate-700 font-medium bg-emerald-50/30 p-3 rounded-xl border border-emerald-100 min-h-[60px] flex gap-2">
                        <Pill className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
-                       <p className="whitespace-pre-wrap">{patient.diagnosis?.medicines || "No instructions provided"}</p>
+                       <p className="whitespace-pre-wrap">{patient.diagnoses?.[0]?.medicines || patient.diagnosis?.medicines || "No instructions provided"}</p>
                     </div>
                   </div>
                   <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Home Exercises</p>
                     <p className="text-xs text-slate-600 italic">
-                       {patient.diagnosis?.homeExercise || "None prescribed"}
+                       {patient.diagnoses?.[0]?.homeExercise || patient.diagnosis?.homeExercise || "None prescribed"}
                     </p>
                   </div>
                </div>

@@ -17,9 +17,9 @@ export async function getAppointments(searchParams: { [key: string]: string | st
     where.patient = {
       AND: tokens.map(token => ({
         OR: [
-          { firstName: { contains: token, mode: 'insensitive' } },
-          { lastName: { contains: token, mode: 'insensitive' } },
-          { phone: { contains: token, mode: 'insensitive' } },
+          { firstName: { contains: token } },
+          { lastName: { contains: token } },
+          { phone: { contains: token } },
         ],
       })),
     };
@@ -66,9 +66,9 @@ export async function searchPatientsForDropdown(query: string) {
     where: {
       AND: tokens.map(token => ({
         OR: [
-          { firstName: { contains: token, mode: 'insensitive' } },
-          { lastName: { contains: token, mode: 'insensitive' } },
-          { phone: { contains: token, mode: 'insensitive' } },
+          { firstName: { contains: token } },
+          { lastName: { contains: token } },
+          { phone: { contains: token } },
         ],
       })),
     },
@@ -124,5 +124,46 @@ export async function getAppointmentsByDateRange(start: Date, end: Date) {
     },
     include: { patient: true },
     orderBy: { appointmentDate: "asc" },
+  });
+}
+
+export async function getAppointmentsForExport(searchParams: { [key: string]: string | string[] | undefined }) {
+  const where: Prisma.AppointmentWhereInput = {};
+
+  if (searchParams?.q) {
+    const q = (searchParams.q as string).trim();
+    const tokens = q.split(/\s+/);
+    where.patient = {
+      AND: tokens.map(token => ({
+        OR: [
+          { firstName: { contains: token } },
+          { lastName: { contains: token } },
+          { phone: { contains: token } },
+        ],
+      })),
+    };
+  }
+
+  if (searchParams?.status) where.status = searchParams.status as string;
+  if (searchParams?.treatment) {
+    where.treatments = { contains: searchParams.treatment as string };
+  }
+  if (searchParams?.dateFrom || searchParams?.dateTo) {
+    where.appointmentDate = {};
+    if (searchParams.dateFrom)
+      where.appointmentDate.gte = new Date(searchParams.dateFrom as string);
+    if (searchParams.dateTo)
+      where.appointmentDate.lte = new Date(searchParams.dateTo as string);
+  }
+
+  return await prisma.appointment.findMany({
+    where,
+    include: {
+      patient: {
+        include: { medicalRecord: true }
+      },
+      doctor: true
+    },
+    orderBy: { appointmentDate: "desc" },
   });
 }

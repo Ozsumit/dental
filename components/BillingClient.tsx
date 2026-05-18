@@ -3,7 +3,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { getPendingBillings, finalizeBilling, markAsPaid, markPatientProceduresPaid } from "@/app/actions/billingActions";
 import { Procedure, Patient } from "@/lib/types";
-import { Receipt, CheckCircle2, Briefcase, CreditCard, DollarSign, Calendar, Search } from "lucide-react";
+import { Receipt, CheckCircle2, Briefcase, CreditCard, Calendar, Search } from "lucide-react";
 
 export default function BillingClient({ initialPending }: { initialPending: Procedure[] }) {
   const [pending, setPending] = useState<Procedure[]>(initialPending);

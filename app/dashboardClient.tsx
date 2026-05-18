@@ -11,7 +11,7 @@ import {
   createAppointmentAction,
 } from "./actions/patientsActions";
 import ReceptionistPatientView from "@/components/ReceptionistPatientView";
-import { Patient, Procedure } from "@/lib/types/index";
+import { Patient, Appointment } from "@/lib/types/index";
 import {
   Search,
   Plus,
@@ -104,17 +104,27 @@ export default function DashboardClient({
         Gender: p.gender || "N/A",
         Status: p.status,
         "Date of Birth": new Date(p.dateOfBirth).toLocaleDateString(),
+        "Category": p.role || "Regular",
+        "Blood Group": p.bloodGroup || "N/A",
+        "Allergies": p.allergies || "None",
+        "Address": p.address || "N/A",
         "Total Visits": p.visitCount,
         "Last Visit": p.lastVisitDate
           ? new Date(p.lastVisitDate).toLocaleDateString()
           : "None",
+        "Insurance": p.medicalRecord?.insurance || "N/A",
+        "Insurance No": p.medicalRecord?.insuranceNo || "N/A",
+        "Emergency Contact": p.medicalRecord?.emergencyContactName || "N/A",
+        "Emergency Phone": p.medicalRecord?.emergencyContactNo || "N/A",
+        "Latest Diagnosis": p.diagnoses?.[0]?.treatmentPlan || "N/A",
+        "Recent Appointments": p.appointments?.map((a: Appointment) => new Date(a.appointmentDate).toLocaleDateString()).join(", ") || "None"
       }));
 
       // Generate Excel File
       const worksheet = XLSX.utils.json_to_sheet(formattedData);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Patients");
-      XLSX.writeFile(workbook, "Patients_Export.xlsx");
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Patients_Master_Export");
+      XLSX.writeFile(workbook, `Patients_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
     } catch (e) {
       console.error(e);
       alert("Failed to export data.");
@@ -680,8 +690,8 @@ export default function DashboardClient({
       {isApptFormOpen && apptPatient && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="p-8 border-b border-slate-50 bg-slate-50/30">
-               <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-2">
+            <div className="p-8 border-b border-slate-50 bg-slate-50/30 text-center">
+               <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center justify-center gap-2">
                  <Calendar className="w-5 h-5 text-indigo-500" /> New Session
                </h2>
                <p className="text-xs text-slate-400 font-bold mt-1 uppercase">Scheduling for: {apptPatient.firstName} {apptPatient.lastName}</p>
@@ -690,6 +700,7 @@ export default function DashboardClient({
             <form
               action={async (formData) => {
                 formData.append("patientId", apptPatient.id);
+                formData.append("status", "SCHEDULED"); // Ensure status is set
                 await createAppointmentAction(formData);
                 setIsApptFormOpen(false);
               }}
@@ -701,14 +712,14 @@ export default function DashboardClient({
                   required
                   type="date"
                   name="appointmentDate"
-                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-medium"
+                  className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white outline-none font-bold text-slate-700"
                 />
               </div>
 
               <div>
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Select Procedures</label>
                 <div className="grid grid-cols-2 gap-3 mt-2">
-                  {["Cleaning", "Filling", "Root Canal", "Checkup"].map(
+                  {["Cleaning", "Filling", "Root Canal", "Checkup", "Whitening", "Extraction"].map(
                     (proc) => (
                       <label
                         key={proc}

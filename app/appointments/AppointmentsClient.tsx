@@ -7,6 +7,7 @@ import {
   saveAppointment,
   deleteAppointment,
   searchPatientsForDropdown,
+  getAppointmentsForExport,
 } from "@/app/actions/appointmentActions";
 import { Appointment } from "@/lib/types";
 import {
@@ -19,7 +20,9 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Download,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface AppointmentsClientProps {
   appointments: Appointment[];
@@ -28,8 +31,6 @@ interface AppointmentsClientProps {
   searchParams: { [key: string]: string | string[] | undefined };
   doctors: { id: string; username: string }[];
 }
-
-import { useEffect } from "react";
 
 export default function AppointmentsClient({
   appointments,
@@ -42,11 +43,12 @@ export default function AppointmentsClient({
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
 
   // Patient Search State for the Form
   const [patientSearchQuery, setPatientSearchQuery] = useState("");
-  const [patientResults, setPatientResults] = useState<{ id: string; firstName: string; lastName: string; phone: string }[]>([]);
+  const [patientResults, setPatientResults] = useState<{ id: string; firstName: string; lastName: string; phone: string; role?: string | null }[]>([]);
   const [selectedPatientId, setSelectedPatientId] = useState("");
 
   const updateQuery = useCallback(
@@ -93,6 +95,35 @@ export default function AppointmentsClient({
   };
 
   const hasFilters = Array.from(params.keys()).length > 0;
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    try {
+      const currentFilters = Object.fromEntries(params.entries());
+      const dataToExport = await getAppointmentsForExport(currentFilters);
+
+      const formattedData = dataToExport.map((a: Appointment) => ({
+        "Appointment Date": new Date(a.appointmentDate).toLocaleDateString(),
+        "Status": a.status,
+        "Treatments": a.treatments,
+        "Patient Name": `${a.patient?.firstName} ${a.patient?.lastName}`,
+        "Patient Phone": a.patient?.phone,
+        "Patient Category": a.patient?.role || "Regular",
+        "Assigned Doctor": a.doctor?.username || "Not Assigned",
+        "Insurance": a.patient?.medicalRecord?.insurance || "N/A",
+        "Created At": new Date(a.createdAt).toLocaleString()
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(formattedData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Appointments_Export");
+      XLSX.writeFile(workbook, `Appointments_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to export data.");
+    }
+    setIsExporting(false);
+  };
 
   return (
     <div className="space-y-6">
@@ -156,6 +187,14 @@ export default function AppointmentsClient({
             <X className="w-5 h-5" /> Clear
           </button>
         )}
+
+        <button
+          onClick={handleExport}
+          disabled={isExporting}
+          className="px-5 py-3 bg-emerald-50 text-emerald-700 rounded-xl font-medium flex items-center gap-2 hover:bg-emerald-100 transition disabled:opacity-50"
+        >
+          <Download className="w-5 h-5" /> {isExporting ? "Exporting..." : "Export Excel"}
+        </button>
 
         <button
           onClick={openAdd}
@@ -331,7 +370,7 @@ export default function AppointmentsClient({
 
                 {/* Dropdown Results */}
                 {patientResults.length > 0 && !selectedPatientId && (
-                  <div className="absolute top-[70px] left-0 w-full bg-white border border-slate-200 rounded-xl shadow-xl z-10 max-h-48 overflow-y-auto">
+                  <div className="absolute top-[70px] left-0 w-full bg-white border border-slate-200 rounded-xl shadow-xl z-[100] max-h-48 overflow-y-auto">
                     {patientResults.map((p) => (
                       <div
                         key={p.id}
@@ -342,9 +381,12 @@ export default function AppointmentsClient({
                         }}
                         className="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 flex flex-col"
                       >
-                        <span className="font-bold text-slate-800">
-                          {p.firstName} {p.lastName}
-                        </span>
+                        <div className="flex justify-between items-center">
+                           <span className="font-bold text-slate-800">
+                             {p.firstName} {p.lastName}
+                           </span>
+                           <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">{p.role}</span>
+                        </div>
                         <span className="text-xs text-slate-500">
                           {p.phone}
                         </span>
@@ -401,23 +443,35 @@ export default function AppointmentsClient({
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-5">
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase">
-                    Treatment Type
-                  </label>
-                  <select
-                    name="treatments"
-                    defaultValue={selectedAppt?.treatments || "Checkup"}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white"
-                  >
-                    <option value="Checkup">Checkup</option>
-                    <option value="Cleaning">Cleaning</option>
-                    <option value="Filling">Filling</option>
-                    <option value="Root Canal">Root Canal</option>
-                    <option value="Whitening">Whitening</option>
-                  </select>
+              <div>
+                <label className="text-xs font-bold text-slate-500 uppercase">
+                  Select Procedures
+                </label>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  {["Cleaning", "Filling", "Root Canal", "Checkup", "Whitening", "Extraction"].map(
+                    (proc) => {
+                      const isChecked = selectedAppt?.treatments?.includes(proc);
+                      return (
+                        <label
+                          key={proc}
+                          className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200"
+                        >
+                          <input
+                            type="checkbox"
+                            name="treatments"
+                            value={proc}
+                            defaultChecked={isChecked}
+                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                          />
+                          <span className="text-xs font-bold text-slate-600">{proc}</span>
+                        </label>
+                      )
+                    },
+                  )}
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-5">
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">
                     Assign Doctor
@@ -435,7 +489,7 @@ export default function AppointmentsClient({
                 </div>
               </div>
 
-              <div className="pt-2 flex justify-end gap-3 mt-6">
+              <div className="pt-2 flex justify-end gap-3 mt-4">
                 <button
                   type="button"
                   onClick={() => setIsFormOpen(false)}
