@@ -67,7 +67,7 @@ export default function BillingHistoryClient({
             placeholder="Search by Patient, Procedure or Type..."
             defaultValue={params.get("q") || ""}
             onChange={(e) => handleSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none"
           />
         </div>
 
@@ -140,9 +140,9 @@ export default function BillingHistoryClient({
                     <span
                       className={`py-1 px-3 rounded-full text-[10px] font-black uppercase border ${
                         proc.status === "PAID"
-                          ? "bg-green-50 text-green-700 border-green-200"
+                          ? "bg-brand-50 text-brand-700 border-brand-200"
                           : proc.status === "BILLED"
-                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            ? "bg-brand-50 text-brand-800 border-brand-200"
                             : "bg-amber-50 text-amber-700 border-amber-200"
                       }`}
                     >
@@ -155,7 +155,7 @@ export default function BillingHistoryClient({
                         setSelectedBill(proc);
                         setIsReviseOpen(true);
                       }}
-                      className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                      className="p-2 text-slate-400 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition"
                       title="Revise Bill"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -237,7 +237,7 @@ export default function BillingHistoryClient({
                     step="0.01"
                     defaultValue={selectedBill.cost}
                     required
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none focus:border-brand-600 focus:ring-1 focus:ring-brand-600"
                   />
                 </div>
 
@@ -248,7 +248,7 @@ export default function BillingHistoryClient({
                   <select
                     name="status"
                     defaultValue={selectedBill.status}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white focus:border-brand-600 focus:ring-1 focus:ring-brand-600"
                   >
                     <option value="PENDING">Pending</option>
                     <option value="BILLED">Billed</option>
@@ -268,7 +268,7 @@ export default function BillingHistoryClient({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-6 py-3 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-xl shadow-md disabled:opacity-50 flex items-center justify-center min-w-[140px]"
+                  className="px-6 py-3 bg-brand-700 text-white font-bold hover:bg-brand-800 rounded-xl shadow-md disabled:opacity-50 flex items-center justify-center min-w-[140px]"
                 >
                   {isSubmitting ? "Saving..." : "Save Revision"}
                 </button>

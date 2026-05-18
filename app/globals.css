@@ -7,7 +7,17 @@
 
 @theme inline {
   --color-background: var(--background);
-  --green: #0d3d3a;
+  --color-brand-950: #051a19;
+  --color-brand-900: #0d3d3a;
+  --color-brand-800: #135f5c;
+  --color-brand-700: #118a7e;
+  --color-brand-600: #1c8b82;
+  --color-brand-500: #26a69a;
+  --color-brand-400: #4db6ac;
+  --color-brand-300: #80cbc4;
+  --color-brand-200: #b2dfdb;
+  --color-brand-100: #cce5e0;
+  --color-brand-50: #f0f7f6;
 
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);

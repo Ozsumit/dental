@@ -218,7 +218,7 @@ export default function DoctorClient({
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
                   Pending
                 </p>
-                <p className="text-xl font-bold text-teal-600">
+                <p className="text-xl font-bold text-brand-700">
                   {filteredPatients.pending.length}
                 </p>
               </div>
@@ -226,7 +226,7 @@ export default function DoctorClient({
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
                   Completed Today
                 </p>
-                <p className="text-xl font-bold text-emerald-600">
+                <p className="text-xl font-bold text-brand-600">
                   {filteredPatients.completedToday.length}
                 </p>
               </div>
@@ -241,7 +241,7 @@ export default function DoctorClient({
                 placeholder="Search by name or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-base focus:ring-1 focus:ring-teal-500 outline-none transition-all"
+                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-base focus:ring-1 focus:ring-brand-600 outline-none transition-all"
               />
             </div>
           </div>
@@ -273,7 +273,7 @@ export default function DoctorClient({
                       <td className="px-8 py-4">
                         <div className="flex items-center gap-4">
                           <div
-                            className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-base ${isCompleted ? "bg-emerald-50 text-emerald-600" : "bg-teal-50 text-teal-700"}`}
+                            className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-base ${isCompleted ? "bg-brand-50 text-brand-600" : "bg-brand-100 text-brand-800"}`}
                           >
                             {p.firstName[0]}
                             {p.lastName[0]}
@@ -308,7 +308,7 @@ export default function DoctorClient({
                         <span
                           className={`px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border ${
                             isCompleted
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                              ? "bg-brand-50 text-brand-700 border-brand-100"
                               : "bg-amber-50 text-amber-700 border-amber-100"
                           }`}
                         >
@@ -321,7 +321,7 @@ export default function DoctorClient({
                           className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
                             isCompleted
                               ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                              : "bg-teal-600 text-white hover:bg-teal-700"
+                              : "bg-brand-700 text-white hover:bg-brand-800"
                           }`}
                         >
                           {isCompleted ? "View Assessment" : "Start Review"}
@@ -370,16 +370,16 @@ export default function DoctorClient({
                   <input
                     type="text"
                     placeholder="Search by name, phone..."
-                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-teal-500 transition-colors"
+                    className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm outline-none focus:border-brand-600 transition-colors"
                   />
                 </div>
-                <button className="bg-[#118a7e] text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-teal-700 transition-colors">
+                <button className="bg-brand-700 text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-brand-800 transition-colors">
                   + New Patient
                 </button>
               </div>
 
               {/* Patient Header */}
-              <div className="bg-white border-b border-slate-200 px-6 py-4 shrink-0 flex items-center justify-between border-t-[3px] border-t-[#3ab0ff]">
+              <div className="bg-white border-b border-slate-200 px-6 py-4 shrink-0 flex items-center justify-between border-t-[3px] border-t-brand-400">
                 <div>
                   <h2 className="text-[22px] font-bold text-slate-900">
                     {selectedPatient.firstName} {selectedPatient.lastName}
@@ -413,7 +413,7 @@ export default function DoctorClient({
                     onClick={() => setActiveTab(tab)}
                     className={`py-3.5 px-2 text-[13px] font-medium border-b-[3px] transition-all -mb-[1px] ${
                       activeTab === tab
-                        ? "border-[#118a7e] text-slate-900 font-semibold"
+                        ? "border-brand-700 text-slate-900 font-semibold"
                         : "border-transparent text-slate-500 hover:text-slate-700"
                     }`}
                   >
@@ -471,7 +471,7 @@ export default function DoctorClient({
                             selectedPatient.diagnosis?.currentHistory || ""
                           }
                           placeholder="Patient presents with lower back pain for 3 weeks, radiating to the left leg. Pain worsens with prolonged sitting and is relieved by rest."
-                          className="w-full border border-slate-200 rounded-lg p-4 text-sm min-h-[120px] focus:border-teal-500 outline-none text-slate-700 resize-none"
+                          className="w-full border border-slate-200 rounded-lg p-4 text-sm min-h-[120px] focus:border-brand-600 outline-none text-slate-700 resize-none"
                         />
                       </div>
 
@@ -485,7 +485,7 @@ export default function DoctorClient({
                             selectedPatient.diagnosis?.pastHistory || ""
                           }
                           placeholder="No major surgeries. History of mild hypertension (managed)."
-                          className="w-full border border-slate-200 rounded-lg p-4 text-sm min-h-[100px] focus:border-teal-500 outline-none text-slate-700 resize-none"
+                          className="w-full border border-slate-200 rounded-lg p-4 text-sm min-h-[100px] focus:border-brand-600 outline-none text-slate-700 resize-none"
                         />
                       </div>
 
@@ -502,7 +502,7 @@ export default function DoctorClient({
                               <div
                                 key={cond.id}
                                 className={`flex items-center justify-between px-3 py-2 rounded-lg transition-colors ${
-                                  isActive ? "bg-[#cce5e0]" : "bg-transparent"
+                                  isActive ? "bg-brand-100" : "bg-transparent"
                                 }`}
                               >
                                 <span className="text-sm text-slate-700">
@@ -512,7 +512,7 @@ export default function DoctorClient({
                                   type="button"
                                   onClick={() => toggleCondition(cond.id)}
                                   className={`relative w-[44px] h-6 rounded-full transition-colors ${
-                                    isActive ? "bg-[#0f766e]" : "bg-slate-200"
+                                    isActive ? "bg-brand-800" : "bg-slate-200"
                                   }`}
                                 >
                                   <div
@@ -589,7 +589,7 @@ export default function DoctorClient({
                             ) as HTMLInputElement;
                             if (hiddenInput) hiddenInput.value = "false";
                           }}
-                          className="bg-[#118a7e] text-white px-6 py-2.5 rounded-md text-sm font-semibold hover:bg-teal-700 transition-colors"
+                          className="bg-brand-700 text-white px-6 py-2.5 rounded-md text-sm font-semibold hover:bg-brand-800 transition-colors"
                         >
                           Save Assessment
                         </button>
@@ -631,7 +631,7 @@ export default function DoctorClient({
                                 pinsNeedles: e.target.value,
                               })
                             }
-                            className="w-full border border-slate-200 rounded-md p-2.5 text-sm outline-none focus:border-teal-500 text-slate-700 bg-white"
+                            className="w-full border border-slate-200 rounded-md p-2.5 text-sm outline-none focus:border-brand-600 text-slate-700 bg-white"
                           >
                             <option>None</option>
                             <option>Left Lumbar, L4-L5</option>
@@ -651,7 +651,7 @@ export default function DoctorClient({
                                 numbness: e.target.value,
                               })
                             }
-                            className="w-full border border-slate-200 rounded-md p-2.5 text-sm outline-none focus:border-teal-500 text-slate-700 bg-white"
+                            className="w-full border border-slate-200 rounded-md p-2.5 text-sm outline-none focus:border-brand-600 text-slate-700 bg-white"
                           >
                             <option>None</option>
                             <option>Left leg (lateral)</option>
@@ -808,7 +808,7 @@ export default function DoctorClient({
                                         },
                                       })
                                     }
-                                    className="w-full border border-[#118a7e] text-slate-900 rounded-md py-1.5 text-center text-sm font-semibold outline-none focus:ring-1 focus:ring-teal-500"
+                                    className="w-full border border-brand-700 text-slate-900 rounded-md py-1.5 text-center text-sm font-semibold outline-none focus:ring-1 focus:ring-brand-600"
                                   />
                                 </div>
                               </div>
@@ -857,7 +857,7 @@ export default function DoctorClient({
                                         }
                                         className={`w-7 h-7 rounded text-xs font-medium flex items-center justify-center transition-colors border ${
                                           isActive
-                                            ? "bg-[#0f766e] border-[#0f766e] text-white"
+                                            ? "bg-brand-800 border-brand-800 text-white"
                                             : "border-slate-200 text-slate-600 hover:border-slate-300 bg-white"
                                         }`}
                                       >
@@ -881,7 +881,7 @@ export default function DoctorClient({
                             ) as HTMLInputElement;
                             if (hiddenInput) hiddenInput.value = "false";
                           }}
-                          className="bg-[#118a7e] text-white px-6 py-2.5 rounded-md text-sm font-semibold hover:bg-teal-700 transition-colors"
+                          className="bg-brand-700 text-white px-6 py-2.5 rounded-md text-sm font-semibold hover:bg-brand-800 transition-colors"
                         >
                           Save Assessment
                         </button>
@@ -906,7 +906,7 @@ export default function DoctorClient({
 
                         <div className="p-6 grid grid-cols-2 gap-10">
                           <div className="space-y-6">
-                            <h4 className="text-[#0f766e] font-medium text-base">
+                            <h4 className="text-brand-800 font-medium text-base">
                               Diagnosis
                             </h4>
                             <div>
@@ -921,7 +921,7 @@ export default function DoctorClient({
                                   selectedPatient.diagnosis?.treatmentPlan ||
                                   ""
                                 }
-                                className="w-full border-2 border-[#118a7e] rounded-md p-3 min-h-[200px] outline-none text-slate-700 text-[13px] resize-none"
+                                className="w-full border-2 border-brand-700 rounded-md p-3 min-h-[200px] outline-none text-slate-700 text-[13px] resize-none"
                               />
                             </div>
                             <div>
@@ -938,14 +938,14 @@ export default function DoctorClient({
                                     ""
                                   }
                                   placeholder="Search diagnosis codes..."
-                                  className="w-full border border-slate-200 rounded-md pl-10 pr-3 py-2 text-[13px] outline-none bg-slate-50 focus:border-teal-500"
+                                  className="w-full border border-slate-200 rounded-md pl-10 pr-3 py-2 text-[13px] outline-none bg-slate-50 focus:border-brand-600"
                                 />
                               </div>
                             </div>
                           </div>
 
                           <div className="space-y-6">
-                            <h4 className="text-[#0f766e] font-medium text-base">
+                            <h4 className="text-brand-800 font-medium text-base">
                               Treatment plan
                             </h4>
                             <div>
@@ -959,7 +959,7 @@ export default function DoctorClient({
                                   selectedPatient.diagnosis?.medicines ||
                                   ""
                                 }
-                                className="w-full border border-slate-200 rounded-md p-3 min-h-[100px] outline-none text-slate-700 text-[13px] resize-none focus:border-teal-500"
+                                className="w-full border border-slate-200 rounded-md p-3 min-h-[100px] outline-none text-slate-700 text-[13px] resize-none focus:border-brand-600"
                               />
                             </div>
                             <div>
@@ -968,7 +968,7 @@ export default function DoctorClient({
                               </label>
                               <textarea
                                 name="homeExerciseProgram"
-                                className="w-full border border-slate-200 rounded-md p-3 min-h-[100px] outline-none text-slate-700 text-[13px] resize-none focus:border-teal-500"
+                                className="w-full border border-slate-200 rounded-md p-3 min-h-[100px] outline-none text-slate-700 text-[13px] resize-none focus:border-brand-600"
                               />
                             </div>
                             <div>
@@ -988,7 +988,7 @@ export default function DoctorClient({
                                       setNextVisitDate(e.target.value);
                                       setActivePreset(null);
                                     }}
-                                    className="w-full border border-slate-200 rounded-md pl-10 pr-3 py-2 text-[13px] outline-none bg-slate-50 focus:border-teal-500 text-slate-500 uppercase"
+                                    className="w-full border border-slate-200 rounded-md pl-10 pr-3 py-2 text-[13px] outline-none bg-slate-50 focus:border-brand-600 text-slate-500 uppercase"
                                   />
                                 </div>
                                 {[1, 2, 3].map((w) => (
@@ -998,8 +998,8 @@ export default function DoctorClient({
                                     onClick={() => handleNextVisitPreset(w)}
                                     className={`px-4 py-2 rounded-md text-[13px] font-medium transition-colors border ${
                                       activePreset === w
-                                        ? "bg-[#10b981] text-white border-[#10b981]"
-                                        : "bg-white text-[#10b981] border-[#10b981] hover:bg-emerald-50"
+                                        ? "bg-brand-600 text-white border-brand-600"
+                                        : "bg-white text-brand-600 border-brand-600 hover:bg-brand-50"
                                     }`}
                                   >
                                     {w} week
@@ -1040,7 +1040,7 @@ export default function DoctorClient({
                             ) as HTMLInputElement;
                             if (hiddenInput) hiddenInput.value = "true";
                           }}
-                          className="px-8 py-2.5 bg-[#135f5c] text-white font-semibold rounded-md text-[13px] hover:bg-[#0f4d4a] transition-colors"
+                          className="px-8 py-2.5 bg-brand-800 text-white font-semibold rounded-md text-[13px] hover:bg-brand-900 transition-colors"
                         >
                           Lock Assessment
                         </button>
@@ -1053,7 +1053,7 @@ export default function DoctorClient({
           ) : (
             <div className="h-full flex flex-col items-center justify-center p-12 text-center bg-white">
               <div className="w-24 h-24 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                <Stethoscope className="w-10 h-10 text-teal-600" />
+                <Stethoscope className="w-10 h-10 text-brand-700" />
               </div>
               <h2 className="text-xl font-bold text-slate-800">
                 Clinical Workspace

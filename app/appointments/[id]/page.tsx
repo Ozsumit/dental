@@ -51,14 +51,14 @@ export default async function AppointmentDetails({
                 name="treatments"
                 value={t}
                 defaultChecked={appointment.treatments.includes(t)}
-                className="w-5 h-5 accent-indigo-600"
+                className="w-5 h-5 accent-brand-700"
               />
               <span className="font-medium text-slate-700">{t}</span>
             </label>
           ))}
         </div>
 
-        <button className="mt-8 w-full bg-indigo-600 text-white px-8 py-4 rounded-xl font-bold hover:bg-indigo-700 transition shadow-md">
+        <button className="mt-8 w-full bg-brand-700 text-white px-8 py-4 rounded-xl font-bold hover:bg-brand-800 transition shadow-md">
           Save Session Details
         </button>
       </form>

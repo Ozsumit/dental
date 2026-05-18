@@ -28,15 +28,15 @@ export default function ConfirmationModal({
   const variantStyles = {
     danger: "bg-red-600 hover:bg-red-700 shadow-red-100",
     warning: "bg-amber-500 hover:bg-amber-600 shadow-amber-100",
-    success: "bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100",
-    info: "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100",
+    success: "bg-brand-600 hover:bg-brand-700 shadow-brand-100",
+    info: "bg-brand-700 hover:bg-brand-800 shadow-brand-100",
   };
 
   const iconStyles = {
     danger: "bg-red-50 text-red-600",
     warning: "bg-amber-50 text-amber-500",
-    success: "bg-emerald-50 text-emerald-600",
-    info: "bg-indigo-50 text-indigo-600",
+    success: "bg-brand-50 text-brand-600",
+    info: "bg-brand-50 text-brand-700",
   };
 
   return (

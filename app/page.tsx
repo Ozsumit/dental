@@ -20,7 +20,7 @@ export default async function Page({
   return (
     <div className="p-6 max-w-[1600px] mx-auto space-y-6">
       <div className="flex items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-        <div className="p-3 bg-green-50 text-green-700 rounded-xl">
+        <div className="p-3 bg-brand-50 text-brand-700 rounded-xl">
           <Users className="w-8 h-8" />
         </div>
         <div>

@@ -211,7 +211,7 @@ export default function BillingClient({
       {toast && (
         <div className="fixed bottom-6 right-6 z-[100] flex items-center gap-3 px-5 py-4 bg-white border border-slate-200 rounded-xl shadow-xl animate-in slide-in-from-bottom-5 fade-in duration-300 font-semibold text-sm text-slate-800">
           {toast.type === "success" ? (
-            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+            <CheckCircle2 className="w-5 h-5 text-brand-500" />
           ) : (
             <AlertCircle className="w-5 h-5 text-red-500" />
           )}
@@ -234,8 +234,8 @@ export default function BillingClient({
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-6 bg-white p-8 rounded-2xl border border-slate-200 shadow-sm">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-50 rounded-xl">
-              <Receipt className="w-7 h-7 text-emerald-600" />
+            <div className="p-2.5 bg-brand-50 rounded-xl">
+              <Receipt className="w-7 h-7 text-brand-600" />
             </div>
             Accounts Receivable
           </h1>
@@ -253,12 +253,12 @@ export default function BillingClient({
               placeholder="Search patient or phone..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-xl text-sm font-semibold text-slate-800 outline-none transition-all shadow-sm focus:bg-white"
+              className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 focus:border-brand-500 focus:ring-4 focus:ring-brand-900/10 rounded-xl text-sm font-semibold text-slate-800 outline-none transition-all shadow-sm focus:bg-white"
             />
           </div>
-          <div className="bg-emerald-50/50 text-emerald-900 px-6 py-3 rounded-xl border border-emerald-100 flex items-center gap-4 w-full sm:w-auto justify-between shadow-sm">
+          <div className="bg-brand-50/50 text-brand-900 px-6 py-3 rounded-xl border border-brand-100 flex items-center gap-4 w-full sm:w-auto justify-between shadow-sm">
             <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 mb-0.5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-brand-600 mb-0.5">
                 Total Outstanding
               </p>
               <p className="text-2xl font-bold tracking-tight">
@@ -273,8 +273,8 @@ export default function BillingClient({
       <div className="space-y-6">
         {grouped.length === 0 ? (
           <div className="py-24 bg-white rounded-2xl border border-dashed border-slate-300 text-center flex flex-col items-center shadow-sm">
-            <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mb-6">
-              <CheckCircle2 className="w-10 h-10 text-emerald-500" />
+            <div className="w-20 h-20 bg-brand-50 rounded-full flex items-center justify-center mb-6">
+              <CheckCircle2 className="w-10 h-10 text-brand-500" />
             </div>
             <h3 className="text-xl font-bold text-slate-900">Accounts Clear</h3>
             <p className="text-slate-500 text-sm mt-2 font-medium">
@@ -295,7 +295,7 @@ export default function BillingClient({
                 {/* Patient Header Section */}
                 <div className="px-6 py-5 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-xl flex items-center justify-center font-bold text-lg shadow-inner border border-emerald-200/50">
+                    <div className="w-12 h-12 bg-brand-100 text-brand-700 rounded-xl flex items-center justify-center font-bold text-lg shadow-inner border border-brand-200/50">
                       {group.patient.firstName[0]}
                       {group.patient.lastName[0]}
                     </div>
@@ -309,7 +309,7 @@ export default function BillingClient({
                           {group.patient.phone}
                         </span>
                         <span className="w-1 h-1 rounded-full bg-slate-300"></span>
-                        <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-md">
+                        <span className="text-xs font-semibold text-brand-700 bg-brand-50 border border-brand-100 px-2 py-0.5 rounded-md">
                           {group.items.length} Pending Items
                         </span>
                       </div>
@@ -327,7 +327,7 @@ export default function BillingClient({
                     </div>
                     <button
                       onClick={() => setInvoiceGroup(group)}
-                      className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-sm shadow-emerald-600/20 hover:bg-emerald-700 transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                      className="flex items-center gap-2 bg-brand-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-sm shadow-brand-900/20 hover:bg-brand-700 transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
                     >
                       <FileText className="w-4 h-4" /> Itemized Bill
                     </button>
@@ -401,7 +401,7 @@ export default function BillingClient({
                                     if (val !== item.cost && !isNaN(val))
                                       handleFinalize(item.id, val);
                                   }}
-                                  className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-900 outline-none focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 transition-all disabled:opacity-50"
+                                  className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-900 outline-none focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-900/20 transition-all disabled:opacity-50"
                                 />
                               </div>
                             </td>
@@ -411,7 +411,7 @@ export default function BillingClient({
                                   triggerPaidConfirm(item.id, item.cost)
                                 }
                                 disabled={isItemProcessing}
-                                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-100 border border-slate-200 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 hover:border-emerald-200 rounded-lg font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50"
+                                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-slate-100 border border-slate-200 hover:bg-brand-50 text-slate-700 hover:text-brand-700 hover:border-brand-200 rounded-lg font-bold text-xs uppercase tracking-wider transition-all disabled:opacity-50"
                               >
                                 {isItemProcessing ? (
                                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -445,14 +445,14 @@ export default function BillingClient({
             <button
               disabled={currentPage <= 1}
               onClick={() => setCurrentPage((p) => p - 1)}
-              className="p-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 hover:text-emerald-600 transition-colors disabled:opacity-50 disabled:hover:text-slate-600"
+              className="p-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 hover:text-brand-600 transition-colors disabled:opacity-50 disabled:hover:text-slate-600"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
               disabled={currentPage >= totalPages}
               onClick={() => setCurrentPage((p) => p + 1)}
-              className="p-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 hover:text-emerald-600 transition-colors disabled:opacity-50 disabled:hover:text-slate-600"
+              className="p-2 border border-slate-200 text-slate-600 rounded-lg hover:bg-slate-50 hover:text-brand-600 transition-colors disabled:opacity-50 disabled:hover:text-slate-600"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
@@ -469,13 +469,13 @@ export default function BillingClient({
             {/* Modal Actions Header (Hidden on print) */}
             <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80 print:hidden shrink-0">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-emerald-600" /> Invoice
+                <FileText className="w-5 h-5 text-brand-600" /> Invoice
                 Preview
               </h3>
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => window.print()}
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors border border-transparent hover:border-emerald-200"
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-600 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition-colors border border-transparent hover:border-brand-200"
                 >
                   <Printer className="w-4 h-4" /> Print
                 </button>
@@ -493,9 +493,9 @@ export default function BillingClient({
             {/* Printable Invoice Body */}
             <div className="p-8 sm:p-12 overflow-y-auto print:overflow-visible print:p-8 flex-1 bg-white">
               {/* Clinic Header */}
-              <div className="flex justify-between items-start border-b-2 border-emerald-800/10 pb-8 mb-8">
+              <div className="flex justify-between items-start border-b-2 border-brand-800/10 pb-8 mb-8">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-sm print:border print:border-black print:text-black print:bg-white">
+                  <div className="w-14 h-14 bg-brand-600 rounded-2xl flex items-center justify-center text-white shadow-sm print:border print:border-black print:text-black print:bg-white">
                     <Building className="w-7 h-7" />
                   </div>
                   <div>
@@ -528,7 +528,7 @@ export default function BillingClient({
 
               {/* Bill To */}
               <div className="mb-10 p-5 bg-slate-50 rounded-2xl border border-slate-100 print:border-none print:p-0 print:bg-transparent">
-                <p className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2">
+                <p className="text-xs font-bold text-brand-600 uppercase tracking-wider mb-2">
                   Billed To
                 </p>
                 <h3 className="text-lg font-bold text-slate-900">
@@ -600,7 +600,7 @@ export default function BillingClient({
                     <span>Tax (0%)</span>
                     <span>$0.00</span>
                   </div>
-                  <div className="flex justify-between items-center text-xl font-bold text-emerald-700 pt-1 print:text-black">
+                  <div className="flex justify-between items-center text-xl font-bold text-brand-700 pt-1 print:text-black">
                     <span>Total Due</span>
                     <span>{formatCurrency(invoiceGroup.total)}</span>
                   </div>
@@ -631,7 +631,7 @@ export default function BillingClient({
                   executeAllPaid(invoiceGroup.patient.id, invoiceGroup.total)
                 }
                 disabled={processingPatients.includes(invoiceGroup.patient.id)}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-8 py-3 rounded-xl font-bold text-sm tracking-wide transition-all shadow-md shadow-emerald-600/20 disabled:opacity-70 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-8 py-3 rounded-xl font-bold text-sm tracking-wide transition-all shadow-md shadow-brand-900/20 disabled:opacity-70 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
               >
                 {processingPatients.includes(invoiceGroup.patient.id) ? (
                   <>

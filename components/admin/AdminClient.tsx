@@ -24,7 +24,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
     <div className="space-y-6 p-6">
       <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-indigo-100 text-indigo-600 rounded-xl">
+          <div className="p-3 bg-brand-100 text-brand-700 rounded-xl">
             <Shield className="w-8 h-8" />
           </div>
           <div>
@@ -32,19 +32,19 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
             <div className="flex gap-4 mt-2">
                <button
                  onClick={() => setActiveTab("Users")}
-                 className={`text-xs font-bold uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === "Users" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+                 className={`text-xs font-bold uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === "Users" ? "border-brand-700 text-brand-700" : "border-transparent text-slate-400 hover:text-slate-600"}`}
                >
                   User Management
                </button>
                <button
                  onClick={() => setActiveTab("Catalog")}
-                 className={`text-xs font-bold uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === "Catalog" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+                 className={`text-xs font-bold uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === "Catalog" ? "border-brand-700 text-brand-700" : "border-transparent text-slate-400 hover:text-slate-600"}`}
                >
                   Billing Catalog
                </button>
                <button
                  onClick={() => setActiveTab("Settings")}
-                 className={`text-xs font-bold uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === "Settings" ? "border-indigo-600 text-indigo-600" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+                 className={`text-xs font-bold uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === "Settings" ? "border-brand-700 text-brand-700" : "border-transparent text-slate-400 hover:text-slate-600"}`}
                >
                   Settings
                </button>
@@ -55,14 +55,14 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
         {activeTab === "Users" ? (
           <button
             onClick={() => { setSelectedUser(null); setIsUserFormOpen(true); }}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
+            className="bg-brand-700 hover:bg-brand-800 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
           >
             <Plus className="w-5 h-5" /> Add New User
           </button>
         ) : activeTab === "Catalog" ? (
           <button
             onClick={() => { setSelectedCatalogItem(null); setIsCatalogFormOpen(true); }}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
+            className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
           >
             <Plus className="w-5 h-5" /> Add Procedure
           </button>
@@ -91,8 +91,8 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                   <td className="px-6 py-4">
                     <span className={`py-1 px-3 rounded-full text-xs font-bold border ${
                       user.role === "ADMIN" ? "bg-red-50 text-red-700 border-red-200" :
-                      user.role === "DOCTOR" ? "bg-blue-50 text-blue-700 border-blue-200" :
-                      "bg-green-50 text-green-700 border-green-200"
+                      user.role === "DOCTOR" ? "bg-brand-50 text-brand-800 border-brand-200" :
+                      "bg-brand-50 text-brand-700 border-brand-200"
                     }`}>
                       {user.role}
                     </span>
@@ -101,7 +101,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => { setSelectedUser(user); setIsUserFormOpen(true); }}
-                        className="p-2 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                        className="p-2 text-slate-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
@@ -136,7 +136,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                 <tr key={item.id} className="hover:bg-slate-50 transition">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                       <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                       <div className="p-2 bg-brand-50 text-brand-600 rounded-lg">
                           <Briefcase className="w-4 h-4" />
                        </div>
                        <span className="font-bold text-slate-900">{item.name}</span>
@@ -152,7 +152,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => { setSelectedCatalogItem(item); setIsCatalogFormOpen(true); }}
-                        className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+                        className="p-2 text-slate-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
@@ -196,7 +196,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                   type="number"
                   step="0.01"
                   defaultValue={settings.appointmentFee}
-                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-black text-slate-700"
+                  className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none font-black text-slate-700"
                 />
               </div>
               <p className="text-[10px] text-slate-400 mt-2 font-medium">This fee will be automatically pre-filled when creating new appointments.</p>
@@ -204,7 +204,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
 
             <button
               type="submit"
-              className="w-full bg-indigo-600 text-white px-6 py-4 rounded-xl font-bold hover:bg-indigo-700 transition flex items-center justify-center gap-2 shadow-lg shadow-indigo-100"
+              className="w-full bg-brand-700 text-white px-6 py-4 rounded-xl font-bold hover:bg-brand-800 transition flex items-center justify-center gap-2 shadow-lg shadow-brand-100"
             >
               <Save className="w-5 h-5" /> Update Settings
             </button>
@@ -239,7 +239,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                   required
                   name="username"
                   defaultValue={selectedUser?.username}
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none"
                 />
               </div>
               <div>
@@ -250,7 +250,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                   required={!selectedUser}
                   name="password"
                   type="password"
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none"
                   placeholder={selectedUser ? "••••••••" : ""}
                 />
               </div>
@@ -276,7 +276,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-xl shadow-md transition"
+                  className="px-6 py-3 bg-brand-700 text-white font-bold hover:bg-brand-800 rounded-xl shadow-md transition"
                 >
                   Save User
                 </button>
@@ -307,7 +307,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
               <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-emerald-500" />
+                <Receipt className="w-5 h-5 text-brand-500" />
                 {selectedCatalogItem ? "Edit Procedure" : "New Procedure"}
               </h2>
               <button
@@ -330,7 +330,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                   required
                   name="name"
                   defaultValue={selectedCatalogItem?.name}
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold"
+                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-bold"
                   placeholder="e.g. Tooth Extraction"
                 />
               </div>
@@ -340,7 +340,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                   <input
                     name="category"
                     defaultValue={selectedCatalogItem?.category || ""}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-medium"
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-medium"
                     placeholder="e.g. Dental"
                   />
                 </div>
@@ -352,7 +352,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                     type="number"
                     step="0.01"
                     defaultValue={selectedCatalogItem?.baseCost}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none font-black text-slate-700"
+                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-black text-slate-700"
                   />
                 </div>
               </div>
@@ -362,7 +362,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                   name="description"
                   defaultValue={selectedCatalogItem?.description || ""}
                   rows={3}
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
+                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none resize-none"
                   placeholder="Optional details about the procedure..."
                 />
               </div>
@@ -376,7 +376,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-emerald-600 text-white font-bold hover:bg-emerald-700 rounded-xl shadow-md transition"
+                  className="px-6 py-3 bg-brand-600 text-white font-bold hover:bg-brand-700 rounded-xl shadow-md transition"
                 >
                   Save Procedure
                 </button>
