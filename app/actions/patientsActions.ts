@@ -231,9 +231,22 @@ export async function getPatientsForExport(searchParams: { [key: string]: string
   }
   if (searchParams?.status) where.status = searchParams.status as string;
   if (searchParams?.gender) where.gender = searchParams.gender as string;
+  if (searchParams?.category) where.role = searchParams.category as string;
+  if (searchParams?.bloodGroup) where.bloodGroup = searchParams.bloodGroup as string;
 
   return await prisma.patient.findMany({
     where,
+    include: {
+      medicalRecord: true,
+      diagnoses: {
+        orderBy: { createdAt: "desc" },
+        take: 1
+      },
+      appointments: {
+        orderBy: { appointmentDate: "desc" },
+        take: 5
+      }
+    },
     orderBy: { createdAt: "desc" },
   });
 }

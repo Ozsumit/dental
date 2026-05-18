@@ -10,6 +10,30 @@ export async function getBillingCatalog() {
   });
 }
 
+export async function getAdminStats() {
+  const [patientCount, revenueData, appointmentCount] = await Promise.all([
+    prisma.patient.count(),
+    prisma.procedure.aggregate({
+      where: { status: "PAID" },
+      _sum: { cost: true }
+    }),
+    prisma.appointment.count({
+      where: {
+        appointmentDate: {
+          gte: new Date(new Date().setHours(0,0,0,0)),
+          lt: new Date(new Date().setHours(23,59,59,999))
+        }
+      }
+    })
+  ]);
+
+  return {
+    totalPatients: patientCount,
+    totalRevenue: revenueData._sum.cost || 0,
+    todaysAppointments: appointmentCount
+  };
+}
+
 export async function getPendingBillings() {
   return await prisma.procedure.findMany({
     where: { status: "PENDING" },

@@ -7,21 +7,15 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-enum Role {
-  ADMIN
-  DOCTOR
-  RECEPTIONIST
-}
-
 model User {
-  id               String          @id @default(uuid())
-  username         String          @unique
-  password         String
-  role             Role            @default(RECEPTIONIST)
-  assignedRecords  MedicalRecord[]
-  appointments     Appointment[]   @relation("DoctorAppointments")
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id              String          @id @default(uuid())
+  username        String          @unique
+  password        String
+  role            Role            @default(RECEPTIONIST)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  appointments    Appointment[]   @relation("DoctorAppointments")
+  assignedRecords MedicalRecord[]
 }
 
 model Patient {
@@ -34,22 +28,18 @@ model Patient {
   gender        String?
   status        String         @default("ACTIVE")
   address       String?
-  role          String?        // Patient category or role
+  role          String?
   bloodGroup    String?
-  allergies     String?        // Comma separated allergies
+  allergies     String?
   isOld         Boolean        @default(false)
-  
-  medicalRecord MedicalRecord?
-  diagnoses     Diagnosis[]
-  
   lastVisitDate DateTime?
   visitCount    Int            @default(0)
-
-  appointments  Appointment[]
-  procedures    Procedure[]
-
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
+  appointments  Appointment[]
+  diagnoses     Diagnosis[]
+  medicalRecord MedicalRecord?
+  procedures    Procedure[]
 
   @@index([firstName, lastName])
   @@index([phone])
@@ -67,35 +57,30 @@ model MedicalRecord {
   emergencyContactNo   String?
   status               String?
   title                String?
-
-  patient              Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  assignedDoctor       User?    @relation(fields: [assignedDoctorId], references: [id])
-
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
+  assignedDoctor       User?    @relation(fields: [assignedDoctorId], references: [id])
+  patient              Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }
 
 model Diagnosis {
-  id                String   @id @default(uuid())
-  patientId         String
-  currentComplaint  String?
-  pastHistory       String?
-  medicalHistory    String?  // Stored as JSON string
-
-  // New fields for overhauled doctor view
-  currentHistory    String?
-  vasScore          Int?     @default(0)
-  icd10Code         String?
-  treatmentPlan     String?
-  homeExercise      String?
-  medicines         String?  // Stored as JSON string
-  nextVisitDate     DateTime?
-
-  patient           Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  id               String    @id @default(uuid())
+  patientId        String
+  currentComplaint String?
+  pastHistory      String?
+  medicalHistory   String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  currentHistory   String?
+  homeExercise     String?
+  icd10Code        String?
+  nextVisitDate    DateTime?
+  treatmentPlan    String?
+  vasScore         Int?      @default(0)
+  medicines        String?
+  patient          Patient   @relation(fields: [patientId], references: [id], onDelete: Cascade)
 
   @@index([patientId])
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
 }
 
 model Appointment {
@@ -104,18 +89,16 @@ model Appointment {
   doctorId        String?
   appointmentDate DateTime
   status          String
-  treatments      String // Stored as JSON string or comma-separated
-  
-  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  doctor          User?    @relation("DoctorAppointments", fields: [doctorId], references: [id])
-
+  treatments      String
   createdAt       DateTime @default(now())
+  doctor          User?    @relation("DoctorAppointments", fields: [doctorId], references: [id])
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
 }
 
 model BillingCatalog {
   id          String   @id @default(uuid())
   name        String   @unique
-  category    String?  // e.g., Radiology, Surgery, Consultation
+  category    String?
   baseCost    Float    @default(0)
   description String?
   createdAt   DateTime @default(now())
@@ -126,19 +109,21 @@ model Procedure {
   id            String   @id @default(uuid())
   patientId     String
   name          String
-  type          String?  // e.g. Standard, Urgent, Follow-up
+  type          String?
   description   String?
   cost          Float    @default(0)
   procedureDate DateTime @default(now())
-  medicine      String?  // Stored as JSON string
-  suggestions   String?  // Stored as JSON string
-
-  // Billing fields
-  status        String   @default("PENDING") // PENDING, BILLED, PAID
+  medicine      String?
+  suggestions   String?
+  status        String   @default("PENDING")
   billedById    String?
-
-  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  ADMIN
+  DOCTOR
+  RECEPTIONIST
 }

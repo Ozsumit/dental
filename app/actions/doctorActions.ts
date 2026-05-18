@@ -134,7 +134,12 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
   } catch (error) {
     console.error("Failed to save diagnosis:", error);
     // Fallback - just try to create it anyway or handle specific error
-    await prisma.diagnosis.create({ data: { patientId, ...diagnosisData } });
+    await prisma.diagnosis.create({
+      data: {
+        patientId,
+        ...diagnosisData,
+      },
+    });
   }
 
   if (finalize) {

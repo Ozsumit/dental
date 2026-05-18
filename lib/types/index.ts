@@ -37,6 +37,7 @@ export interface Appointment {
   id: string;
   patientId: string;
   doctorId?: string | null;
+  doctor?: { id: string; username: string } | null;
   appointmentDate: Date;
   status: string;
   treatments: string;
