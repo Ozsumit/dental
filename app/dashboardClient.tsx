@@ -200,7 +200,7 @@ export default function DashboardClient({
               placeholder="Search patients by name, phone, or email..."
               defaultValue={params.get("q") || ""}
               onChange={(e) => handleTextSearch(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-700 focus:bg-white outline-none transition-colors"
+              className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-700 focus:bg-white outline-none transition-colors"
             />
           </div>
 
@@ -208,14 +208,14 @@ export default function DashboardClient({
             onClick={() => setShowFilters(!showFilters)}
             className={`px-5 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors ${
               showFilters || hasActiveFilters
-                ? "bg-green-50 text-green-700 border border-green-200"
+                ? "bg-brand-50 text-brand-700 border border-brand-200"
                 : "bg-slate-100 text-slate-700 hover:bg-slate-200 border border-transparent"
             }`}
           >
             <Filter className="w-5 h-5" />
             Filters
             {hasActiveFilters && (
-              <span className="bg-green-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center ml-1">
+              <span className="bg-brand-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center ml-1">
                 {
                   Array.from(params.keys()).filter(
                     (k) => k !== "q" && k !== "page",
@@ -228,7 +228,7 @@ export default function DashboardClient({
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className="px-5 py-3 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-emerald-100 transition disabled:opacity-50"
+            className="px-5 py-3 bg-brand-50 text-brand-700 border border-brand-100 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-brand-100 transition disabled:opacity-50"
           >
             <Download className="w-5 h-5" />{" "}
             {isExporting ? "Exporting..." : "Export Excel"}
@@ -236,7 +236,7 @@ export default function DashboardClient({
 
           <button
             onClick={openAdd}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition shadow-sm"
+            className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition shadow-sm"
           >
             <Plus className="w-5 h-5" /> Add Patient
           </button>
@@ -250,7 +250,7 @@ export default function DashboardClient({
                 Account Status
               </label>
               <select
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
                 value={params.get("status") || ""}
                 onChange={(e) => updateQuery("status", e.target.value)}
               >
@@ -265,7 +265,7 @@ export default function DashboardClient({
                 Patient Category
               </label>
               <select
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
                 value={params.get("role") || ""}
                 onChange={(e) => updateQuery("role", e.target.value)}
               >
@@ -284,7 +284,7 @@ export default function DashboardClient({
                 Gender
               </label>
               <select
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
                 value={params.get("gender") || ""}
                 onChange={(e) => updateQuery("gender", e.target.value)}
               >
@@ -300,7 +300,7 @@ export default function DashboardClient({
                 Blood Group
               </label>
               <select
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
                 value={params.get("bloodGroup") || ""}
                 onChange={(e) => updateQuery("bloodGroup", e.target.value)}
               >
@@ -320,7 +320,7 @@ export default function DashboardClient({
                 Age Group
               </label>
               <select
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
                 value={params.get("ageGroup") || ""}
                 onChange={(e) => updateQuery("ageGroup", e.target.value)}
               >
@@ -337,7 +337,7 @@ export default function DashboardClient({
                 Visit Frequency
               </label>
               <select
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
                 value={params.get("visits") || ""}
                 onChange={(e) => updateQuery("visits", e.target.value)}
               >
@@ -353,7 +353,7 @@ export default function DashboardClient({
                 Last Visit
               </label>
               <select
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
+                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-700 focus:bg-white outline-none text-sm font-medium text-slate-700 transition-colors cursor-pointer"
                 value={params.get("lastVisit") || ""}
                 onChange={(e) => updateQuery("lastVisit", e.target.value)}
               >
@@ -369,7 +369,7 @@ export default function DashboardClient({
               <div className="sm:col-span-2 lg:col-span-4 flex justify-end items-end pt-2">
                 <button
                   onClick={clearFilters}
-                  className="text-xs font-bold text-slate-500 hover:text-green-800 flex items-center gap-1.5 transition-colors bg-slate-100 hover:bg-green-200 px-4 py-2.5 rounded-lg"
+                  className="text-xs font-bold text-slate-500 hover:text-brand-800 flex items-center gap-1.5 transition-colors bg-slate-100 hover:bg-brand-200 px-4 py-2.5 rounded-lg"
                 >
                   <RefreshCcw className="w-3.5 h-3.5" /> Clear All Filters
                 </button>
@@ -397,7 +397,7 @@ export default function DashboardClient({
                 className="hover:bg-slate-50 transition group"
               >
                 <td className="px-6 py-4 flex items-center gap-3">
-                  <div className="bg-green-50 p-2.5 rounded-xl text-green-800 border border-green-100 shrink-0">
+                  <div className="bg-brand-50 p-2.5 rounded-xl text-brand-800 border border-brand-100 shrink-0">
                     <User className="w-5 h-5" />
                   </div>
                   <div>
@@ -431,7 +431,7 @@ export default function DashboardClient({
                   <span
                     className={`py-1 px-3 rounded-full text-[10px] font-black uppercase border ${
                       patient.status === "ACTIVE"
-                        ? "bg-green-50 text-green-700 border-green-100"
+                        ? "bg-brand-50 text-brand-700 border-brand-100"
                         : "bg-red-50 text-red-700 border-red-100"
                     }`}
                   >
@@ -442,13 +442,13 @@ export default function DashboardClient({
                   <div className="flex justify-end gap-2">
                     <button
                       onClick={() => openProfile(patient)}
-                      className="p-2 text-green-800 bg-green-100 border border-green-200 hover:bg-green-200 hover:text-green-900 rounded-lg transition-all"
+                      className="p-2 text-brand-800 bg-brand-100 border border-brand-200 hover:bg-brand-200 hover:text-brand-900 rounded-lg transition-all"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => openEdit(patient)}
-                      className="p-2 text-slate-400 hover:text-green-800 hover:bg-green-100 rounded-lg transition-all"
+                      className="p-2 text-slate-400 hover:text-brand-800 hover:bg-brand-100 rounded-lg transition-all"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
@@ -474,7 +474,7 @@ export default function DashboardClient({
                   {hasActiveFilters && (
                     <button
                       onClick={clearFilters}
-                      className="text-green-600 font-semibold text-sm mt-2 hover:underline"
+                      className="text-brand-600 font-semibold text-sm mt-2 hover:underline"
                     >
                       Clear filters
                     </button>
@@ -496,14 +496,14 @@ export default function DashboardClient({
               <button
                 disabled={currentPage <= 1}
                 onClick={() => updateQuery("page", String(currentPage - 1))}
-                className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-green-600 transition disabled:opacity-50 disabled:hover:text-slate-600"
+                className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-brand-600 transition disabled:opacity-50 disabled:hover:text-slate-600"
               >
                 <ChevronLeft className="w-5 h-5 text-slate-600" />
               </button>
               <button
                 disabled={currentPage >= totalPages}
                 onClick={() => updateQuery("page", String(currentPage + 1))}
-                className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-green-600 transition disabled:opacity-50 disabled:hover:text-slate-600"
+                className="p-2 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-brand-600 transition disabled:opacity-50 disabled:hover:text-slate-600"
               >
                 <ChevronRight className="w-5 h-5 text-slate-600" />
               </button>
@@ -518,7 +518,7 @@ export default function DashboardClient({
           <div className="bg-white rounded-[2rem] w-full max-w-5xl max-h-[95vh] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="bg-slate-50/50 p-8 border-b border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div className="flex gap-6 items-center">
-                <div className="w-16 h-16 bg-green-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-green-100">
+                <div className="w-16 h-16 bg-brand-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-brand-100">
                   <User className="w-8 h-8" />
                 </div>
                 <div>
@@ -540,7 +540,7 @@ export default function DashboardClient({
                     setApptError(null);
                     setIsApptFormOpen(true);
                   }}
-                  className="flex-1 md:flex-none bg-green-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-100 flex items-center justify-center gap-2"
+                  className="flex-1 md:flex-none bg-brand-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-100 flex items-center justify-center gap-2"
                 >
                   <Calendar className="w-4 h-4" /> New Appointment
                 </button>
@@ -624,7 +624,7 @@ export default function DashboardClient({
                         required
                         name="firstName"
                         defaultValue={selectedPatient?.firstName}
-                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all"
                       />
                     </div>
                     <div>
@@ -635,7 +635,7 @@ export default function DashboardClient({
                         required
                         name="lastName"
                         defaultValue={selectedPatient?.lastName}
-                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -656,7 +656,7 @@ export default function DashboardClient({
                                 .split("T")[0]
                             : ""
                         }
-                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all text-slate-600"
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all text-slate-600"
                       />
                     </div>
                     <div>
@@ -666,7 +666,7 @@ export default function DashboardClient({
                       <select
                         name="gender"
                         defaultValue={selectedPatient?.gender || ""}
-                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all font-medium"
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all font-medium"
                       >
                         <option value="">Select...</option>
                         <option value="Male">Male</option>
@@ -681,7 +681,7 @@ export default function DashboardClient({
                       <select
                         name="bloodGroup"
                         defaultValue={selectedPatient?.bloodGroup || ""}
-                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all font-medium"
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all font-medium"
                       >
                         <option value="">Select...</option>
                         {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
@@ -711,7 +711,7 @@ export default function DashboardClient({
                         type="tel"
                         name="phone"
                         defaultValue={selectedPatient?.phone}
-                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all"
                       />
                     </div>
                     <div>
@@ -722,7 +722,7 @@ export default function DashboardClient({
                         type="email"
                         name="email"
                         defaultValue={selectedPatient?.email || ""}
-                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -734,7 +734,7 @@ export default function DashboardClient({
                       name="address"
                       defaultValue={selectedPatient?.address || ""}
                       rows={2}
-                      className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all resize-none"
+                      className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all resize-none"
                     />
                   </div>
                 </div>
@@ -752,7 +752,7 @@ export default function DashboardClient({
                       <select
                         name="role"
                         defaultValue={selectedPatient?.role || "Regular"}
-                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all font-medium"
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all font-medium"
                       >
                         <option value="Regular">Regular</option>
                         <option value="VIP">VIP</option>
@@ -769,7 +769,7 @@ export default function DashboardClient({
                       <input
                         name="allergies"
                         defaultValue={selectedPatient?.allergies || ""}
-                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all"
+                        className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all"
                         placeholder="e.g. Penicillin, Peanuts"
                       />
                     </div>
@@ -779,7 +779,7 @@ export default function DashboardClient({
                 {/* DYNAMIC APPOINTMENT TOGGLE (ONLY FOR NEW PATIENTS) */}
                 {!selectedPatient && (
                   <div className="space-y-5 border-t border-slate-200 pt-6 mt-6">
-                    <label className="flex items-center gap-4 cursor-pointer p-4 bg-white border border-slate-200 rounded-2xl hover:border-green-300 transition-all shadow-sm">
+                    <label className="flex items-center gap-4 cursor-pointer p-4 bg-white border border-slate-200 rounded-2xl hover:border-brand-300 transition-all shadow-sm">
                       <div className="relative flex items-center">
                         <input
                           type="checkbox"
@@ -793,7 +793,7 @@ export default function DashboardClient({
                         />
                         <div
                           className={`block w-12 h-7 rounded-full transition-colors ${
-                            createApptToggle ? "bg-green-600" : "bg-slate-200"
+                            createApptToggle ? "bg-brand-600" : "bg-slate-200"
                           }`}
                         ></div>
                         <div
@@ -813,15 +813,15 @@ export default function DashboardClient({
                     </label>
 
                     {createApptToggle && (
-                      <div className="p-6 bg-green-50/50 border border-green-100 rounded-2xl space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
-                        <h3 className="text-sm font-bold text-green-900 flex items-center gap-2 border-b border-green-100 pb-3">
+                      <div className="p-6 bg-brand-50/50 border border-brand-100 rounded-2xl space-y-5 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <h3 className="text-sm font-bold text-brand-900 flex items-center gap-2 border-b border-brand-100 pb-3">
                           <Calendar className="w-4 h-4" /> Appointment
                           Configuration
                         </h3>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div>
-                            <label className="text-[10px] font-black text-green-400 uppercase tracking-widest block mb-2">
+                            <label className="text-[10px] font-black text-brand-400 uppercase tracking-widest block mb-2">
                               Preferred Date{" "}
                               <span className="text-red-500">*</span>
                             </label>
@@ -832,18 +832,18 @@ export default function DashboardClient({
                               defaultValue={
                                 new Date().toISOString().split("T")[0]
                               }
-                              className="w-full p-3.5 bg-white border border-green-100 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all font-medium text-slate-700"
+                              className="w-full p-3.5 bg-white border border-brand-100 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-700"
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] font-black text-green-400 uppercase tracking-widest block mb-2">
+                            <label className="text-[10px] font-black text-brand-400 uppercase tracking-widest block mb-2">
                               Assign Doctor{" "}
                               <span className="text-red-500">*</span>
                             </label>
                             <select
                               required={createApptToggle}
                               name="doctorId"
-                              className="w-full p-3.5 bg-white border border-green-100 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all font-medium text-slate-700"
+                              className="w-full p-3.5 bg-white border border-brand-100 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-700"
                             >
                               <option value="">Select Doctor...</option>
                               {initialDoctors.map((d) => (
@@ -857,7 +857,7 @@ export default function DashboardClient({
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <div>
-                            <label className="text-[10px] font-black text-green-400 uppercase tracking-widest block mb-2">
+                            <label className="text-[10px] font-black text-brand-400 uppercase tracking-widest block mb-2">
                               Bill Amount
                             </label>
                             <input
@@ -869,7 +869,7 @@ export default function DashboardClient({
                                 setApptBillAmount(e.target.value)
                               }
                               placeholder="0.00"
-                              className="w-full p-3.5 bg-white border border-green-100 rounded-xl focus:ring-4 focus:ring-green-500/10 focus:border-green-500 outline-none transition-all font-medium text-slate-700"
+                              className="w-full p-3.5 bg-white border border-brand-100 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-700"
                             />
                           </div>
                           <div className="flex items-end pb-3">
@@ -878,7 +878,7 @@ export default function DashboardClient({
                                 type="checkbox"
                                 name="isPaid"
                                 value="true"
-                                className="w-5 h-5 rounded border-green-300 text-green-600 focus:ring-green-500"
+                                className="w-5 h-5 rounded border-brand-300 text-brand-600 focus:ring-brand-500"
                               />
                               <span className="text-sm font-bold text-slate-700">
                                 Payment Received (Paid)
@@ -888,7 +888,7 @@ export default function DashboardClient({
                         </div>
 
                         <div>
-                          <label className="text-[10px] font-black text-green-400 uppercase tracking-widest block mb-2">
+                          <label className="text-[10px] font-black text-brand-400 uppercase tracking-widest block mb-2">
                             Select Procedures
                           </label>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -903,13 +903,13 @@ export default function DashboardClient({
                             ].map((proc) => (
                               <label
                                 key={proc}
-                                className="flex items-center gap-3 p-3 bg-white border border-green-50 rounded-xl cursor-pointer hover:border-green-200 transition-all has-[:checked]:bg-green-50 has-[:checked]:border-green-200 shadow-sm"
+                                className="flex items-center gap-3 p-3 bg-white border border-brand-50 rounded-xl cursor-pointer hover:border-brand-200 transition-all has-[:checked]:bg-brand-50 has-[:checked]:border-brand-200 shadow-sm"
                               >
                                 <input
                                   type="checkbox"
                                   name="treatments"
                                   value={proc}
-                                  className="w-4 h-4 rounded border-green-300 text-green-600 focus:ring-green-500"
+                                  className="w-4 h-4 rounded border-brand-300 text-brand-600 focus:ring-brand-500"
                                 />
                                 <span className="text-xs font-bold text-slate-700">
                                   {proc}
@@ -936,7 +936,7 @@ export default function DashboardClient({
                 <button
                   type="submit"
                   disabled={isSavingPatient}
-                  className="px-8 py-3 bg-green-600 text-white font-bold hover:bg-green-700 rounded-xl shadow-lg shadow-green-100 transition disabled:opacity-70 flex items-center gap-2"
+                  className="px-8 py-3 bg-brand-600 text-white font-bold hover:bg-brand-700 rounded-xl shadow-lg shadow-brand-100 transition disabled:opacity-70 flex items-center gap-2"
                 >
                   {isSavingPatient ? "Saving..." : "Confirm & Save"}
                 </button>
@@ -968,7 +968,7 @@ export default function DashboardClient({
           <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 border-b border-slate-50 bg-slate-50/30 text-center">
               <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center justify-center gap-2">
-                <Calendar className="w-5 h-5 text-green-700" /> New Session
+                <Calendar className="w-5 h-5 text-brand-700" /> New Session
               </h2>
               <p className="text-xs text-slate-400 font-bold mt-1 uppercase">
                 Scheduling for: {apptPatient.firstName} {apptPatient.lastName}
@@ -1064,13 +1064,13 @@ export default function DashboardClient({
                   ].map((proc) => (
                     <label
                       key={proc}
-                      className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-green-200 transition-all has-[:checked]:bg-green-50 has-[:checked]:border-green-200"
+                      className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-brand-200 transition-all has-[:checked]:bg-brand-50 has-[:checked]:border-brand-200"
                     >
                       <input
                         type="checkbox"
                         name="treatments"
                         value={proc}
-                        className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
+                        className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500"
                       />
                       <span className="text-xs font-bold text-slate-600">
                         {proc}
@@ -1086,7 +1086,7 @@ export default function DashboardClient({
                     type="checkbox"
                     name="isPaid"
                     value="true"
-                    className="w-5 h-5 rounded border-green-300 text-green-600 focus:ring-green-500"
+                    className="w-5 h-5 rounded border-brand-300 text-brand-600 focus:ring-brand-500"
                   />
                   <span className="text-sm font-bold text-slate-700">
                     Mark as Paid
@@ -1106,7 +1106,7 @@ export default function DashboardClient({
                 <button
                   type="submit"
                   disabled={isSavingAppt}
-                  className="flex-1 py-4 bg-green-600 text-white rounded-xl font-bold hover:bg-green-700 shadow-lg shadow-green-100 transition disabled:opacity-70"
+                  className="flex-1 py-4 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 shadow-lg shadow-brand-100 transition disabled:opacity-70"
                 >
                   {isSavingAppt ? "Creating..." : "Create Session"}
                 </button>

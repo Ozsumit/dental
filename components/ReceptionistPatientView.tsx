@@ -92,7 +92,7 @@ export default function ReceptionistPatientView({
       {/* Header Info */}
       {/* <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex gap-4 items-center">
-          <div className="bg-emerald-100 p-4 rounded-full text-emerald-600">
+          <div className="bg-brand-100 p-4 rounded-full text-brand-600">
             <User className="w-8 h-8" />
           </div>
           <div>
@@ -106,7 +106,7 @@ export default function ReceptionistPatientView({
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
                   patient.status === "ACTIVE"
-                    ? "bg-green-50 text-green-700 border-green-100"
+                    ? "bg-brand-50 text-brand-700 border-brand-100"
                     : "bg-red-50 text-red-700 border-red-100"
                 }`}
               >
@@ -117,7 +117,7 @@ export default function ReceptionistPatientView({
         </div>
         <button
           onClick={() => setIsProcedureModalOpen(true)}
-          className="bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-emerald-700 transition flex items-center gap-2 shadow-lg shadow-emerald-100"
+          className="bg-brand-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-brand-700 transition flex items-center gap-2 shadow-lg shadow-brand-100"
         >
           <Plus className="w-5 h-5" /> Record Payment
         </button>
@@ -129,10 +129,10 @@ export default function ReceptionistPatientView({
           {/* Medical Summary (High Priority) */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <Activity className="w-4 h-4 text-green-700" /> Medical Summary
+              <Activity className="w-4 h-4 text-brand-700" /> Medical Summary
             </h3>
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-green-50 p-3 rounded-xl border border-green-100">
+              <div className="bg-brand-50 p-3 rounded-xl border border-brand-100">
                 <p className="text-[10px] font-black text-slate-800 uppercase">
                   Blood Group
                 </p>
@@ -162,7 +162,7 @@ export default function ReceptionistPatientView({
           {/* Personal Info */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <User className="w-4 h-4 text-green-700" /> Contact Info
+              <User className="w-4 h-4 text-brand-700" /> Contact Info
             </h3>
             <div className="space-y-3">
               <div className="flex items-center gap-3 text-sm text-slate-600">
@@ -190,7 +190,7 @@ export default function ReceptionistPatientView({
           {/* Insurance & Emergency */}
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-              <Shield className="w-4 h-4 text-green-700" /> Insurance &
+              <Shield className="w-4 h-4 text-brand-700" /> Insurance &
               Emergency
             </h3>
             <div className="space-y-4">
@@ -268,7 +268,7 @@ export default function ReceptionistPatientView({
                       </div>
                       <button
                         onClick={() => handlePaid(proc.id)}
-                        className="px-4 py-2 bg-emerald-500 text-white text-[10px] font-black uppercase rounded-lg hover:bg-emerald-600 transition-all"
+                        className="px-4 py-2 bg-brand-500 text-white text-[10px] font-black uppercase rounded-lg hover:bg-brand-600 transition-all"
                       >
                         Mark Paid
                       </button>
@@ -283,7 +283,7 @@ export default function ReceptionistPatientView({
           <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <Stethoscope className="w-4 h-4 text-emerald-500" /> Current
+                <Stethoscope className="w-4 h-4 text-brand-500" /> Current
                 Assessment
               </h3>
               {(patient.diagnoses?.[0]?.updatedAt ||
@@ -314,7 +314,7 @@ export default function ReceptionistPatientView({
                   <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
                     ICD-10 Code
                   </p>
-                  <p className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-1 rounded inline-block">
+                  <p className="text-xs font-black text-brand-700 bg-brand-50 px-2 py-1 rounded inline-block">
                     {patient.diagnoses?.[0]?.icd10Code ||
                       patient.diagnosis?.icd10Code ||
                       "N/A"}
@@ -326,8 +326,8 @@ export default function ReceptionistPatientView({
                   <p className="text-[10px] font-black text-slate-400 uppercase mb-1">
                     Medicines & Suggestions
                   </p>
-                  <div className="text-sm text-slate-700 font-medium bg-emerald-50/30 p-3 rounded-xl border border-emerald-100 min-h-[60px] flex gap-2">
-                    <Pill className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <div className="text-sm text-slate-700 font-medium bg-brand-50/30 p-3 rounded-xl border border-brand-100 min-h-[60px] flex gap-2">
+                    <Pill className="w-4 h-4 text-brand-500 shrink-0 mt-0.5" />
                     <p className="whitespace-pre-wrap">
                       {patient.diagnoses?.[0]?.medicines ||
                         patient.diagnosis?.medicines ||
@@ -353,7 +353,7 @@ export default function ReceptionistPatientView({
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-100 bg-slate-50/50">
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <FileText className="w-4 h-4 text-green-700" /> Visit &
+                <FileText className="w-4 h-4 text-brand-700" /> Visit &
                 Procedure History
               </h3>
             </div>
@@ -373,9 +373,9 @@ export default function ReceptionistPatientView({
                       <div className="flex gap-3">
                         <div className="mt-1">
                           {proc.status === "PAID" ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            <CheckCircle2 className="w-4 h-4 text-brand-500" />
                           ) : proc.status === "BILLED" ? (
-                            <Clock className="w-4 h-4 text-blue-500" />
+                            <Clock className="w-4 h-4 text-brand-600" />
                           ) : (
                             <Receipt className="w-4 h-4 text-amber-500" />
                           )}
@@ -390,9 +390,9 @@ export default function ReceptionistPatientView({
                           <span
                             className={`text-[9px] font-black uppercase px-1.5 py-0.5 rounded ${
                               proc.status === "PAID"
-                                ? "bg-emerald-50 text-emerald-600"
+                                ? "bg-brand-50 text-brand-600"
                                 : proc.status === "BILLED"
-                                  ? "bg-blue-50 text-blue-600"
+                                  ? "bg-brand-50 text-brand-700"
                                   : "bg-amber-50 text-amber-600"
                             }`}
                           >
@@ -401,7 +401,7 @@ export default function ReceptionistPatientView({
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="font-black text-emerald-600">
+                        <p className="font-black text-brand-600">
                           ${proc.cost}
                         </p>
                         <button
@@ -410,7 +410,7 @@ export default function ReceptionistPatientView({
                               expandedProcedure === proc.id ? null : proc.id,
                             )
                           }
-                          className="text-[10px] font-black text-green-700 uppercase flex items-center gap-1 mt-1 ml-auto"
+                          className="text-[10px] font-black text-brand-700 uppercase flex items-center gap-1 mt-1 ml-auto"
                         >
                           {expandedProcedure === proc.id ? (
                             <>
@@ -435,7 +435,7 @@ export default function ReceptionistPatientView({
                               (m: string, i: number) => (
                                 <span
                                   key={i}
-                                  className="px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[10px] font-bold"
+                                  className="px-2 py-0.5 bg-brand-50 text-brand-700 rounded-md text-[10px] font-bold"
                                 >
                                   {m}
                                 </span>
@@ -472,7 +472,7 @@ export default function ReceptionistPatientView({
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="p-4 border-b border-slate-100 bg-slate-50/50">
               <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
-                <Calendar className="w-4 h-4 text-green-700" /> Upcoming
+                <Calendar className="w-4 h-4 text-brand-700" /> Upcoming
                 Schedule
               </h3>
             </div>
@@ -482,22 +482,22 @@ export default function ReceptionistPatientView({
                 .map((appt: Appointment) => (
                   <div
                     key={appt.id}
-                    className="flex items-center justify-between p-3 bg-blue-50/30 rounded-xl border border-blue-100 mb-2 last:mb-0"
+                    className="flex items-center justify-between p-3 bg-brand-50/30 rounded-xl border border-brand-100 mb-2 last:mb-0"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="bg-white p-2 rounded-lg text-green-600 shadow-sm">
+                      <div className="bg-white p-2 rounded-lg text-brand-600 shadow-sm">
                         <Calendar className="w-4 h-4" />
                       </div>
                       <div>
                         <p className="text-xs font-black text-slate-800">
                           {new Date(appt.appointmentDate).toLocaleDateString()}
                         </p>
-                        <p className="text-[10px] font-bold text-green-600 uppercase tracking-wider">
+                        <p className="text-[10px] font-bold text-brand-600 uppercase tracking-wider">
                           {appt.treatments}
                         </p>
                       </div>
                     </div>
-                    <span className="bg-green-100 text-green-700 px-3 py-1 rounded-lg text-[10px] font-black uppercase">
+                    <span className="bg-brand-100 text-brand-700 px-3 py-1 rounded-lg text-[10px] font-black uppercase">
                       {appt.status}
                     </span>
                   </div>
@@ -542,7 +542,7 @@ export default function ReceptionistPatientView({
                 <input
                   required
                   name="name"
-                  className="mt-1 w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500"
+                  className="mt-1 w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
                   placeholder="e.g. Scaling & Polishing"
                 />
               </div>
@@ -555,7 +555,7 @@ export default function ReceptionistPatientView({
                   type="date"
                   name="procedureDate"
                   defaultValue={new Date().toISOString().split("T")[0]}
-                  className="mt-1 w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500"
+                  className="mt-1 w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
                 />
               </div>
               <div>
@@ -567,7 +567,7 @@ export default function ReceptionistPatientView({
                   type="number"
                   name="cost"
                   step="0.01"
-                  className="mt-1 w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-green-500"
+                  className="mt-1 w-full p-3 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-brand-500"
                   placeholder="0.00"
                 />
               </div>
@@ -581,7 +581,7 @@ export default function ReceptionistPatientView({
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-green-600 text-white font-bold hover:bg-green-700 rounded-xl shadow-md transition"
+                  className="px-6 py-3 bg-brand-600 text-white font-bold hover:bg-brand-700 rounded-xl shadow-md transition"
                 >
                   Save Record
                 </button>

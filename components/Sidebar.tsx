@@ -18,8 +18,8 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
   const pathname = usePathname();
   const colors = [
     "from-pink-500 to-rose-500",
-    "from-blue-500 to-indigo-500",
-    "from-green-500 to-emerald-500",
+    "from-brand-600 to-brand-600",
+    "from-brand-600 to-brand-500",
     "from-yellow-500 to-orange-500",
     "from-purple-500 to-fuchsia-500",
   ];
@@ -73,7 +73,7 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
   );
 
   return (
-    <div className="w-64 bg-[#0D3D3A] border-r border-slate-200 h-screen flex flex-col shadow-sm">
+    <div className="w-64 bg-brand-900 border-r border-slate-200 h-screen flex flex-col shadow-sm">
       <div className="p-6 border-b border-slate-100 flex items-center gap-3">
         <div className="bg-slate-500 p-2 rounded-lg text-white">
           <Activity className="w-6 h-6" />
@@ -94,8 +94,8 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition ${
                 isActive
-                  ? "bg-[#1C5F5A] text-indigo-100 shadow-sm"
-                  : "text-slate-200 hover:bg-[#1C5F5A] hover:text-slate-100"
+                  ? "bg-brand-800 text-brand-100 shadow-sm"
+                  : "text-slate-200 hover:bg-brand-800 hover:text-slate-100"
               }`}
             >
               <Icon

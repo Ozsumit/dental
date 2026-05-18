@@ -15,7 +15,7 @@ export default async function AdminPage() {
     <div className="max-w-[1400px] mx-auto space-y-8 p-4">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5">
-            <div className="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-brand-50 text-brand-700 rounded-xl flex items-center justify-center">
                <Users className="w-6 h-6" />
             </div>
             <div>
@@ -24,7 +24,7 @@ export default async function AdminPage() {
             </div>
          </div>
          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-5">
-            <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-brand-50 text-brand-600 rounded-xl flex items-center justify-center">
                <DollarSign className="w-6 h-6" />
             </div>
             <div>
@@ -69,7 +69,7 @@ export default async function AdminPage() {
                        </div>
                        <div className="w-full bg-slate-100 rounded-full h-1.5">
                           <div
-                             className="bg-indigo-600 h-1.5 rounded-full"
+                             className="bg-brand-700 h-1.5 rounded-full"
                              style={{ width: `${Math.min(100, (cat.amount / stats.totalRevenue) * 100)}%` }}
                           />
                        </div>
@@ -90,7 +90,7 @@ export default async function AdminPage() {
                           <p className="text-[10px] text-slate-400 font-bold uppercase">{proc.name}</p>
                        </div>
                        <div className="text-right">
-                          <p className="text-sm font-black text-emerald-600">${proc.cost.toFixed(2)}</p>
+                          <p className="text-sm font-black text-brand-600">${proc.cost.toFixed(2)}</p>
                           <p className="text-[10px] text-slate-400 font-medium">{new Date(proc.procedureDate).toLocaleDateString()}</p>
                        </div>
                     </div>

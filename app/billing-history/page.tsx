@@ -14,7 +14,7 @@ export default async function BillingHistoryPage({
     <main className="min-h-screen bg-slate-50 p-4 md:p-8 space-y-8">
       <div className="max-w-[1400px] mx-auto space-y-6">
         <div className="flex items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-          <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+          <div className="p-3 bg-brand-50 text-brand-600 rounded-xl">
             <Receipt className="w-8 h-8" />
           </div>
           <div>
