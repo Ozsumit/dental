@@ -177,7 +177,7 @@ export default function AppointmentsClient({
             placeholder="Search by Patient Name..."
             defaultValue={params.get("q") || ""}
             onChange={(e) => handleTextSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none"
+            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-green-500 outline-none"
           />
         </div>
 
@@ -242,7 +242,7 @@ export default function AppointmentsClient({
 
         <button
           onClick={openAdd}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition ml-auto"
+          className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition ml-auto"
         >
           <Plus className="w-5 h-5" /> New Appointment
         </button>
@@ -296,7 +296,7 @@ export default function AppointmentsClient({
                   >
                     <td className="px-6 py-4 font-bold text-slate-800">
                       <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-indigo-500" />
+                        <Calendar className="w-4 h-4 text-green-500" />
                         {dateStr}
                       </div>
                       <div className="text-[10px] text-slate-400 font-medium ml-6 uppercase">
@@ -314,13 +314,13 @@ export default function AppointmentsClient({
                       </div>
                       <div className="text-xs text-slate-500 ml-6">
                         {appt.patient?.phone} •{" "}
-                        <span className="text-indigo-600 font-bold">
+                        <span className="text-green-600 font-bold">
                           {appt.patient?.role}
                         </span>
                         {appt.doctor && (
                           <>
                             <span className="mx-1">•</span>
-                            <span className="text-emerald-600 font-bold">
+                            <span className="text-green-600 font-bold">
                               Dr. {appt.doctor.username}
                             </span>
                           </>
@@ -346,7 +346,7 @@ export default function AppointmentsClient({
                       <div className="flex justify-end gap-1">
                         <button
                           onClick={() => openEdit(appt)}
-                          className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition"
+                          className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -464,7 +464,7 @@ export default function AppointmentsClient({
                       handlePatientSearch(e.target.value);
                     }}
                     placeholder="Type a name to search..."
-                    className={`mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none ${selectedPatientId ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-bold" : ""}`}
+                    className={`mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-green-500 outline-none ${selectedPatientId ? "bg-green-50 border-green-200 text-green-700 font-bold" : ""}`}
                   />
 
                   {/* Dropdown Results */}
@@ -486,7 +486,7 @@ export default function AppointmentsClient({
                             <span className="font-bold text-slate-800">
                               {p.firstName} {p.lastName}
                             </span>
-                            <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">
+                            <span className="text-[10px] font-black text-green-500 bg-green-50 px-1.5 py-0.5 rounded uppercase">
                               {p.role}
                             </span>
                           </div>
@@ -509,7 +509,7 @@ export default function AppointmentsClient({
                         <button
                           type="button"
                           onClick={() => setIsCreatingPatient(true)}
-                          className="w-full py-2 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition"
+                          className="w-full py-2 bg-green-50 text-green-600 rounded-lg text-xs font-bold hover:bg-green-100 transition"
                         >
                           + Create New Patient
                         </button>
@@ -523,16 +523,16 @@ export default function AppointmentsClient({
                         setSelectedPatientId("");
                         setPatientSearchQuery("");
                       }}
-                      className="text-xs text-indigo-600 font-bold mt-2"
+                      className="text-xs text-green-600 font-bold mt-2"
                     >
                       Change Patient
                     </button>
                   )}
                 </div>
               ) : (
-                <div className="bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100 space-y-4">
+                <div className="bg-green-50/50 p-4 rounded-2xl border border-green-100 space-y-4">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-xs font-black text-indigo-600 uppercase">
+                    <h3 className="text-xs font-black text-green-600 uppercase">
                       New Patient Info
                     </h3>
                     <button
@@ -553,7 +553,7 @@ export default function AppointmentsClient({
                           firstName: e.target.value,
                         })
                       }
-                      className="p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
+                      className="p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-green-500"
                     />
                     <input
                       placeholder="Last Name"
@@ -564,7 +564,7 @@ export default function AppointmentsClient({
                           lastName: e.target.value,
                         })
                       }
-                      className="p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
+                      className="p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-green-500"
                     />
                   </div>
                   <input
@@ -576,7 +576,7 @@ export default function AppointmentsClient({
                         phone: e.target.value,
                       })
                     }
-                    className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500"
+                    className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-green-500"
                   />
                 </div>
               )}
@@ -633,14 +633,14 @@ export default function AppointmentsClient({
                     return (
                       <label
                         key={proc}
-                        className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200"
+                        className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-green-200 transition-all has-[:checked]:bg-green-50 has-[:checked]:border-green-200"
                       >
                         <input
                           type="checkbox"
                           name="treatments"
                           value={proc}
                           defaultChecked={isChecked}
-                          className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                          className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
                         />
                         <span className="text-xs font-bold text-slate-600">
                           {proc}
@@ -694,7 +694,7 @@ export default function AppointmentsClient({
                   name="isPaid"
                   value="true"
                   defaultChecked={selectedAppt?.isPaid || false}
-                  className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                  className="w-4 h-4 rounded text-green-600 focus:ring-green-500"
                 />
                 <label
                   htmlFor="isPaid"
@@ -714,7 +714,7 @@ export default function AppointmentsClient({
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-indigo-600 text-white font-bold hover:bg-indigo-700 rounded-xl shadow-md"
+                  className="px-6 py-3 bg-green-600 text-white font-bold hover:bg-green-700 rounded-xl shadow-md"
                 >
                   Save Appointment
                 </button>

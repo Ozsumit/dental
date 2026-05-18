@@ -322,3 +322,16 @@ export async function getAppointmentsForExport(searchParams: {
     orderBy: { appointmentDate: "desc" },
   });
 }
+export async function getAppointmentById(id: string) {
+  return await prisma.appointment.findUnique({
+    where: { id },
+    include: {
+      patient: {
+        include: {
+          medicalRecord: true,
+        },
+      },
+      doctor: true,
+    },
+  });
+}

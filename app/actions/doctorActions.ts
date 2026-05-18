@@ -70,6 +70,7 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
           appointmentDate: { gte: today, lt: tomorrow },
           status: { not: "COMPLETED" },
         },
+
         data: { status: "COMPLETED" },
       });
 

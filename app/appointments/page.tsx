@@ -14,7 +14,7 @@ export default async function AppointmentsPage({
     await Promise.all([
       getAppointments(resolvedParams),
       getDoctors(),
-      getSystemSettings()
+      getSystemSettings(),
     ]);
   const today = new Date();
   const tomorrow = new Date(today);
@@ -32,7 +32,7 @@ export default async function AppointmentsPage({
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl">
+            <div className="p-3 bg-green-50 text-green-800 rounded-xl">
               <CalendarDays className="w-8 h-8" />
             </div>
             <div>
