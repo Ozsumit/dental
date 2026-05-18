@@ -36,7 +36,7 @@ export default function AppointmentsClient({
   appointments,
   totalPages,
   currentPage,
-  doctors: initialDoctors
+  doctors: initialDoctors,
 }: AppointmentsClientProps) {
   const router = useRouter();
   const params = useSearchParams();
@@ -48,7 +48,15 @@ export default function AppointmentsClient({
 
   // Patient Search State for the Form
   const [patientSearchQuery, setPatientSearchQuery] = useState("");
-  const [patientResults, setPatientResults] = useState<{ id: string; firstName: string; lastName: string; phone: string; role?: string | null }[]>([]);
+  const [patientResults, setPatientResults] = useState<
+    {
+      id: string;
+      firstName: string;
+      lastName: string;
+      phone: string;
+      role?: string | null;
+    }[]
+  >([]);
   const [selectedPatientId, setSelectedPatientId] = useState("");
 
   const updateQuery = useCallback(
@@ -103,20 +111,23 @@ export default function AppointmentsClient({
 
       const formattedData = dataToExport.map((a: Appointment) => ({
         "Appointment Date": new Date(a.appointmentDate).toLocaleDateString(),
-        "Status": a.status,
-        "Treatments": a.treatments,
+        Status: a.status,
+        Treatments: a.treatments,
         "Patient Name": `${a.patient?.firstName} ${a.patient?.lastName}`,
         "Patient Phone": a.patient?.phone,
         "Patient Category": a.patient?.role || "Regular",
         "Assigned Doctor": a.doctor?.username || "Not Assigned",
-        "Insurance": a.patient?.medicalRecord?.insurance || "N/A",
-        "Created At": new Date(a.createdAt).toLocaleString()
+        Insurance: a.patient?.medicalRecord?.insurance || "N/A",
+        "Created At": new Date(a.createdAt).toLocaleString(),
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(formattedData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "Appointments_Export");
-      XLSX.writeFile(workbook, `Appointments_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.writeFile(
+        workbook,
+        `Appointments_Export_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
     } catch (e) {
       console.error(e);
       alert("Failed to export data.");
@@ -192,7 +203,8 @@ export default function AppointmentsClient({
           disabled={isExporting}
           className="px-5 py-3 bg-emerald-50 text-emerald-700 rounded-xl font-medium flex items-center gap-2 hover:bg-emerald-100 transition disabled:opacity-50"
         >
-          <Download className="w-5 h-5" /> {isExporting ? "Exporting..." : "Export Excel"}
+          <Download className="w-5 h-5" />{" "}
+          {isExporting ? "Exporting..." : "Export Excel"}
         </button>
 
         <button
@@ -253,7 +265,11 @@ export default function AppointmentsClient({
                         {dateStr}
                       </div>
                       <div className="text-[10px] text-slate-400 font-medium ml-6 uppercase">
-                        Scheduled at {new Date(appt.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        Scheduled at{" "}
+                        {new Date(appt.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -262,12 +278,19 @@ export default function AppointmentsClient({
                         {appt.patient?.firstName} {appt.patient?.lastName}
                       </div>
                       <div className="text-xs text-slate-500 ml-6">
-                        {appt.patient?.phone} • <span className="text-indigo-600 font-bold">{appt.patient?.role}</span>
+                        {appt.patient?.phone} •{" "}
+                        <span className="text-indigo-600 font-bold">
+                          {appt.patient?.role}
+                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="font-medium text-slate-800">{appt.treatments}</div>
-                      <div className="text-[10px] text-slate-400 italic">Previous visits: {appt.patient?.visitCount}</div>
+                      <div className="font-medium text-slate-800">
+                        {appt.treatments}
+                      </div>
+                      <div className="text-[10px] text-slate-400 italic">
+                        Previous visits: {appt.patient?.visitCount}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <span
@@ -384,10 +407,12 @@ export default function AppointmentsClient({
                         className="p-3 hover:bg-slate-50 cursor-pointer border-b border-slate-100 flex flex-col"
                       >
                         <div className="flex justify-between items-center">
-                           <span className="font-bold text-slate-800">
-                             {p.firstName} {p.lastName}
-                           </span>
-                           <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">{p.role}</span>
+                          <span className="font-bold text-slate-800">
+                            {p.firstName} {p.lastName}
+                          </span>
+                          <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded uppercase">
+                            {p.role}
+                          </span>
                         </div>
                         <span className="text-xs text-slate-500">
                           {p.phone}
@@ -450,26 +475,33 @@ export default function AppointmentsClient({
                   Select Procedures
                 </label>
                 <div className="grid grid-cols-2 gap-3 mt-2">
-                  {["Cleaning", "Filling", "Root Canal", "Checkup", "Whitening", "Extraction"].map(
-                    (proc) => {
-                      const isChecked = selectedAppt?.treatments?.includes(proc);
-                      return (
-                        <label
-                          key={proc}
-                          className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200"
-                        >
-                          <input
-                            type="checkbox"
-                            name="treatments"
-                            value={proc}
-                            defaultChecked={isChecked}
-                            className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
-                          />
-                          <span className="text-xs font-bold text-slate-600">{proc}</span>
-                        </label>
-                      )
-                    },
-                  )}
+                  {[
+                    "Cleaning",
+                    "Filling",
+                    "Root Canal",
+                    "Checkup",
+                    "Whitening",
+                    "Extraction",
+                  ].map((proc) => {
+                    const isChecked = selectedAppt?.treatments?.includes(proc);
+                    return (
+                      <label
+                        key={proc}
+                        className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200"
+                      >
+                        <input
+                          type="checkbox"
+                          name="treatments"
+                          value={proc}
+                          defaultChecked={isChecked}
+                          className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <span className="text-xs font-bold text-slate-600">
+                          {proc}
+                        </span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -484,8 +516,10 @@ export default function AppointmentsClient({
                     className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white"
                   >
                     <option value="">Select Doctor (Optional)</option>
-                    {initialDoctors.map(d => (
-                      <option key={d.id} value={d.id}>{d.username}</option>
+                    {initialDoctors.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.username}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -513,7 +547,10 @@ export default function AppointmentsClient({
                   defaultChecked={selectedAppt?.isPaid || false}
                   className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
                 />
-                <label htmlFor="isPaid" className="text-sm font-bold text-slate-600">
+                <label
+                  htmlFor="isPaid"
+                  className="text-sm font-bold text-slate-600"
+                >
                   Mark as Paid
                 </label>
               </div>

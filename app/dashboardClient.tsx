@@ -27,7 +27,7 @@ import {
   ChevronRight,
   Phone,
   Mail,
-  Receipt
+  Receipt,
 } from "lucide-react";
 import * as XLSX from "xlsx"; // Import Excel library
 interface DashboardClientProps {
@@ -104,27 +104,39 @@ export default function DashboardClient({
         Gender: p.gender || "N/A",
         Status: p.status,
         "Date of Birth": new Date(p.dateOfBirth).toLocaleDateString(),
-        "Category": p.role || "Regular",
+        Category: p.role || "Regular",
         "Blood Group": p.bloodGroup || "N/A",
-        "Allergies": p.allergies || "None",
-        "Address": p.address || "N/A",
+        Allergies: p.allergies || "None",
+        Address: p.address || "N/A",
         "Total Visits": p.visitCount,
         "Last Visit": p.lastVisitDate
           ? new Date(p.lastVisitDate).toLocaleDateString()
           : "None",
-        "Insurance": p.medicalRecord?.insurance || "N/A",
+        Insurance: p.medicalRecord?.insurance || "N/A",
         "Insurance No": p.medicalRecord?.insuranceNo || "N/A",
         "Emergency Contact": p.medicalRecord?.emergencyContactName || "N/A",
         "Emergency Phone": p.medicalRecord?.emergencyContactNo || "N/A",
         "Latest Diagnosis": p.diagnoses?.[0]?.treatmentPlan || "N/A",
-        "Recent Appointments": p.appointments?.map((a: Appointment) => new Date(a.appointmentDate).toLocaleDateString()).join(", ") || "None"
+        "Recent Appointments":
+          p.appointments
+            ?.map((a: Appointment) =>
+              new Date(a.appointmentDate).toLocaleDateString(),
+            )
+            .join(", ") || "None",
       }));
 
       // Generate Excel File
       const worksheet = XLSX.utils.json_to_sheet(formattedData);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "Patients_Master_Export");
-      XLSX.writeFile(workbook, `Patients_Export_${new Date().toISOString().split('T')[0]}.xlsx`);
+      XLSX.utils.book_append_sheet(
+        workbook,
+        worksheet,
+        "Patients_Master_Export",
+      );
+      XLSX.writeFile(
+        workbook,
+        `Patients_Export_${new Date().toISOString().split("T")[0]}.xlsx`,
+      );
     } catch (e) {
       console.error(e);
       alert("Failed to export data.");
@@ -211,8 +223,10 @@ export default function DashboardClient({
               className="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-lg outline-none"
             >
               <option value="">All Blood Groups</option>
-              {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(bg => (
-                <option key={bg} value={bg}>{bg}</option>
+              {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((bg) => (
+                <option key={bg} value={bg}>
+                  {bg}
+                </option>
               ))}
             </select>
 
@@ -331,9 +345,13 @@ export default function DashboardClient({
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`py-1 px-3 rounded-full text-[10px] font-black uppercase border ${
-                    patient.status === "ACTIVE" ? "bg-green-50 text-green-700 border-green-100" : "bg-red-50 text-red-700 border-red-100"
-                  }`}>
+                  <span
+                    className={`py-1 px-3 rounded-full text-[10px] font-black uppercase border ${
+                      patient.status === "ACTIVE"
+                        ? "bg-green-50 text-green-700 border-green-100"
+                        : "bg-red-50 text-red-700 border-red-100"
+                    }`}
+                  >
                     {patient.status}
                   </span>
                 </td>
@@ -362,7 +380,14 @@ export default function DashboardClient({
               </tr>
             ))}
             {patients.length === 0 && (
-               <tr><td colSpan={4} className="px-6 py-20 text-center text-slate-400 italic">No patients found.</td></tr>
+              <tr>
+                <td
+                  colSpan={4}
+                  className="px-6 py-20 text-center text-slate-400 italic"
+                >
+                  No patients found.
+                </td>
+              </tr>
             )}
           </tbody>
         </table>
@@ -407,9 +432,14 @@ export default function DashboardClient({
                     {selectedPatient.firstName} {selectedPatient.lastName}
                   </h2>
                   <div className="flex flex-wrap gap-4 text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">
-                    <span className="flex items-center gap-1"><Phone className="w-3 h-3" /> {selectedPatient.phone}</span>
+                    <span className="flex items-center gap-1">
+                      <Phone className="w-3 h-3" /> {selectedPatient.phone}
+                    </span>
                     <span>•</span>
-                    <span className="flex items-center gap-1"><Mail className="w-3 h-3" /> {selectedPatient.email || "No Email"}</span>
+                    <span className="flex items-center gap-1">
+                      <Mail className="w-3 h-3" />{" "}
+                      {selectedPatient.email || "No Email"}
+                    </span>
                     <span>•</span>
                     <span className="text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100">
                       {selectedPatient.status}
@@ -418,27 +448,27 @@ export default function DashboardClient({
                 </div>
               </div>
               <div className="flex gap-3 w-full md:w-auto">
-                 <button
-                   onClick={() => {
-                     setAppointmentPatient(selectedPatient);
-                     setIsApptFormOpen(true);
-                   }}
-                   className="flex-1 md:flex-none bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
-                 >
-                   <Calendar className="w-4 h-4" /> New Appointment
-                 </button>
-                 <button
-                   onClick={() => setIsProfileOpen(false)}
-                   className="p-3 bg-white text-slate-400 hover:text-slate-800 rounded-xl border border-slate-200 transition-all"
-                 >
-                   <X className="w-6 h-6" />
-                 </button>
+                <button
+                  onClick={() => {
+                    setAppointmentPatient(selectedPatient);
+                    setIsApptFormOpen(true);
+                  }}
+                  className="flex-1 md:flex-none bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-100 flex items-center justify-center gap-2"
+                >
+                  <Calendar className="w-4 h-4" /> New Appointment
+                </button>
+                <button
+                  onClick={() => setIsProfileOpen(false)}
+                  className="p-3 bg-white text-slate-400 hover:text-slate-800 rounded-xl border border-slate-200 transition-all"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </div>
             </div>
 
             {/* Profile Body (Scrollable) */}
             <div className="p-8 overflow-y-auto flex-1 bg-white">
-               <ReceptionistPatientView patient={selectedPatient} />
+              <ReceptionistPatientView patient={selectedPatient} />
             </div>
           </div>
         </div>
@@ -450,9 +480,7 @@ export default function DashboardClient({
           <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-8 border-b border-slate-50 bg-slate-50/30">
               <h2 className="text-2xl font-black text-slate-800 tracking-tight">
-                {selectedPatient
-                  ? "Update Record"
-                  : "New Patient Registration"}
+                {selectedPatient ? "Update Record" : "New Patient Registration"}
               </h2>
               <button
                 onClick={() => setIsFormOpen(false)}
@@ -471,7 +499,9 @@ export default function DashboardClient({
             >
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">First Name</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    First Name
+                  </label>
                   <input
                     required
                     name="firstName"
@@ -480,7 +510,9 @@ export default function DashboardClient({
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Last Name</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Last Name
+                  </label>
                   <input
                     required
                     name="lastName"
@@ -492,7 +524,9 @@ export default function DashboardClient({
 
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Phone Number</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Phone Number
+                  </label>
                   <input
                     required
                     name="phone"
@@ -501,7 +535,9 @@ export default function DashboardClient({
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Email Address</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Email Address
+                  </label>
                   <input
                     type="email"
                     name="email"
@@ -512,7 +548,9 @@ export default function DashboardClient({
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Residential Address</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                  Residential Address
+                </label>
                 <textarea
                   name="address"
                   defaultValue={selectedPatient?.address || ""}
@@ -523,7 +561,9 @@ export default function DashboardClient({
 
               <div className="grid grid-cols-3 gap-6 pt-4 border-t border-slate-50">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Birth Date</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Birth Date
+                  </label>
                   <input
                     required
                     type="date"
@@ -539,7 +579,9 @@ export default function DashboardClient({
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Gender</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Gender
+                  </label>
                   <select
                     name="gender"
                     defaultValue={selectedPatient?.gender || ""}
@@ -552,23 +594,31 @@ export default function DashboardClient({
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Blood Group</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Blood Group
+                  </label>
                   <select
                     name="bloodGroup"
                     defaultValue={selectedPatient?.bloodGroup || ""}
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none bg-white font-medium"
                   >
                     <option value="">Select...</option>
-                    {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(bg => (
-                      <option key={bg} value={bg}>{bg}</option>
-                    ))}
+                    {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
+                      (bg) => (
+                        <option key={bg} value={bg}>
+                          {bg}
+                        </option>
+                      ),
+                    )}
                   </select>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-50">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Patient Category</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Patient Category
+                  </label>
                   <select
                     name="role"
                     defaultValue={selectedPatient?.role || "Regular"}
@@ -580,7 +630,9 @@ export default function DashboardClient({
                   </select>
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Known Allergies</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Known Allergies
+                  </label>
                   <input
                     name="allergies"
                     defaultValue={selectedPatient?.allergies || ""}
@@ -592,19 +644,27 @@ export default function DashboardClient({
 
               <div className="grid grid-cols-2 gap-6 pt-4 border-t border-slate-50">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Insurance Provider</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Insurance Provider
+                  </label>
                   <input
                     name="insurance"
-                    defaultValue={selectedPatient?.medicalRecord?.insurance || ""}
+                    defaultValue={
+                      selectedPatient?.medicalRecord?.insurance || ""
+                    }
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
                     placeholder="e.g. HealthCare Plus"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Insurance No.</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Insurance No.
+                  </label>
                   <input
                     name="insuranceNo"
-                    defaultValue={selectedPatient?.medicalRecord?.insuranceNo || ""}
+                    defaultValue={
+                      selectedPatient?.medicalRecord?.insuranceNo || ""
+                    }
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
                     placeholder="e.g. HCP-889900"
                   />
@@ -613,18 +673,26 @@ export default function DashboardClient({
 
               <div className="grid grid-cols-2 gap-6">
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Emergency Name</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Emergency Name
+                  </label>
                   <input
                     name="emergencyContactName"
-                    defaultValue={selectedPatient?.medicalRecord?.emergencyContactName || ""}
+                    defaultValue={
+                      selectedPatient?.medicalRecord?.emergencyContactName || ""
+                    }
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
                 <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Emergency Phone</label>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                    Emergency Phone
+                  </label>
                   <input
                     name="emergencyContactNo"
-                    defaultValue={selectedPatient?.medicalRecord?.emergencyContactNo || ""}
+                    defaultValue={
+                      selectedPatient?.medicalRecord?.emergencyContactNo || ""
+                    }
                     className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
@@ -661,7 +729,9 @@ export default function DashboardClient({
               Delete Record
             </h2>
             <p className="text-slate-500 mt-3 text-sm leading-relaxed">
-              Are you sure you want to delete <strong>{selectedPatient?.firstName}</strong>? This action cannot be undone.
+              Are you sure you want to delete{" "}
+              <strong>{selectedPatient?.firstName}</strong>? This action cannot
+              be undone.
             </p>
             <div className="flex flex-col gap-2 mt-8">
               <button
@@ -691,10 +761,12 @@ export default function DashboardClient({
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="p-8 border-b border-slate-50 bg-slate-50/30 text-center">
-               <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center justify-center gap-2">
-                 <Calendar className="w-5 h-5 text-indigo-500" /> New Session
-               </h2>
-               <p className="text-xs text-slate-400 font-bold mt-1 uppercase">Scheduling for: {apptPatient.firstName} {apptPatient.lastName}</p>
+              <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center justify-center gap-2">
+                <Calendar className="w-5 h-5 text-indigo-500" /> New Session
+              </h2>
+              <p className="text-xs text-slate-400 font-bold mt-1 uppercase">
+                Scheduling for: {apptPatient.firstName} {apptPatient.lastName}
+              </p>
             </div>
 
             <form
@@ -707,7 +779,9 @@ export default function DashboardClient({
               className="p-8 space-y-6"
             >
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Preferred Date</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                  Preferred Date
+                </label>
                 <input
                   required
                   type="date"
@@ -717,19 +791,33 @@ export default function DashboardClient({
               </div>
 
               <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Select Procedures</label>
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
+                  Select Procedures
+                </label>
                 <div className="grid grid-cols-2 gap-3 mt-2">
-                  {["Cleaning", "Filling", "Root Canal", "Checkup", "Whitening", "Extraction"].map(
-                    (proc) => (
-                      <label
-                        key={proc}
-                        className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200"
-                      >
-                        <input type="checkbox" name="treatments" value={proc} className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" />
-                        <span className="text-xs font-bold text-slate-600">{proc}</span>
-                      </label>
-                    ),
-                  )}
+                  {[
+                    "Cleaning",
+                    "Filling",
+                    "Root Canal",
+                    "Checkup",
+                    "Whitening",
+                    "Extraction",
+                  ].map((proc) => (
+                    <label
+                      key={proc}
+                      className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:border-indigo-200 transition-all has-[:checked]:bg-indigo-50 has-[:checked]:border-indigo-200"
+                    >
+                      <input
+                        type="checkbox"
+                        name="treatments"
+                        value={proc}
+                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                      />
+                      <span className="text-xs font-bold text-slate-600">
+                        {proc}
+                      </span>
+                    </label>
+                  ))}
                 </div>
               </div>
 
