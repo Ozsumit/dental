@@ -499,10 +499,58 @@ export default function DoctorClient({
                               defaultValue={
                                 selectedPatient.diagnosis?.pastHistory || ""
                               }
-                              rows={3}
+                              rows={5}
                               className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
                               placeholder="Any previous surgeries, conditions, or chronic illnesses..."
                             />
+                          </div>
+                          <div className="bg-white p-6 w-full rounded-2xl border border-slate-200 shadow-sm">
+                            <div className="flex justify-between items-center mb-8">
+                              <div>
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                                  Pain Intensity (VAS)
+                                </label>
+                                <p className="text-xs text-slate-500 mt-1">
+                                  Visual Analog Scale for pain measurement
+                                </p>
+                              </div>
+                              <div className="bg-slate-900 text-white px-4 py-1.5 rounded-lg text-sm font-black">
+                                Score : {vasScore}
+                              </div>
+                            </div>
+                            <div className="relative pt-6 px-4">
+                              <input
+                                type="range"
+                                min="0"
+                                max="10"
+                                step="1"
+                                value={vasScore}
+                                onChange={(e) =>
+                                  setVasScore(parseInt(e.target.value))
+                                }
+                                className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-100 accent-emerald-500"
+                                style={{
+                                  background: `linear-gradient(to right, #10b981 0%, #facc15 50%, #ef4444 100%)`,
+                                }}
+                              />
+                              <div className="flex justify-between mt-6 px-1">
+                                {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                                  <div
+                                    key={n}
+                                    className="flex flex-col items-center gap-2"
+                                  >
+                                    <div
+                                      className={`w-1 h-2 rounded-full ${vasScore === n ? "bg-slate-800" : "bg-slate-200"}`}
+                                    />
+                                    <span
+                                      className={`text-[10px] font-black ${vasScore === n ? "text-slate-900 scale-125" : "text-slate-400"}`}
+                                    >
+                                      {n}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
                           </div>
                         </div>
 
@@ -537,72 +585,23 @@ export default function DoctorClient({
                               ))}
                             </div>
                           </div>
-                        </div>
-                      </div>
-
-                      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <div className="flex justify-between items-center mb-8">
-                          <div>
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
-                              Pain Intensity (VAS)
-                            </label>
-                            <p className="text-xs text-slate-500 mt-1">
-                              Visual Analog Scale for pain measurement
-                            </p>
-                          </div>
-                          <div className="bg-slate-900 text-white px-4 py-1.5 rounded-lg text-sm font-black">
-                            Score : {vasScore}
-                          </div>
-                        </div>
-                        <div className="relative pt-6 px-4">
-                          <input
-                            type="range"
-                            min="0"
-                            max="10"
-                            step="1"
-                            value={vasScore}
-                            onChange={(e) =>
-                              setVasScore(parseInt(e.target.value))
-                            }
-                            className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-slate-100 accent-emerald-500"
-                            style={{
-                              background: `linear-gradient(to right, #10b981 0%, #facc15 50%, #ef4444 100%)`,
-                            }}
-                          />
-                          <div className="flex justify-between mt-6 px-1">
-                            {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                              <div
-                                key={n}
-                                className="flex flex-col items-center gap-2"
-                              >
-                                <div
-                                  className={`w-1 h-2 rounded-full ${vasScore === n ? "bg-slate-800" : "bg-slate-200"}`}
-                                />
-                                <span
-                                  className={`text-[10px] font-black ${vasScore === n ? "text-slate-900 scale-125" : "text-slate-400"}`}
-                                >
-                                  {n}
-                                </span>
-                              </div>
-                            ))}
+                          <div className="flex justify-end gap-3 pt-4">
+                            <button
+                              type="submit"
+                              className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all"
+                            >
+                              Save Draft
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab("Objective")}
+                              className="bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2"
+                            >
+                              Next: Objective{" "}
+                              <ChevronRight className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
-                      </div>
-
-                      <div className="flex justify-end gap-3 pt-4">
-                        <button
-                          type="submit"
-                          className="px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-50 transition-all"
-                        >
-                          Save Draft
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setActiveTab("Objective")}
-                          className="bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2"
-                        >
-                          Next: Objective <ChevronRight className="w-4 h-4" />
-                        </button>
                       </div>
                     </div>
 
@@ -931,31 +930,36 @@ export default function DoctorClient({
 
                             <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2">
                               {/* Most Recent Assessment */}
-                              <div className="bg-slate-50/50 rounded-2xl border border-slate-100 overflow-hidden">
-                                <div className="bg-slate-900 px-4 py-2 flex justify-between items-center">
+                              <div className="bg-slate-50/50 rounded-xl border border-slate-100 overflow-hidden">
+                                {/* Header */}
+                                <div className="bg-slate-900 px-3 py-1.5 flex justify-between items-center">
                                   <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                                    Active/Latest Assessment
+                                    Active / Latest Assessment
                                   </span>
-                                  <span className="text-[10px] font-bold text-slate-400">
-                                    {selectedPatient.diagnoses?.[0]
-                                      ?.updatedAt ||
-                                    selectedPatient.diagnosis?.updatedAt
-                                      ? new Date(
-                                          selectedPatient.diagnoses?.[0]
-                                            ?.updatedAt ||
-                                            selectedPatient.diagnosis!
-                                              .updatedAt,
-                                        ).toLocaleDateString()
-                                      : "N/A"}
+
+                                  <span className="text-[10px] font-semibold text-slate-400">
+                                    {(() => {
+                                      const date =
+                                        selectedPatient.diagnoses?.[0]
+                                          ?.updatedAt ||
+                                        selectedPatient.diagnosis?.updatedAt;
+
+                                      return date
+                                        ? new Date(date).toLocaleDateString()
+                                        : "N/A";
+                                    })()}
                                   </span>
                                 </div>
-                                <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  <div className="space-y-3">
+
+                                {/* Body */}
+                                <div className="p-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  {/* Left */}
+                                  <div className="space-y-2">
                                     <div>
-                                      <p className="text-[9px] font-black text-slate-400 uppercase mb-1">
-                                        Chief Complaint (Prev)
+                                      <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">
+                                        Chief Complaint
                                       </p>
-                                      <p className="text-xs text-slate-700 font-medium leading-relaxed">
+                                      <p className="text-xs text-slate-700 leading-snug">
                                         {selectedPatient.diagnoses?.[0]
                                           ?.currentHistory ||
                                           selectedPatient.diagnosis
@@ -963,11 +967,12 @@ export default function DoctorClient({
                                           "None recorded"}
                                       </p>
                                     </div>
+
                                     <div>
-                                      <p className="text-[9px] font-black text-slate-400 uppercase mb-1">
+                                      <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">
                                         Diagnosis & Plan
                                       </p>
-                                      <p className="text-xs text-slate-800 font-bold leading-relaxed">
+                                      <p className="text-xs text-slate-800 font-semibold leading-snug">
                                         {selectedPatient.diagnoses?.[0]
                                           ?.treatmentPlan ||
                                           selectedPatient.diagnosis
@@ -976,12 +981,14 @@ export default function DoctorClient({
                                       </p>
                                     </div>
                                   </div>
-                                  <div className="space-y-3">
+
+                                  {/* Right */}
+                                  <div className="space-y-2">
                                     <div>
-                                      <p className="text-[9px] font-black text-slate-400 uppercase mb-1">
+                                      <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">
                                         Medicines
                                       </p>
-                                      <p className="text-xs text-slate-700 font-medium">
+                                      <p className="text-xs text-slate-700">
                                         {selectedPatient.diagnoses?.[0]
                                           ?.medicines ||
                                           selectedPatient.diagnosis
@@ -989,12 +996,14 @@ export default function DoctorClient({
                                           "None prescribed"}
                                       </p>
                                     </div>
-                                    <div className="flex gap-4">
+
+                                    {/* Bottom row */}
+                                    <div className="flex justify-between items-end pt-1 border-t border-slate-200">
                                       <div>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-1">
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">
                                           ICD-10
                                         </p>
-                                        <p className="text-xs font-black text-emerald-600">
+                                        <p className="text-xs font-bold text-emerald-600">
                                           {selectedPatient.diagnoses?.[0]
                                             ?.icd10Code ||
                                             selectedPatient.diagnosis
@@ -1002,11 +1011,12 @@ export default function DoctorClient({
                                             "N/A"}
                                         </p>
                                       </div>
-                                      <div>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-1">
-                                          Pain (VAS)
+
+                                      <div className="text-right w-1/2">
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase mb-0.5">
+                                          VAS
                                         </p>
-                                        <p className="text-xs font-black text-red-500">
+                                        <p className="text-xs font-bold text-red-500">
                                           {selectedPatient.diagnoses?.[0]
                                             ?.vasScore ||
                                             selectedPatient.diagnosis
@@ -1019,7 +1029,6 @@ export default function DoctorClient({
                                   </div>
                                 </div>
                               </div>
-
                               {/* Patient Demographics & Baseline */}
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="p-4 bg-white border border-slate-100 rounded-2xl shadow-sm">
@@ -1150,7 +1159,7 @@ export default function DoctorClient({
                               }
                               rows={6}
                               className="w-full p-4 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:border-emerald-500 outline-none transition-all text-slate-700 font-medium resize-none"
-                              placeholder="Initial complaints recorded by receptionist..."
+                              placeholder="Initial complaints"
                             />
                           </div>
                         </div>
