@@ -94,11 +94,15 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
           ...diagnosisData,
         },
       }),
-      prisma.medicalRecord.update({
+      prisma.medicalRecord.upsert({
         where: { patientId },
-        data: {
+        update: {
           complaints: formData.get("complaints")?.toString() || undefined,
         },
+        create: {
+          patientId,
+          complaints: formData.get("complaints")?.toString() || null,
+        }
       }),
     ]);
 
@@ -203,6 +207,7 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
   }
 
   revalidatePath("/doctor");
+  revalidatePath("/");
 }
 
 export async function addBatchProcedures(patientId: string, procedures: {
