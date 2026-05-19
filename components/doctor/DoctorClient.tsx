@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { updateDiagnosis } from "@/app/actions/doctorActions";
 import { Patient } from "@/lib/types/index";
 import { Search, Clock, User, ChevronLeft, Stethoscope } from "lucide-react";
@@ -37,7 +38,12 @@ export default function DoctorClient({
     category: string | null;
   }[];
 }) {
+  const searchParams = useSearchParams();
+  const patientIdParam = searchParams?.get("patientId");
+
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [purposeFilter, setPurposeFilter] = useState("ALL");
   const [selectedPatient, setSelectedPatient] = useState<
     (Patient & { currentAppointmentId?: string }) | null
   >(null);
@@ -94,7 +100,7 @@ export default function DoctorClient({
             );
           });
 
-    const pending = results.filter(
+    let pending = results.filter(
       (p) =>
         !p.appointments?.some(
           (a) =>
@@ -103,7 +109,7 @@ export default function DoctorClient({
               new Date().toDateString(),
         ),
     );
-    const completedToday = results.filter((p) =>
+    let completedToday = results.filter((p) =>
       p.appointments?.some(
         (a) =>
           a.status === "COMPLETED" &&
@@ -112,8 +118,25 @@ export default function DoctorClient({
       ),
     );
 
+    // Filter by Status
+    if (statusFilter === "PENDING") {
+      completedToday = [];
+    } else if (statusFilter === "COMPLETED") {
+      pending = [];
+    }
+
+    // Filter by Purpose / Procedure
+    if (purposeFilter !== "ALL") {
+      pending = pending.filter((p) =>
+        p.appointments?.[0]?.treatments?.toLowerCase().includes(purposeFilter.toLowerCase()),
+      );
+      completedToday = completedToday.filter((p) =>
+        p.appointments?.[0]?.treatments?.toLowerCase().includes(purposeFilter.toLowerCase()),
+      );
+    }
+
     return { pending, completedToday };
-  }, [patients, searchTerm]);
+  }, [patients, searchTerm, statusFilter, purposeFilter]);
 
   const calculateAge = (dob: Date) => {
     const birthDate = new Date(dob);
@@ -187,6 +210,15 @@ export default function DoctorClient({
     }
   };
 
+  useEffect(() => {
+    if (patientIdParam && patients.length > 0) {
+      const p = patients.find((p) => p.id === patientIdParam);
+      if (p) {
+        handlePatientSelect(p);
+      }
+    }
+  }, [patientIdParam, patients]);
+
   const toggleCondition = (id: string) => {
     setSelectedConditions((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
@@ -234,15 +266,41 @@ export default function DoctorClient({
           </div>
 
           <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by name or phone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-base focus:ring-1 focus:ring-brand-600 outline-none transition-all"
-              />
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name or phone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-base focus:ring-1 focus:ring-brand-600 outline-none transition-all"
+                />
+              </div>
+              <div className="flex gap-4">
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-600 font-bold focus:ring-1 focus:ring-brand-600 cursor-pointer min-w-[140px]"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+                <select
+                  value={purposeFilter}
+                  onChange={(e) => setPurposeFilter(e.target.value)}
+                  className="px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-600 font-bold focus:ring-1 focus:ring-brand-600 cursor-pointer min-w-[160px]"
+                >
+                  <option value="ALL">All Purposes</option>
+                  <option value="Checkup">Checkup</option>
+                  <option value="Cleaning">Cleaning</option>
+                  <option value="Filling">Filling</option>
+                  <option value="Root Canal">Root Canal</option>
+                  <option value="Whitening">Whitening</option>
+                  <option value="Extraction">Extraction</option>
+                </select>
+              </div>
             </div>
           </div>
 
@@ -252,8 +310,9 @@ export default function DoctorClient({
                 <tr>
                   <th className="px-8 py-5">Patient Details</th>
                   <th className="px-8 py-5">Appt Time</th>
+                  {/* <th className="px-8 py-5">Purpose</th> */}
                   <th className="px-8 py-5">Contact</th>
-                  <th className="px-8 py-5">Status</th>
+                  <th className="px-8 py-5">Status/Purpose</th>
                   <th className="px-8 py-5 text-right">Actions</th>
                 </tr>
               </thead>
@@ -301,19 +360,45 @@ export default function DoctorClient({
                             : "N/A"}
                         </div>
                       </td>
+                      {/* <td className="px-8 py-4">
+                        <span className="bg-slate-100 text-slate-700 border border-slate-200 px-2.5 py-1 rounded-md text-xs font-semibold inline-block">
+                          {p.appointments?.[0]?.treatments || "General Checkup"}
+                        </span>
+                      </td> */}
                       <td className="px-8 py-4 font-medium text-slate-600">
                         {p.phone}
                       </td>
                       <td className="px-8 py-4">
-                        <span
-                          className={`px-3 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider border ${
-                            isCompleted
-                              ? "bg-brand-50 text-brand-700 border-brand-100"
-                              : "bg-amber-50 text-amber-700 border-amber-100"
-                          }`}
-                        >
-                          {isCompleted ? "Finalized" : "Pending"}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          {/* Status Badge */}
+                          <span
+                            className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                              isCompleted
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                : "bg-amber-50 text-amber-700 border-amber-100"
+                            }`}
+                          >
+                            {isCompleted ? "Completed" : "Pending"}
+                          </span>
+                          
+                          {/* Purpose Badge */}
+                          {(() => {
+                            const treatmentsStr = p.appointments?.[0]?.treatments || "General Checkup";
+                            const isFollowUp = treatmentsStr.toLowerCase().includes("follow");
+                            
+                            return (
+                              <span
+                                className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                                  isFollowUp
+                                    ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                    : "bg-slate-50 text-slate-500 border-slate-200"
+                                }`}
+                              >
+                                {treatmentsStr}
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </td>
                       <td className="px-8 py-4 text-right">
                         <button
@@ -391,6 +476,11 @@ export default function DoctorClient({
                     </span>
                     <span>{selectedPatient.phone}</span>
                     <span>{selectedPatient.address || "Kathmandu"}</span>
+                    {selectedPatient.appointments?.[0]?.treatments && (
+                      <span className="bg-brand-50 text-brand-700 border border-brand-100 px-2.5 py-0.5 rounded text-[11px] font-bold">
+                        Purpose: {selectedPatient.appointments[0].treatments}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <button className="bg-blue-50 text-blue-600 px-4 py-2 rounded-md text-sm font-semibold hover:bg-blue-100 transition-colors">

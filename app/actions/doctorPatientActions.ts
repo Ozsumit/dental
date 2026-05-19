@@ -1,10 +1,11 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { getSession } from "@/lib/auth/session";
+import { getSession, getTenantIdOrThrow } from "@/lib/auth/session";
 
 export async function getDoctorHistory() {
   const session = await getSession();
+  const tenantId = await getTenantIdOrThrow();
 
   // Allow both DOCTOR and ADMIN
   if (!session || !["DOCTOR", "ADMIN"].includes(session.role)) {
@@ -19,18 +20,18 @@ export async function getDoctorHistory() {
 
   return await prisma.patient.findMany({
     where: {
+      tenantId,
       OR: [
         // Patients completed with this doctor
         {
           appointments: {
             some: {
+              tenantId,
               doctorId: session.role === "DOCTOR" ? session.id : undefined,
-
               appointmentDate: {
                 gte: today,
                 lt: tomorrow,
               },
-
               status: "COMPLETED",
             },
           },
@@ -46,17 +47,15 @@ export async function getDoctorHistory() {
                       assignedDoctorId: session.id,
                     },
                   },
-
                   {
                     appointments: {
                       some: {
+                        tenantId,
                         doctorId: null,
-
                         appointmentDate: {
                           gte: today,
                           lt: tomorrow,
                         },
-
                         status: "COMPLETED",
                       },
                     },
@@ -67,31 +66,25 @@ export async function getDoctorHistory() {
           : []),
       ],
     },
-
     include: {
       appointments: {
         orderBy: {
           appointmentDate: "desc",
         },
       },
-
       procedures: {
         orderBy: {
           procedureDate: "desc",
         },
       },
-
       medicalRecord: true,
-
       diagnoses: {
         orderBy: {
           createdAt: "desc",
         },
-
         take: 1,
       },
     },
-
     orderBy: {
       updatedAt: "desc",
     },
@@ -100,6 +93,7 @@ export async function getDoctorHistory() {
 
 export async function getDoctorPatients() {
   const session = await getSession();
+  const tenantId = await getTenantIdOrThrow();
 
   // Allow both DOCTOR and ADMIN
   if (!session || !["DOCTOR", "ADMIN"].includes(session.role)) {
@@ -114,15 +108,15 @@ export async function getDoctorPatients() {
 
   const patients = await prisma.patient.findMany({
     where: {
+      tenantId,
       appointments: {
         some: {
+          tenantId,
           appointmentDate: {
             gte: today,
             lt: tomorrow,
           },
-
-          status: "SCHEDULED",
-
+          status: { in: ["SCHEDULED", "COMPLETED"] },
           // Doctor sees only their own patients
           // Admin sees all patients
           ...(session.role === "DOCTOR"
@@ -133,35 +127,29 @@ export async function getDoctorPatients() {
         },
       },
     },
-
     include: {
       appointments: {
         orderBy: {
           appointmentDate: "asc",
         },
       },
-
       procedures: {
         orderBy: {
           procedureDate: "desc",
         },
       },
-
       medicalRecord: {
         include: {
           assignedDoctor: true,
         },
       },
-
       diagnoses: {
         orderBy: {
           createdAt: "desc",
         },
-
         take: 1,
       },
     },
-
     orderBy: {
       firstName: "asc",
     },

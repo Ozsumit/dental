@@ -21,6 +21,7 @@ import {
   ChevronRight,
   X,
   Download,
+  Clock,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
@@ -30,7 +31,7 @@ interface AppointmentsClientProps {
   totalPages: number;
   currentPage: number;
   searchParams: { [key: string]: string | string[] | undefined };
-  doctors: { id: string; username: string }[];
+  doctors: { id: string; username: string; fullName?: string | null }[];
   defaultFee?: number;
 }
 
@@ -48,6 +49,22 @@ export default function AppointmentsClient({
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
+  const [showTodayOnly, setShowTodayOnly] = useState(false);
+  const [todaysAppts, setTodaysAppts] = useState<Appointment[]>([]);
+  const [loadingTodays, setLoadingTodays] = useState(false);
+
+  const refreshTodaysQueue = useCallback(async () => {
+    setLoadingTodays(true);
+    try {
+      const { getTodaysAppointments } = await import("@/app/actions/appointmentActions");
+      const res = await getTodaysAppointments();
+      setTodaysAppts(res as any);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingTodays(false);
+    }
+  }, []);
 
   // New Doctor State to enforce correct selection
   const [selectedDoctorId, setSelectedDoctorId] = useState("");
@@ -147,7 +164,7 @@ export default function AppointmentsClient({
         "Patient Name": `${a.patient?.firstName} ${a.patient?.lastName}`,
         "Patient Phone": a.patient?.phone,
         "Patient Category": a.patient?.role || "Regular",
-        "Assigned Doctor": a.doctor?.username || "Not Assigned",
+        "Assigned Doctor": a.doctor?.fullName || a.doctor?.username || "Not Assigned",
         Insurance: a.patient?.medicalRecord?.insurance || "N/A",
         "Created At": new Date(a.createdAt).toLocaleString(),
       }));
@@ -169,75 +186,95 @@ export default function AppointmentsClient({
   return (
     <div className="space-y-6">
       {/* FILTER PANEL */}
-      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-4">
-        <div className="relative flex-1 min-w-[250px]">
-          <Search className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by Patient Name..."
-            defaultValue={params.get("q") || ""}
-            onChange={(e) => handleTextSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none"
-          />
-        </div>
+      <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap gap-4 items-center">
+        {!showTodayOnly && (
+          <>
+            <div className="relative flex-1 min-w-[250px]">
+              <Search className="absolute left-3 top-3.5 h-5 w-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by Patient Name..."
+                defaultValue={params.get("q") || ""}
+                onChange={(e) => handleTextSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none"
+              />
+            </div>
 
-        <select
-          onChange={(e) => updateQuery("status", e.target.value)}
-          defaultValue={params.get("status") || ""}
-          className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-700"
-        >
-          <option value="">All Statuses</option>
+            <select
+              onChange={(e) => updateQuery("status", e.target.value)}
+              defaultValue={params.get("status") || ""}
+              className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-700"
+            >
+              <option value="">All Statuses</option>
+              <option value="PENDING_PAYMENT">Pending</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="SCHEDULED">Scheduled</option>
+              <option value="CANCELLED">Cancelled</option>
+            </select>
 
-          <option value="PENDING_PAYMENT">Pending</option>
-          <option value="COMPLETED">Completed</option>
-          <option value="SCHEDULED">Scheduled</option>
-          <option value="CANCELLED">Cancelled</option>
-        </select>
+            <select
+              onChange={(e) => updateQuery("treatment", e.target.value)}
+              defaultValue={params.get("treatment") || ""}
+              className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-700"
+            >
+              <option value="">All Treatments</option>
+              <option value="Checkup">Checkup</option>
+              <option value="Cleaning">Cleaning</option>
+              <option value="Filling">Filling</option>
+              <option value="Root Canal">Root Canal</option>
+              <option value="Whitening">Whitening</option>
+            </select>
 
-        <select
-          onChange={(e) => updateQuery("treatment", e.target.value)}
-          defaultValue={params.get("treatment") || ""}
-          className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-700"
-        >
-          <option value="">All Treatments</option>
-          <option value="Checkup">Checkup</option>
-          <option value="Cleaning">Cleaning</option>
-          <option value="Filling">Filling</option>
-          <option value="Root Canal">Root Canal</option>
-          <option value="Whitening">Whitening</option>
-        </select>
+            <input
+              type="date"
+              title="From Date"
+              defaultValue={params.get("dateFrom") || ""}
+              onChange={(e) => updateQuery("dateFrom", e.target.value)}
+              className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-500"
+            />
+            <input
+              type="date"
+              title="To Date"
+              defaultValue={params.get("dateTo") || ""}
+              onChange={(e) => updateQuery("dateTo", e.target.value)}
+              className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-500"
+            />
 
-        <input
-          type="date"
-          title="From Date"
-          defaultValue={params.get("dateFrom") || ""}
-          onChange={(e) => updateQuery("dateFrom", e.target.value)}
-          className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-500"
-        />
-        <input
-          type="date"
-          title="To Date"
-          defaultValue={params.get("dateTo") || ""}
-          onChange={(e) => updateQuery("dateTo", e.target.value)}
-          className="px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none text-slate-500"
-        />
+            {hasFilters && (
+              <button
+                onClick={() => router.push("/appointments")}
+                className="px-5 py-3 bg-red-50 text-red-600 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-red-100 transition"
+              >
+                <X className="w-5 h-5" /> Clear
+              </button>
+            )}
 
-        {hasFilters && (
-          <button
-            onClick={() => router.push("/appointments")}
-            className="px-5 py-3 bg-red-50 text-red-600 rounded-xl font-medium flex items-center justify-center gap-2 hover:bg-red-100 transition"
-          >
-            <X className="w-5 h-5" /> Clear
-          </button>
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className="px-5 py-3 bg-brand-50 text-brand-700 rounded-xl font-medium flex items-center gap-2 hover:bg-brand-100 transition disabled:opacity-50"
+            >
+              <Download className="w-5 h-5" />{" "}
+              {isExporting ? "Exporting..." : "Export Excel"}
+            </button>
+          </>
         )}
 
         <button
-          onClick={handleExport}
-          disabled={isExporting}
-          className="px-5 py-3 bg-brand-50 text-brand-700 rounded-xl font-medium flex items-center gap-2 hover:bg-brand-100 transition disabled:opacity-50"
+          onClick={async () => {
+            if (!showTodayOnly) {
+              await refreshTodaysQueue();
+            }
+            setShowTodayOnly(!showTodayOnly);
+          }}
+          className={`px-5 py-3 rounded-xl font-medium flex items-center gap-2 transition ${
+            showTodayOnly
+              ? "bg-amber-600 hover:bg-amber-700 text-white shadow-lg shadow-amber-100"
+              : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+          }`}
         >
-          <Download className="w-5 h-5" />{" "}
-          {isExporting ? "Exporting..." : "Export Excel"}
+          <Calendar className="w-5 h-5" />
+          {showTodayOnly ? "Show All Appointments" : "Today's Queue / Tokens"}
         </button>
 
         <button
@@ -248,150 +285,269 @@ export default function AppointmentsClient({
         </button>
       </div>
 
-      {/* DATA TABLE */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
-        <table className="min-w-full text-left text-sm text-slate-600">
-          <thead className="bg-slate-50 text-slate-700 uppercase font-bold text-xs border-b border-slate-200">
-            <tr>
-              <th className="px-6 py-5">Date & Time</th>
-              <th className="px-6 py-5">Patient</th>
-              <th className="px-6 py-5">Treatment</th>
-              <th className="px-6 py-5">Status</th>
-              <th className="px-6 py-5 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {appointments.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="py-12 text-center text-slate-500">
-                  No appointments found.
-                </td>
-              </tr>
-            ) : (
-              appointments.map((appt: Appointment) => {
-                const dateStr = new Date(
-                  appt.appointmentDate,
-                ).toLocaleDateString(undefined, {
-                  weekday: "short",
-                  year: "numeric",
-                  month: "short",
-                  day: "numeric",
-                });
-
-                let statusColor =
-                  "bg-slate-100 text-slate-600 border-slate-200";
-                if (appt.status === "COMPLETED")
-                  statusColor = "bg-brand-50 text-brand-700 border-brand-200";
-                if (appt.status === "SCHEDULED")
-                  statusColor = "bg-brand-50 text-brand-800 border-brand-200";
-                if (appt.status === "PENDING_PAYMENT")
-                  statusColor = "bg-amber-50 text-amber-700 border-amber-200";
-                if (appt.status === "CANCELLED")
-                  statusColor = "bg-red-50 text-red-700 border-red-200";
-
-                return (
-                  <tr
-                    key={appt.id}
-                    className="hover:bg-slate-50 transition group"
-                  >
-                    <td className="px-6 py-4 font-bold text-slate-800">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-4 h-4 text-brand-500" />
-                        {dateStr}
-                      </div>
-                      <div className="text-[10px] text-slate-400 font-medium ml-6 uppercase">
-                        Scheduled at{" "}
-                        {new Date(appt.createdAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 font-bold text-slate-900">
-                        <User className="w-4 h-4 text-slate-400" />{" "}
-                        {appt.patient?.firstName} {appt.patient?.lastName}
-                      </div>
-                      <div className="text-xs text-slate-500 ml-6">
-                        {appt.patient?.phone} •{" "}
-                        <span className="text-brand-600 font-bold">
-                          {appt.patient?.role}
-                        </span>
-                        {appt.doctor && (
-                          <>
-                            <span className="mx-1">•</span>
-                            <span className="text-brand-600 font-bold">
-                              Dr. {appt.doctor.username}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-slate-800">
-                        {appt.treatments}
-                      </div>
-                      <div className="text-[10px] text-slate-400 italic">
-                        Previous visits: {appt.patient?.visitCount}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`py-1 px-3 rounded-full text-xs font-bold border ${statusColor}`}
-                      >
-                        {appt.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1">
-                        <button
-                          onClick={() => openEdit(appt)}
-                          className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedAppt(appt);
-                            setIsDeleteOpen(true);
-                          }}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+      {showTodayOnly ? (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+          {loadingTodays ? (
+            <div className="py-20 text-center font-bold text-slate-500 animate-pulse">
+              Loading today's queue...
+            </div>
+          ) : (
+            <>
+              <div className="p-6 border-b border-slate-100 bg-amber-50/30 flex justify-between items-center">
+                <div>
+                  <h3 className="text-base font-extrabold text-amber-800">Today's Appointment Queue</h3>
+                  <p className="text-xs text-amber-600 font-medium">Sorted chronologically with token numbers</p>
+                </div>
+                <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full border border-amber-200">
+                  Total Today: {todaysAppts.length}
+                </span>
+              </div>
+              <table className="min-w-full text-left text-sm text-slate-600">
+                <thead className="bg-slate-50 text-slate-700 uppercase font-bold text-xs border-b border-slate-200">
+                  <tr>
+                    <th className="px-6 py-5 w-24">Token No.</th>
+                    <th className="px-6 py-5">Appt Time</th>
+                    <th className="px-6 py-5">Patient</th>
+                    <th className="px-6 py-5">Treatment</th>
+                    <th className="px-6 py-5">Status</th>
+                    <th className="px-6 py-5 text-right">Actions</th>
                   </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {todaysAppts.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-slate-500 font-medium">
+                        No appointments scheduled for today.
+                      </td>
+                    </tr>
+                  ) : (
+                    todaysAppts.map((appt: Appointment, index) => {
+                      const apptTimeStr = new Date(appt.appointmentDate).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      });
 
-        {/* SERVER PAGINATION */}
-        <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-200">
-          <p className="text-sm text-slate-500 font-medium">
-            Page <span className="text-slate-900">{currentPage}</span> of{" "}
-            <span className="text-slate-900">{totalPages || 1}</span>
-          </p>
-          <div className="flex gap-2">
-            <button
-              disabled={currentPage <= 1}
-              onClick={() => updateQuery("page", String(currentPage - 1))}
-              className="p-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition"
-            >
-              <ChevronLeft className="w-5 h-5 text-slate-600" />
-            </button>
-            <button
-              disabled={currentPage >= totalPages}
-              onClick={() => updateQuery("page", String(currentPage + 1))}
-              className="p-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition"
-            >
-              <ChevronRight className="w-5 h-5 text-slate-600" />
-            </button>
+                      let statusColor = "bg-slate-100 text-slate-600 border-slate-200";
+                      if (appt.status === "COMPLETED")
+                        statusColor = "bg-brand-50 text-brand-700 border-brand-200";
+                      if (appt.status === "SCHEDULED")
+                        statusColor = "bg-brand-50 text-brand-800 border-brand-200";
+                      if (appt.status === "PENDING_PAYMENT")
+                        statusColor = "bg-amber-50 text-amber-700 border-amber-200";
+                      if (appt.status === "CANCELLED")
+                        statusColor = "bg-red-50 text-red-700 border-red-200";
+
+                      return (
+                        <tr key={appt.id} className="hover:bg-slate-50 transition group">
+                          <td className="px-6 py-4 font-black text-slate-800">
+                            <span className="w-8 h-8 rounded-full bg-amber-100 border border-amber-200 text-amber-800 flex items-center justify-center text-xs font-black">
+                              #{index + 1}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 font-bold text-slate-800">
+                            <div className="flex items-center gap-2 text-brand-600">
+                              <Clock className="w-4 h-4 text-brand-500" />
+                              {apptTimeStr}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-2 font-bold text-slate-900">
+                              <User className="w-4 h-4 text-slate-400" />{" "}
+                              {appt.patient?.firstName} {appt.patient?.lastName}
+                            </div>
+                            <div className="text-xs text-slate-500 ml-6">
+                              {appt.patient?.phone}
+                              {appt.doctor && (
+                                <>
+                                  <span className="mx-1">•</span>
+                                  <span className="text-brand-600 font-bold">
+                                    Dr. {appt.doctor.fullName || appt.doctor.username}
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 font-medium text-slate-800">
+                            {appt.treatments}
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`py-1 px-3 rounded-full text-xs font-bold border ${statusColor}`}>
+                              {appt.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-1">
+                              <button
+                                onClick={() => openEdit(appt)}
+                                className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedAppt(appt);
+                                  setIsDeleteOpen(true);
+                                }}
+                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
+          <table className="min-w-full text-left text-sm text-slate-600">
+            <thead className="bg-slate-50 text-slate-700 uppercase font-bold text-xs border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-5">Date & Time</th>
+                <th className="px-6 py-5">Patient</th>
+                <th className="px-6 py-5">Treatment</th>
+                <th className="px-6 py-5">Status</th>
+                <th className="px-6 py-5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {appointments.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-12 text-center text-slate-500">
+                    No appointments found.
+                  </td>
+                </tr>
+              ) : (
+                appointments.map((appt: Appointment) => {
+                  const dateStr = new Date(
+                    appt.appointmentDate,
+                  ).toLocaleDateString(undefined, {
+                    weekday: "short",
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  });
+
+                  let statusColor =
+                    "bg-slate-100 text-slate-600 border-slate-200";
+                  if (appt.status === "COMPLETED")
+                    statusColor = "bg-brand-50 text-brand-700 border-brand-200";
+                  if (appt.status === "SCHEDULED")
+                    statusColor = "bg-brand-50 text-brand-800 border-brand-200";
+                  if (appt.status === "PENDING_PAYMENT")
+                    statusColor = "bg-amber-50 text-amber-700 border-amber-200";
+                  if (appt.status === "CANCELLED")
+                    statusColor = "bg-red-50 text-red-700 border-red-200";
+
+                  return (
+                    <tr
+                      key={appt.id}
+                      className="hover:bg-slate-50 transition group"
+                    >
+                      <td className="px-6 py-4 font-bold text-slate-800">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="w-4 h-4 text-brand-500" />
+                          {dateStr}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-medium ml-6 uppercase">
+                          Scheduled at{" "}
+                          {new Date(appt.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2 font-bold text-slate-900">
+                          <User className="w-4 h-4 text-slate-400" />{" "}
+                          {appt.patient?.firstName} {appt.patient?.lastName}
+                        </div>
+                        <div className="text-xs text-slate-500 ml-6">
+                          {appt.patient?.phone} •{" "}
+                          <span className="text-brand-600 font-bold">
+                            {appt.patient?.role}
+                          </span>
+                          {appt.doctor && (
+                            <>
+                              <span className="mx-1">•</span>
+                              <span className="text-brand-600 font-bold">
+                                Dr. {appt.doctor.fullName || appt.doctor.username}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="font-medium text-slate-800">
+                          {appt.treatments}
+                        </div>
+                        <div className="text-[10px] text-slate-400 italic">
+                          Previous visits: {appt.patient?.visitCount}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`py-1 px-3 rounded-full text-xs font-bold border ${statusColor}`}
+                        >
+                          {appt.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-1">
+                          <button
+                            onClick={() => openEdit(appt)}
+                            className="p-2 text-slate-400 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedAppt(appt);
+                              setIsDeleteOpen(true);
+                            }}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+
+          {/* SERVER PAGINATION */}
+          <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-200">
+            <p className="text-sm text-slate-500 font-medium">
+              Page <span className="text-slate-900">{currentPage}</span> of{" "}
+              <span className="text-slate-900">{totalPages || 1}</span>
+            </p>
+            <div className="flex gap-2">
+              <button
+                disabled={currentPage <= 1}
+                onClick={() => updateQuery("page", String(currentPage - 1))}
+                className="p-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition"
+              >
+                <ChevronLeft className="w-5 h-5 text-slate-600" />
+              </button>
+              <button
+                disabled={currentPage >= totalPages}
+                onClick={() => updateQuery("page", String(currentPage + 1))}
+                className="p-2 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition"
+              >
+                <ChevronRight className="w-5 h-5 text-slate-600" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* FORM MODAL */}
       {isFormOpen && (
@@ -428,8 +584,10 @@ export default function AppointmentsClient({
 
                   try {
                     const newPatient = await savePatient(pForm);
-                    if (newPatient && newPatient.id) {
+                    if (newPatient && "id" in newPatient) {
                       formData.append("patientId", newPatient.id);
+                    } else if (newPatient && "error" in newPatient) {
+                      return alert(newPatient.error);
                     } else {
                       return alert("Error creating patient.");
                     }
@@ -442,6 +600,9 @@ export default function AppointmentsClient({
 
                 try {
                   await saveAppointment(formData, selectedAppt?.id);
+                  if (showTodayOnly) {
+                    await refreshTodaysQueue();
+                  }
                   setIsFormOpen(false);
                 } catch (e: any) {
                   alert(e.message);
@@ -666,7 +827,7 @@ export default function AppointmentsClient({
                     <option value="">Select Doctor...</option>
                     {initialDoctors.map((d) => (
                       <option key={d.id} value={d.id}>
-                        {d.username}
+                        {d.fullName || d.username}
                       </option>
                     ))}
                   </select>
@@ -731,6 +892,9 @@ export default function AppointmentsClient({
         onConfirm={async () => {
           if (selectedAppt) {
             await deleteAppointment(selectedAppt.id);
+            if (showTodayOnly) {
+              await refreshTodaysQueue();
+            }
           }
         }}
         title="Delete Appointment?"

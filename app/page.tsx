@@ -1,4 +1,4 @@
-import { getPatients } from "./actions/patientsActions";
+import { getPatients, getPatientAnalytics } from "./actions/patientsActions";
 import DashboardClient from "./dashboardClient";
 import { Users } from "lucide-react";
 import { getDoctors } from "./actions/userActions";
@@ -10,12 +10,17 @@ export default async function Page({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const resolvedParams = await searchParams;
-  const [{ data, totalPages, currentPage, totalCount }, doctors, settings] =
-    await Promise.all([
-      getPatients(resolvedParams),
-      getDoctors(),
-      getSystemSettings(),
-    ]);
+  const [
+    { data, totalPages, currentPage, totalCount },
+    doctors,
+    settings,
+    analytics,
+  ] = await Promise.all([
+    getPatients(resolvedParams),
+    getDoctors(),
+    getSystemSettings(),
+    getPatientAnalytics(),
+  ]);
 
   return (
     <div className="p-6 max-w-[1600px] mx-auto space-y-6">
@@ -39,6 +44,7 @@ export default async function Page({
         searchParams={resolvedParams}
         initialDoctors={doctors}
         defaultFee={settings.appointmentFee}
+        analytics={analytics}
       />
     </div>
   );

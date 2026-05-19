@@ -12,147 +12,238 @@ async function main() {
   await prisma.medicalRecord.deleteMany();
   await prisma.patient.deleteMany();
   await prisma.user.deleteMany();
+  await prisma.billingCatalog.deleteMany();
+  await prisma.systemSettings.deleteMany();
+  await prisma.tenant.deleteMany();
 
-  console.log("👤 Creating initial users...");
-  const adminPassword = await bcrypt.hash("adminpassword", 10);
-  const doctorPassword = await bcrypt.hash("doctorpassword", 10);
-  const receptionistPassword = await bcrypt.hash("receptionistpassword", 10);
-
-  const admin = await prisma.user.create({
+  console.log("🏢 Creating Tenants...");
+  const tenantMaster = await prisma.tenant.create({
     data: {
-      username: "admin",
-      password: adminPassword,
-      role: "ADMIN",
+      id: "master",
+      name: "DentalCRM System Master",
     },
   });
 
-  const doctor = await prisma.user.create({
+  const tenant1 = await prisma.tenant.create({
     data: {
-      username: "doctor",
-      password: doctorPassword,
-      role: "DOCTOR",
+      id: "nepal-general",
+      name: "Nepal General Hospital",
     },
   });
 
-  const receptionist = await prisma.user.create({
+  const tenant2 = await prisma.tenant.create({
     data: {
-      username: "receptionist",
-      password: receptionistPassword,
-      role: "RECEPTIONIST",
+      id: "apex-dental",
+      name: "Apex Dental Care",
     },
   });
 
-  const TOTAL_RECORDS = 50;
+  const defaultPasswordHash = await bcrypt.hash("password123", 10);
+
+  // Define tenants configuration
+  const tenantsConfig = [
+    {
+      tenant: tenantMaster,
+      users: [
+        { username: "superadmin", role: "SUPERADMIN" as const },
+      ],
+      patientCount: 0,
+      fee: 0,
+      catalog: [],
+    },
+    {
+      tenant: tenant1,
+      users: [
+        { username: "admin", role: "ADMIN" as const },
+        { username: "doctor", role: "DOCTOR" as const },
+        { username: "receptionist", role: "RECEPTIONIST" as const },
+      ],
+      patientCount: 30,
+      fee: 250,
+      catalog: [
+        { name: "Consultation", category: "General", baseCost: 250 },
+        { name: "Follow-up Consultation", category: "General", baseCost: 100 },
+        { name: "X-Ray Chest", category: "Radiology", baseCost: 500 },
+        { name: "Full Blood Count", category: "Laboratory", baseCost: 350 },
+        { name: "MRI Scan", category: "Radiology", baseCost: 4500 },
+        { name: "Physical Therapy Session", category: "Therapy", baseCost: 600 },
+      ],
+    },
+    {
+      tenant: tenant2,
+      users: [
+        { username: "apexadmin", role: "ADMIN" as const },
+        { username: "apexdoctor", role: "DOCTOR" as const },
+        { username: "apexreceptionist", role: "RECEPTIONIST" as const },
+      ],
+      patientCount: 20,
+      fee: 300,
+      catalog: [
+        { name: "Dental Consultation", category: "General", baseCost: 300 },
+        { name: "Dental Follow-up", category: "General", baseCost: 150 },
+        { name: "Dental Cleaning", category: "Dental", baseCost: 800 },
+        { name: "Root Canal Treatment", category: "Dental", baseCost: 5500 },
+        { name: "Tooth Extraction", category: "Dental", baseCost: 1200 },
+        { name: "Dental X-Ray", category: "Radiology", baseCost: 400 },
+      ],
+    },
+  ];
+
   const TREATMENT_OPTIONS = [
+    "Consultation",
+    "Follow-up",
     "Cleaning",
-    "Checkup",
-    "Filling",
-    "Root Canal",
-    "Whitening",
     "Extraction",
     "X-Ray",
-    "Braces",
+    "Therapy",
+    "Checkup",
   ];
 
-  console.log(`🚀 Seeding ${TOTAL_RECORDS} patients...`);
+  for (const config of tenantsConfig) {
+    const t = config.tenant;
+    console.log(`\n👤 Creating users for ${t.name}...`);
+    
+    const seededUsers: any[] = [];
+    for (const u of config.users) {
+      const isDrPriya = u.username === "doctor";
+      const doctorData = u.role === "DOCTOR" ? {
+        fullName: isDrPriya ? "Dr. Priya Thapa" : "Dr. Apex Doctor",
+        specialization: isDrPriya ? "Physiotherapy" : "Dentistry",
+        nmcRegNo: isDrPriya ? "12847" : "54321",
+        phone: isDrPriya ? "+977 9801234567" : "+977 9801112222",
+        email: isDrPriya ? "priya.thapa@aashas.com" : "apex.doctor@apexdental.com",
+        dateOfBirth: isDrPriya ? new Date("1988-06-15") : new Date("1985-04-10"),
+        notifyAppointment: false,
+        notifyWaiting: true,
+        notifyLabResults: false,
+        notifyDraftReminder: true,
+        notifyDailySummary: false,
+        requireOtp: false,
+      } : {};
 
-  for (let i = 0; i < TOTAL_RECORDS; i++) {
-    const gender = faker.helpers.arrayElement(["Male", "Female", "Other"] as const);
-    const firstName = faker.person.firstName(gender === "Other" ? undefined : (gender.toLowerCase() as "male" | "female"));
-    const lastName = faker.person.lastName();
+      const user = await prisma.user.create({
+        data: {
+          username: u.username,
+          password: defaultPasswordHash,
+          role: u.role,
+          tenantId: t.id,
+          ...doctorData,
+        },
+      });
+      seededUsers.push(user);
+    }
 
-    const patient = await prisma.patient.create({
+    const doctorUser = seededUsers.find(u => u.role === "DOCTOR");
+
+    console.log(`⚙️ Creating system settings for ${t.name}...`);
+    await prisma.systemSettings.create({
       data: {
-        firstName,
-        lastName,
-        phone: faker.phone.number({ style: "national" }),
-        email: faker.internet.email(),
-        dateOfBirth: faker.date.birthdate({ min: 10, max: 80, mode: "age" }),
-        gender,
-        status: "ACTIVE",
-        address: faker.location.streetAddress(),
-        bloodGroup: faker.helpers.arrayElement(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]),
-        allergies: faker.helpers.arrayElement(["Peanuts", "Penicillin", "None", "Dust", "Latex"]),
-        role: faker.helpers.arrayElement(["VIP", "Regular", "New"]),
-        visitCount: faker.number.int({ min: 1, max: 6 }),
-        isOld: true, // Seeding mostly old patients for history
-        lastVisitDate: faker.date.recent({ days: 30 }),
+        appointmentFee: config.fee,
+        tenantId: t.id,
       },
     });
 
-    // Create Medical Record
-    await prisma.medicalRecord.create({
-      data: {
-        patientId: patient.id,
-        assignedDoctorId: doctor.id,
-        complaints: faker.lorem.sentence(),
-        insurance: "HealthCare Plus",
-        insuranceNo: faker.string.alphanumeric(10),
-        emergencyContactName: faker.person.fullName(),
-        emergencyContactNo: faker.phone.number({ style: "national" }),
-        status: "STABLE",
-        title: "Routine Patient",
-      },
-    });
+    console.log(`💳 Creating billing catalog for ${t.name}...`);
+    for (const item of config.catalog) {
+      await prisma.billingCatalog.create({
+        data: {
+          ...item,
+          tenantId: t.id,
+        },
+      });
+    }
 
-    // Create Diagnosis
-    await prisma.diagnosis.create({
-      data: {
-        patientId: patient.id,
-        currentComplaint: "Slight toothache",
-        pastHistory: "No major surgeries",
-        medicalHistory: JSON.stringify(["Hypertension", "Asthma"].slice(0, faker.number.int({min:0, max:2}))),
-      },
-    });
+    if (doctorUser && config.patientCount > 0) {
+      console.log(`🚀 Seeding ${config.patientCount} patients for ${t.name}...`);
+      for (let i = 0; i < config.patientCount; i++) {
+        const gender = faker.helpers.arrayElement(["Male", "Female", "Other"] as const);
+        const firstName = faker.person.firstName(gender === "Other" ? undefined : (gender.toLowerCase() as "male" | "female"));
+        const lastName = faker.person.lastName();
+        
+        const phone = faker.phone.number({ style: "national" });
+        const email = faker.internet.email();
 
-    // Create some appointments
-    const appointmentDate = i < 5 ? new Date() : faker.date.future(); // First 5 patients have appointments today
-    await prisma.appointment.create({
-      data: {
-        patientId: patient.id,
-        appointmentDate,
-        status: i < 5 ? "SCHEDULED" : "COMPLETED",
-        treatments: faker.helpers.arrayElement(TREATMENT_OPTIONS),
-      },
-    });
+        const patient = await prisma.patient.create({
+          data: {
+            firstName,
+            lastName,
+            phone,
+            email,
+            dateOfBirth: faker.date.birthdate({ min: 10, max: 80, mode: "age" }),
+            gender,
+            status: "ACTIVE",
+            address: faker.location.streetAddress(),
+            bloodGroup: faker.helpers.arrayElement(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]),
+            allergies: faker.helpers.arrayElement(["Peanuts", "Penicillin", "None", "Dust", "Latex"]),
+            role: faker.helpers.arrayElement(["VIP", "Regular", "New"]),
+            visitCount: faker.number.int({ min: 1, max: 6 }),
+            isOld: true,
+            lastVisitDate: faker.date.recent({ days: 30 }),
+            tenantId: t.id,
+          },
+        });
 
-    // Create some procedures
-    await prisma.procedure.create({
-      data: {
-        patientId: patient.id,
-        name: faker.helpers.arrayElement(TREATMENT_OPTIONS),
-        cost: parseFloat(faker.commerce.price({ min: 50, max: 500 })),
-        procedureDate: faker.date.past(),
-        medicine: JSON.stringify(["Amoxicillin", "Paracetamol"]),
-        suggestions: JSON.stringify(["Avoid cold drinks", "Brush twice daily"]),
-        status: "PAID"
-      },
-    });
+        // Create Medical Record
+        await prisma.medicalRecord.create({
+          data: {
+            patientId: patient.id,
+            assignedDoctorId: doctorUser.id,
+            complaints: faker.lorem.sentence(),
+            insurance: "HealthCare Plus",
+            insuranceNo: faker.string.alphanumeric(10),
+            emergencyContactName: faker.person.fullName(),
+            emergencyContactNo: faker.phone.number({ style: "national" }),
+            status: "STABLE",
+            title: "Routine Patient",
+          },
+        });
+
+        // Create Diagnosis
+        await prisma.diagnosis.create({
+          data: {
+            patientId: patient.id,
+            currentComplaint: "Mild pain and irritation",
+            pastHistory: "No prior operations",
+            medicalHistory: JSON.stringify(["Hypertension", "Asthma"].slice(0, faker.number.int({ min: 0, max: 2 }))),
+          },
+        });
+
+        // Create appointments
+        const isToday = i < 5;
+        const appointmentDate = isToday ? new Date() : faker.date.future();
+        const appt = await prisma.appointment.create({
+          data: {
+            patientId: patient.id,
+            appointmentDate,
+            status: isToday ? "SCHEDULED" : "COMPLETED",
+            treatments: faker.helpers.arrayElement(TREATMENT_OPTIONS),
+            doctorId: doctorUser.id,
+            tenantId: t.id,
+          },
+        });
+
+        // Create procedures
+        await prisma.procedure.create({
+          data: {
+            patientId: patient.id,
+            appointmentId: appt.id,
+            name: faker.helpers.arrayElement(TREATMENT_OPTIONS),
+            cost: parseFloat(faker.commerce.price({ min: 100, max: 800 })),
+            procedureDate: faker.date.past(),
+            medicine: JSON.stringify(["Amoxicillin", "Paracetamol"]),
+            suggestions: JSON.stringify(["Rest well", "Brush twice daily"]),
+            status: "PAID",
+            tenantId: t.id,
+          },
+        });
+      }
+    }
   }
 
-  console.log("💳 Seeding billing catalog...");
-  const catalog = [
-    { name: "Consultation", category: "General", baseCost: 100 },
-    { name: "Follow-up Consultation", category: "General", baseCost: 50 },
-    { name: "X-Ray Chest", category: "Radiology", baseCost: 150 },
-    { name: "Dental Cleaning", category: "Dental", baseCost: 80 },
-    { name: "Root Canal Treatment", category: "Dental", baseCost: 450 },
-    { name: "Full Blood Count", category: "Laboratory", baseCost: 60 },
-    { name: "MRI Scan", category: "Radiology", baseCost: 1200 },
-    { name: "Physical Therapy Session", category: "Therapy", baseCost: 90 },
-  ];
-
-  for (const item of catalog) {
-    await prisma.billingCatalog.upsert({
-      where: { name: item.name },
-      update: {},
-      create: item,
-    });
-  }
-
-  console.log("🎉 Seeding complete!");
+  console.log("\n🎉 Seeding complete! Credentials for all tenants are configured with password 'password123'");
 }
 
 main()
   .catch(console.error)
   .finally(() => prisma.$disconnect());
+

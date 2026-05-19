@@ -27,6 +27,22 @@ export async function getSession() {
   return await decrypt(session);
 }
 
+export async function getTenantIdOrThrow(): Promise<string> {
+  const session = await getSession();
+  if (!session || !session.tenantId) {
+    throw new Error("Unauthorized: No tenant context found.");
+  }
+  return session.tenantId;
+}
+
+export async function getTenantNameOrThrow(): Promise<string> {
+  const session = await getSession();
+  if (!session || !session.tenantName) {
+    throw new Error("Unauthorized: No tenant name found.");
+  }
+  return session.tenantName;
+}
+
 export async function logout() {
   (await cookies()).set("session", "", { expires: new Date(0) });
 }

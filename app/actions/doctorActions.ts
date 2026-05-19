@@ -2,10 +2,17 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/lib/auth/session";
+import { getSession, getTenantIdOrThrow } from "@/lib/auth/session";
 
 export async function updateDiagnosis(patientId: string, formData: FormData) {
   const session = await getSession();
+  const tenantId = await getTenantIdOrThrow();
+
+  // Verify patient ownership
+  const patient = await prisma.patient.findFirst({
+    where: { id: patientId, tenantId },
+  });
+  if (!patient) throw new Error("Patient not found in this tenant context");
 
   // Parse Medical History
   const medicalHistoryRaw = formData.get("medicalHistory")?.toString();
@@ -63,21 +70,46 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
 
     // 2. Finalization Logic
     if (finalize) {
-      // Mark current appointment as COMPLETED
-      await prisma.appointment.updateMany({
+      // Find appointments that are about to be completed
+      const pendingAppointments = await prisma.appointment.findMany({
         where: {
           patientId,
+          tenantId,
           appointmentDate: { gte: today, lt: tomorrow },
           status: { not: "COMPLETED" },
         },
-
-        data: { status: "COMPLETED" },
       });
 
-      // 3. HANDLE FOLLOW-UP BILLING "AS USUAL"
+      if (pendingAppointments.length > 0) {
+        await prisma.appointment.updateMany({
+          where: {
+            id: { in: pendingAppointments.map((a) => a.id) },
+          },
+          data: { status: "COMPLETED" },
+        });
+
+        // Get current patient to calculate new visit count and isOld status
+        const patient = await prisma.patient.findUnique({
+          where: { id: patientId },
+          select: { visitCount: true },
+        });
+        const currentCount = patient?.visitCount || 0;
+        const newCount = currentCount + 1;
+
+        await prisma.patient.update({
+          where: { id: patientId },
+          data: {
+            visitCount: newCount,
+            lastVisitDate: new Date(),
+            isOld: newCount > 1,
+          },
+        });
+      }
+
+      // 3. HANDLE FOLLOW-UP BILLING
       if (nextVisitDate) {
         const settings = await prisma.systemSettings.findUnique({
-          where: { id: "default" },
+          where: { tenantId },
         });
         const usualFee = settings?.appointmentFee || 0;
         const assignedDrId = referredDoctorId || session?.id;
@@ -90,6 +122,7 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
             appointmentDate: nextVisitDate,
             status: "PENDING_PAYMENT",
             treatments: "Follow-up Consultation",
+            tenantId,
           },
         });
 
@@ -104,6 +137,7 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
             status: "PENDING",
             procedureDate: nextVisitDate,
             description: `Auto-generated bill for follow-up scheduled on ${nextVisitDate.toLocaleDateString()}`,
+            tenantId,
           },
         });
       }

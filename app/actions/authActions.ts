@@ -12,6 +12,7 @@ export async function login(formData: FormData) {
 
   const user = await prisma.user.findUnique({
     where: { username },
+    include: { tenant: true },
   });
 
   if (!user || !(await bcrypt.compare(password, user.password))) {
@@ -22,12 +23,16 @@ export async function login(formData: FormData) {
   const session = await encrypt({
     id: user.id,
     username: user.username,
+    fullName: user.fullName,
     role: user.role,
     expires,
+    tenantId: user.tenantId,
+    tenantName: user.tenant.name,
   });
 
   (await cookies()).set("session", session, { expires, httpOnly: true });
 
+  if (user.role === "SUPERADMIN") redirect("/superadmin");
   if (user.role === "ADMIN") redirect("/admin");
   if (user.role === "DOCTOR") redirect("/doctor");
   redirect("/");

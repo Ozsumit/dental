@@ -3,26 +3,28 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { getTenantIdOrThrow } from "@/lib/auth/session";
 
 export async function getPatients(searchParams: {
   [key: string]: string | string[] | undefined;
 }) {
+  const tenantId = await getTenantIdOrThrow();
   const page = Number(searchParams?.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.PatientWhereInput = {};
+  const where: Prisma.PatientWhereInput = { tenantId };
 
   // 1. BULLETPROOF SEARCH
   if (searchParams?.q) {
-    const q = (searchParams.q as string).trim().toLowerCase();
+    const q = (searchParams.q as string).trim();
     const terms = q.split(/\s+/);
     where.AND = terms.map((term: string) => ({
       OR: [
-        { firstName: { contains: term } },
-        { lastName: { contains: term } },
-        { email: { contains: term } },
-        { phone: { contains: term } },
+        { firstName: { contains: term, mode: "insensitive" } },
+        { lastName: { contains: term, mode: "insensitive" } },
+        { email: { contains: term, mode: "insensitive" } },
+        { phone: { contains: term, mode: "insensitive" } },
       ],
     }));
   }
@@ -78,7 +80,7 @@ export async function getPatients(searchParams: {
     orderBy = [{ firstName: "desc" }, { lastName: "desc" }];
   if (searchParams?.sort === "mostVisits") orderBy = { visitCount: "desc" };
 
-  // 6. FETCH DATA (Added 'include' to fetch history for the Profile View)
+  // 6. FETCH DATA (Optimized: Removed heavy includes for page load times)
   const [totalCount, patients] = await Promise.all([
     prisma.patient.count({ where }),
     prisma.patient.findMany({
@@ -86,35 +88,47 @@ export async function getPatients(searchParams: {
       skip,
       take: limit,
       orderBy,
-      include: {
-        appointments: {
-          orderBy: { appointmentDate: "desc" }, // Orders history from newest to oldest
-        },
-        procedures: {
-          orderBy: { procedureDate: "desc" },
-        },
-        medicalRecord: {
-          include: { assignedDoctor: true },
-        },
-        diagnoses: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-      },
     }),
   ]);
 
   return {
-    data: patients,
+    data: patients as any[],
     totalPages: Math.ceil(totalCount / limit),
     currentPage: page,
     totalCount,
   };
 }
 
-// CRUD OPERATIONS
+// FETCH INDIVIDUAL PATIENT DETAILS ON-DEMAND
+export async function getPatientDetails(id: string) {
+  const tenantId = await getTenantIdOrThrow();
+  return await prisma.patient.findFirst({
+    where: { id, tenantId },
+    include: {
+      primaryAccount: true,
+      familyMembers: {
+        orderBy: { firstName: "asc" },
+      },
+      appointments: {
+        orderBy: { appointmentDate: "desc" },
+      },
+      procedures: {
+        orderBy: { procedureDate: "desc" },
+      },
+      medicalRecord: {
+        include: { assignedDoctor: true },
+      },
+      diagnoses: {
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+}
+
 // CRUD OPERATIONS
 export async function savePatient(formData: FormData, id?: string) {
+  const tenantId = await getTenantIdOrThrow();
+
   const visitCountStr = formData.get("visitCount") as string;
   const visitCount = visitCountStr ? Number(visitCountStr) : 0;
 
@@ -122,7 +136,6 @@ export async function savePatient(formData: FormData, id?: string) {
   const lastName = formData.get("lastName")?.toString().trim();
   const phone = formData.get("phone")?.toString().trim();
 
-  // Return formatted JSON errors for the frontend UI to display gracefully
   if (!firstName || !lastName || !phone) {
     return { error: "First Name, Last Name, and Phone are required." };
   }
@@ -156,7 +169,7 @@ export async function savePatient(formData: FormData, id?: string) {
   try {
     if (id) {
       await prisma.patient.update({
-        where: { id },
+        where: { id, tenantId },
         data: {
           ...patientData,
           medicalRecord: {
@@ -168,28 +181,26 @@ export async function savePatient(formData: FormData, id?: string) {
         },
       });
     } else {
-      // Check for duplicate patient by phone number BEFORE attempting DB write
+      // Check for duplicate patient by phone number BEFORE attempting DB write within the same tenant
       const existingPatient = await prisma.patient.findFirst({
-        where: { phone: patientData.phone },
+        where: { phone: patientData.phone, tenantId },
       });
 
       if (existingPatient) {
-        return { error: "A patient with this phone number already exists." };
+        return { error: "A patient with this phone number already exists in this hospital." };
       }
 
       // Create Patient
       const patient = await prisma.patient.create({
         data: {
           ...patientData,
+          tenantId,
           medicalRecord: {
             create: medicalRecordData,
           },
         },
       });
 
-      // =======================================================
-      // NEW DYNAMIC APPOINTMENT TOGGLE LOGIC
-      // =======================================================
       const createAppointment = formData.get("createAppointment") === "true";
 
       if (createAppointment) {
@@ -224,6 +235,7 @@ export async function savePatient(formData: FormData, id?: string) {
             treatments,
             billAmount,
             isPaid,
+            tenantId,
           },
         });
 
@@ -238,24 +250,25 @@ export async function savePatient(formData: FormData, id?: string) {
               cost: billAmount,
               procedureDate: appointmentDate,
               status: isPaid ? "PAID" : "PENDING",
+              tenantId,
             },
           });
         }
 
-        // Update Patient's assigned doctor based on first appointment & increment visits
+        // Update Patient's assigned doctor based on first appointment
         await prisma.medicalRecord.update({
           where: { patientId: patient.id },
           data: { assignedDoctorId: doctorId },
         });
 
         await prisma.patient.update({
-          where: { id: patient.id },
+          where: { id: patient.id, tenantId },
           data: { visitCount: 1, lastVisitDate: appointmentDate },
         });
       }
 
       revalidatePath("/");
-      return patient; // Exited without an error property, frontend knows it's a success
+      return patient;
     }
     revalidatePath("/");
   } catch (error: any) {
@@ -267,7 +280,8 @@ export async function savePatient(formData: FormData, id?: string) {
 }
 
 export async function deletePatient(id: string) {
-  await prisma.patient.delete({ where: { id } });
+  const tenantId = await getTenantIdOrThrow();
+  await prisma.patient.delete({ where: { id, tenantId } });
   revalidatePath("/");
 }
 
@@ -275,6 +289,13 @@ export async function transferPatientDoctor(
   patientId: string,
   doctorId: string,
 ) {
+  const tenantId = await getTenantIdOrThrow();
+  // Ensure patient belongs to tenant
+  const patient = await prisma.patient.findFirst({
+    where: { id: patientId, tenantId },
+  });
+  if (!patient) throw new Error("Patient not found");
+
   await prisma.medicalRecord.update({
     where: { patientId },
     data: { assignedDoctorId: doctorId },
@@ -284,6 +305,7 @@ export async function transferPatientDoctor(
 }
 
 export async function createAppointmentAction(formData: FormData) {
+  const tenantId = await getTenantIdOrThrow();
   const patientId = formData.get("patientId") as string;
   const doctorId = formData.get("doctorId") as string;
   if (!doctorId) throw new Error("Doctor assignment is compulsory.");
@@ -308,11 +330,12 @@ export async function createAppointmentAction(formData: FormData) {
         treatments,
         billAmount,
         isPaid,
+        tenantId,
       },
     });
 
     await tx.patient.update({
-      where: { id: patientId },
+      where: { id: patientId, tenantId },
       data: {
         visitCount: { increment: 1 },
         lastVisitDate: appointmentDate,
@@ -332,6 +355,7 @@ export async function createAppointmentAction(formData: FormData) {
         cost: billAmount,
         procedureDate: appointmentDate,
         status: isPaid ? "PAID" : "PENDING",
+        tenantId,
       },
     });
   }
@@ -344,16 +368,18 @@ export async function createAppointmentAction(formData: FormData) {
 export async function getPatientsForExport(searchParams: {
   [key: string]: string | string[] | undefined;
 }) {
-  const where: Prisma.PatientWhereInput = {};
+  const tenantId = await getTenantIdOrThrow();
+  const where: Prisma.PatientWhereInput = { tenantId };
+
   if (searchParams?.q) {
-    const q = (searchParams.q as string).trim().toLowerCase();
+    const q = (searchParams.q as string).trim();
     const terms = q.split(/\s+/);
     where.AND = terms.map((term: string) => ({
       OR: [
-        { firstName: { contains: term } },
-        { lastName: { contains: term } },
-        { email: { contains: term } },
-        { phone: { contains: term } },
+        { firstName: { contains: term, mode: "insensitive" } },
+        { lastName: { contains: term, mode: "insensitive" } },
+        { email: { contains: term, mode: "insensitive" } },
+        { phone: { contains: term, mode: "insensitive" } },
       ],
     }));
   }
@@ -379,3 +405,168 @@ export async function getPatientsForExport(searchParams: {
     orderBy: { createdAt: "desc" },
   });
 }
+
+export async function linkFamilyMember(primaryId: string, dependentId: string, relation: string) {
+  const tenantId = await getTenantIdOrThrow();
+
+  const [primary, dependent] = await Promise.all([
+    prisma.patient.findFirst({ where: { id: primaryId, tenantId } }),
+    prisma.patient.findFirst({ where: { id: dependentId, tenantId } }),
+  ]);
+
+  if (!primary || !dependent) {
+    throw new Error("Patient not found.");
+  }
+
+  if (primary.id === dependent.id) {
+    throw new Error("Cannot link a patient to themselves.");
+  }
+
+  await prisma.patient.update({
+    where: { id: dependentId, tenantId },
+    data: {
+      primaryAccountId: primaryId,
+      familyRelation: relation,
+    },
+  });
+
+  revalidatePath("/appointments");
+  revalidatePath("/");
+}
+
+export async function unlinkFamilyMember(dependentId: string) {
+  const tenantId = await getTenantIdOrThrow();
+
+  await prisma.patient.update({
+    where: { id: dependentId, tenantId },
+    data: {
+      primaryAccountId: null,
+      familyRelation: null,
+    },
+  });
+
+  revalidatePath("/appointments");
+  revalidatePath("/");
+}
+
+export async function searchPatientsToLink(query: string, excludePatientId: string) {
+  const tenantId = await getTenantIdOrThrow();
+  if (!query || !query.trim()) return [];
+
+  const terms = query.trim().split(/\s+/);
+  
+  return await prisma.patient.findMany({
+    where: {
+      tenantId,
+      id: { not: excludePatientId },
+      AND: terms.map((term: string) => ({
+        OR: [
+          { firstName: { contains: term, mode: "insensitive" } },
+          { lastName: { contains: term, mode: "insensitive" } },
+          { phone: { contains: term, mode: "insensitive" } },
+        ],
+      })),
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      dateOfBirth: true,
+    },
+    take: 5,
+  });
+}
+
+export async function getPatientAnalytics() {
+  const tenantId = await getTenantIdOrThrow();
+
+  const today = new Date();
+  const eighteenYearsAgo = new Date(
+    today.getFullYear() - 18,
+    today.getMonth(),
+    today.getDate()
+  );
+  const sixtyYearsAgo = new Date(
+    today.getFullYear() - 60,
+    today.getMonth(),
+    today.getDate()
+  );
+
+  const [
+    totalCount,
+    activeCount,
+    genderGroups,
+    categoryGroups,
+    visitStats,
+    childrenCount,
+    seniorsCount,
+  ] = await Promise.all([
+    prisma.patient.count({ where: { tenantId } }),
+    prisma.patient.count({ where: { tenantId, status: "ACTIVE" } }),
+    prisma.patient.groupBy({
+      by: ["gender"],
+      where: { tenantId },
+      _count: { _all: true },
+    }),
+    prisma.patient.groupBy({
+      by: ["role"],
+      where: { tenantId },
+      _count: { _all: true },
+    }),
+    prisma.patient.aggregate({
+      where: { tenantId },
+      _avg: { visitCount: true },
+      _sum: { visitCount: true },
+    }),
+    prisma.patient.count({
+      where: {
+        tenantId,
+        dateOfBirth: { gt: eighteenYearsAgo },
+      },
+    }),
+    prisma.patient.count({
+      where: {
+        tenantId,
+        dateOfBirth: { lt: sixtyYearsAgo },
+      },
+    }),
+  ]);
+
+  const adultsCount = Math.max(0, totalCount - childrenCount - seniorsCount);
+
+  // Calculate patients registered in last 30 days
+  const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const newPatientsLast30Days = await prisma.patient.count({
+    where: {
+      tenantId,
+      createdAt: { gte: thirtyDaysAgo },
+    },
+  });
+
+  return {
+    totalPatients: totalCount,
+    activePatients: activeCount,
+    inactivePatients: Math.max(0, totalCount - activeCount),
+    newPatientsLast30Days,
+    genderDistribution: genderGroups.map((g) => ({
+      gender: g.gender || "Unspecified",
+      count: g._count._all,
+    })),
+    categoryDistribution: categoryGroups.map((c) => ({
+      category: c.role || "Regular",
+      count: c._count._all,
+    })),
+    ageGroups: {
+      children: childrenCount,
+      adults: adultsCount,
+      seniors: seniorsCount,
+    },
+    visitStats: {
+      avgVisits: visitStats._avg.visitCount || 0,
+      totalVisits: visitStats._sum.visitCount || 0,
+    },
+  };
+}
+
+

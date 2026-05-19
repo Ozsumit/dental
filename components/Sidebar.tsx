@@ -10,6 +10,9 @@ import {
   Stethoscope,
   LogOut,
   Receipt,
+  LayoutDashboard,
+  Settings,
+  Globe,
 } from "lucide-react";
 import { handleLogout } from "@/app/actions/authActions";
 import { UserSession } from "@/lib/types";
@@ -36,6 +39,12 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
     name?.trim()?.charAt(0)?.toUpperCase() || "?";
   const allItems = [
     {
+      name: "Tenants Overview",
+      href: "/superadmin",
+      icon: Globe,
+      roles: ["SUPERADMIN"],
+    },
+    {
       name: "Patients",
       href: "/",
       icon: Users,
@@ -60,10 +69,28 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
       roles: ["RECEPTIONIST", "ADMIN"],
     },
     {
-      name: "Doctor View",
+      name: "Dashboard",
       href: "/doctor",
+      icon: LayoutDashboard,
+      roles: ["DOCTOR"],
+    },
+    {
+      name: "Clinical Workspace",
+      href: "/doctor/clinical-workspace",
       icon: Stethoscope,
       roles: ["DOCTOR", "ADMIN"],
+    },
+    {
+      name: "Settings",
+      href: "/doctor/settings",
+      icon: Settings,
+      roles: ["DOCTOR"],
+    },
+    {
+      name: "Settings",
+      href: "/settings",
+      icon: Settings,
+      roles: ["RECEPTIONIST", "ADMIN"],
     },
     { name: "Admin Panel", href: "/admin", icon: Shield, roles: ["ADMIN"] },
   ];
@@ -74,11 +101,18 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
 
   return (
     <div className="w-64 bg-brand-900 border-r border-slate-200 h-screen flex flex-col shadow-sm">
-      <div className="p-6 border-b border-slate-100 flex items-center gap-3">
-        <div className="bg-slate-500 p-2 rounded-lg text-white">
+      <div className="p-6 border-b border-brand-800 flex items-center gap-3">
+        <div className="bg-brand-700 p-2.5 rounded-xl text-white shadow-md shadow-brand-950">
           <Activity className="w-6 h-6" />
         </div>
-        <span className="text-xl font-bold text-slate-100">DentalCRM</span>
+        <div className="min-w-0">
+          <span className="text-sm font-black text-white block truncate uppercase tracking-wider">
+            {session?.tenantName || "DentalCRM"}
+          </span>
+          <span className="text-[10px] font-bold text-brand-300 block uppercase tracking-widest mt-0.5">
+            SaaS Workspace
+          </span>
+        </div>
       </div>
 
       <div className="p-4 flex-1 space-y-2 overflow-y-auto">
@@ -113,15 +147,15 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
           <div className="flex items-center gap-3 min-w-0 flex-1">
             {/* Avatar (no image version) */}
             <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold text-white bg-gradient-to-br ${getColor(session?.username)} flex-shrink-0`}
+              className={`w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold text-white bg-gradient-to-br ${getColor(session?.fullName || session?.username)} flex-shrink-0`}
             >
-              {getInitial(session?.username)}
+              {getInitial(session?.fullName || session?.username)}
             </div>
 
             {/* Text */}
             <div className="min-w-0">
               <p className="text-sm font-semibold capitalize text-slate-100 truncate">
-                {session?.username}
+                {session?.fullName || session?.username}
               </p>
               <p className="text-xs font-medium text-slate-400 truncate">
                 {session?.role}

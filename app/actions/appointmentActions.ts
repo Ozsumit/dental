@@ -3,46 +3,48 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { getTenantIdOrThrow } from "@/lib/auth/session";
 
 export async function getAppointments(searchParams: {
   [key: string]: string | string[] | undefined;
 }) {
+  const tenantId = await getTenantIdOrThrow();
   const page = Number(searchParams?.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.AppointmentWhereInput = {};
+  const where: Prisma.AppointmentWhereInput = { tenantId };
 
   // 1. Handle Text Search (Name/Phone)
   if (searchParams?.q) {
     const q = (searchParams.q as string).trim();
     where.OR = [
-      { patient: { firstName: { contains: q, mode: "insensitive" } } },
-      { patient: { lastName: { contains: q, mode: "insensitive" } } },
-      { patient: { phone: { contains: q } } },
+      { patient: { firstName: { contains: q, mode: "insensitive" }, tenantId } },
+      { patient: { lastName: { contains: q, mode: "insensitive" }, tenantId } },
+      { patient: { phone: { contains: q, mode: "insensitive" }, tenantId } },
     ];
   }
 
-  // 2. Handle Status Filter (FIX)
+  // 2. Handle Status Filter
   if (searchParams?.status) {
     where.status = searchParams.status as string;
   }
 
-  // 3. Handle Treatment Filter (FIX)
+  // 3. Handle Treatment Filter
   if (searchParams?.treatment) {
     where.treatments = {
       contains: searchParams.treatment as string,
+      mode: "insensitive",
     };
   }
 
-  // 4. Handle Date Range Filters (FIX)
+  // 4. Handle Date Range Filters
   if (searchParams?.dateFrom || searchParams?.dateTo) {
     where.appointmentDate = {};
     if (searchParams.dateFrom) {
       where.appointmentDate.gte = new Date(searchParams.dateFrom as string);
     }
     if (searchParams.dateTo) {
-      // Set to end of day to include appointments on that date
       const endOfDay = new Date(searchParams.dateTo as string);
       endOfDay.setHours(23, 59, 59, 999);
       where.appointmentDate.lte = endOfDay;
@@ -57,9 +59,9 @@ export async function getAppointments(searchParams: {
       take: limit,
       include: {
         patient: true,
-        doctor: true, // Added to ensure doctor names show up in the list
+        doctor: true,
       },
-      orderBy: { appointmentDate: "desc" },
+      orderBy: { appointmentDate: "asc" },
     }),
   ]);
 
@@ -72,18 +74,19 @@ export async function getAppointments(searchParams: {
 }
 
 export async function searchPatientsForDropdown(query: string) {
+  const tenantId = await getTenantIdOrThrow();
   if (!query || query.trim() === "") return [];
 
-  const tokens = query.toLowerCase().trim().split(/\s+/);
+  const tokens = query.trim().split(/\s+/);
 
-  // Use findMany with simple contains (since it's SQLite, it's case-insensitive by default for ASCII)
   return prisma.patient.findMany({
     where: {
+      tenantId,
       AND: tokens.map((token) => ({
         OR: [
-          { firstName: { contains: token } },
-          { lastName: { contains: token } },
-          { phone: { contains: token } },
+          { firstName: { contains: token, mode: "insensitive" } },
+          { lastName: { contains: token, mode: "insensitive" } },
+          { phone: { contains: token, mode: "insensitive" } },
         ],
       })),
     },
@@ -100,6 +103,7 @@ export async function searchPatientsForDropdown(query: string) {
 }
 
 export async function saveAppointment(formData: FormData, id?: string) {
+  const tenantId = await getTenantIdOrThrow();
   const patientId = formData.get("patientId") as string;
   const doctorId = formData.get("doctorId") as string;
 
@@ -121,7 +125,6 @@ export async function saveAppointment(formData: FormData, id?: string) {
     throw new Error("Invalid appointment date.");
   }
 
-  // GRAB ALL CHECKED BOXES AS AN ARRAY
   const treatments =
     formData.getAll("treatments").join(", ") ||
     (formData.get("treatmentType") as string) ||
@@ -130,7 +133,6 @@ export async function saveAppointment(formData: FormData, id?: string) {
   const billAmount = parseFloat((formData.get("billAmount") as string) || "0");
   const isPaid = formData.get("isPaid") === "true";
 
-  // If billAmount > 0 and not paid, status should be PENDING_PAYMENT
   let status = formData.get("status") as string;
   if (
     billAmount > 0 &&
@@ -146,13 +148,13 @@ export async function saveAppointment(formData: FormData, id?: string) {
     doctorId,
     appointmentDate,
     status,
-    treatments, // Save the string to the database
+    treatments,
     billAmount,
     isPaid,
+    tenantId,
   };
 
   if (!id) {
-    // Prevent duplicate appointments for the same patient on the same day
     const todayStart = new Date(appointmentDate);
     todayStart.setHours(0, 0, 0, 0);
     const todayEnd = new Date(appointmentDate);
@@ -161,6 +163,7 @@ export async function saveAppointment(formData: FormData, id?: string) {
     const existingAppointment = await prisma.appointment.findFirst({
       where: {
         patientId,
+        tenantId,
         appointmentDate: {
           gte: todayStart,
           lte: todayEnd,
@@ -183,10 +186,9 @@ export async function saveAppointment(formData: FormData, id?: string) {
         },
       });
 
-      // Create or Update Billing Procedure
       if (data.billAmount > 0) {
         await prisma.procedure.upsert({
-          where: { id: `appt-bill-${updatedAppt.id}` }, // Fixed ID for appointment-linked bill
+          where: { id: `appt-bill-${updatedAppt.id}` },
           create: {
             id: `appt-bill-${updatedAppt.id}`,
             patientId,
@@ -196,6 +198,7 @@ export async function saveAppointment(formData: FormData, id?: string) {
             cost: billAmount,
             procedureDate: appointmentDate,
             status: isPaid ? "PAID" : "PENDING",
+            tenantId,
           },
           update: {
             cost: billAmount,
@@ -208,17 +211,7 @@ export async function saveAppointment(formData: FormData, id?: string) {
       return;
     }
 
-    const [newAppt] = await prisma.$transaction(async (tx) => {
-      const appt = await tx.appointment.create({ data });
-      await tx.patient.update({
-        where: { id: patientId },
-        data: {
-          visitCount: { increment: 1 },
-          lastVisitDate: appointmentDate,
-        },
-      });
-      return [appt];
-    });
+    const newAppt = await prisma.appointment.create({ data });
 
     if (billAmount > 0) {
       await prisma.procedure.create({
@@ -231,10 +224,17 @@ export async function saveAppointment(formData: FormData, id?: string) {
           cost: billAmount,
           procedureDate: appointmentDate,
           status: isPaid ? "PAID" : "PENDING",
+          tenantId,
         },
       });
     }
   } else {
+    // Ensure the appointment belongs to the tenant before updating
+    const existing = await prisma.appointment.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) throw new Error("Appointment not found");
+
     const updatedAppt = await prisma.appointment.update({
       where: { id },
       data,
@@ -252,6 +252,7 @@ export async function saveAppointment(formData: FormData, id?: string) {
           cost: billAmount,
           procedureDate: appointmentDate,
           status: isPaid ? "PAID" : "PENDING",
+          tenantId,
         },
         update: {
           cost: billAmount,
@@ -266,13 +267,22 @@ export async function saveAppointment(formData: FormData, id?: string) {
 }
 
 export async function deleteAppointment(id: string) {
+  const tenantId = await getTenantIdOrThrow();
+  // Ensure appointment belongs to tenant
+  const appt = await prisma.appointment.findFirst({
+    where: { id, tenantId },
+  });
+  if (!appt) throw new Error("Appointment not found");
+
   await prisma.appointment.delete({ where: { id } });
   revalidatePath("/appointments");
 }
-// app/actions/appointmentActions.ts - Add this function
+
 export async function getAppointmentsByDateRange(start: Date, end: Date) {
+  const tenantId = await getTenantIdOrThrow();
   return await prisma.appointment.findMany({
     where: {
+      tenantId,
       appointmentDate: { gte: start, lte: end },
     },
     include: { patient: true },
@@ -283,17 +293,19 @@ export async function getAppointmentsByDateRange(start: Date, end: Date) {
 export async function getAppointmentsForExport(searchParams: {
   [key: string]: string | string[] | undefined;
 }) {
-  const where: Prisma.AppointmentWhereInput = {};
+  const tenantId = await getTenantIdOrThrow();
+  const where: Prisma.AppointmentWhereInput = { tenantId };
 
   if (searchParams?.q) {
     const q = (searchParams.q as string).trim();
     const tokens = q.split(/\s+/);
     where.patient = {
+      tenantId,
       AND: tokens.map((token) => ({
         OR: [
-          { firstName: { contains: token } },
-          { lastName: { contains: token } },
-          { phone: { contains: token } },
+          { firstName: { contains: token, mode: "insensitive" } },
+          { lastName: { contains: token, mode: "insensitive" } },
+          { phone: { contains: token, mode: "insensitive" } },
         ],
       })),
     };
@@ -301,7 +313,7 @@ export async function getAppointmentsForExport(searchParams: {
 
   if (searchParams?.status) where.status = searchParams.status as string;
   if (searchParams?.treatment) {
-    where.treatments = { contains: searchParams.treatment as string };
+    where.treatments = { contains: searchParams.treatment as string, mode: "insensitive" };
   }
   if (searchParams?.dateFrom || searchParams?.dateTo) {
     where.appointmentDate = {};
@@ -322,9 +334,11 @@ export async function getAppointmentsForExport(searchParams: {
     orderBy: { appointmentDate: "desc" },
   });
 }
+
 export async function getAppointmentById(id: string) {
-  return await prisma.appointment.findUnique({
-    where: { id },
+  const tenantId = await getTenantIdOrThrow();
+  const appt = await prisma.appointment.findFirst({
+    where: { id, tenantId },
     include: {
       patient: {
         include: {
@@ -332,6 +346,32 @@ export async function getAppointmentById(id: string) {
         },
       },
       doctor: true,
+    },
+  });
+  return appt;
+}
+
+export async function getTodaysAppointments() {
+  const tenantId = await getTenantIdOrThrow();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  return await prisma.appointment.findMany({
+    where: {
+      tenantId,
+      appointmentDate: {
+        gte: today,
+        lt: tomorrow,
+      },
+    },
+    include: {
+      patient: true,
+      doctor: true,
+    },
+    orderBy: {
+      appointmentDate: "asc",
     },
   });
 }

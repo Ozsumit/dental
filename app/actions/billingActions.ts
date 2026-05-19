@@ -1,35 +1,50 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-
 import { revalidatePath } from "next/cache";
+import { getTenantIdOrThrow } from "@/lib/auth/session";
 
 export async function getBillingCatalog() {
+  const tenantId = await getTenantIdOrThrow();
   return await prisma.billingCatalog.findMany({
+    where: { tenantId },
     orderBy: { category: "asc" },
   });
 }
 
 export async function getSystemSettings() {
-  return await prisma.systemSettings.upsert({
-    where: { id: "default" },
-    update: {},
-    create: { id: "default", appointmentFee: 0 },
+  const tenantId = await getTenantIdOrThrow();
+  // Try to find the settings for this tenant, if not exist, create it
+  let settings = await prisma.systemSettings.findUnique({
+    where: { tenantId },
   });
+
+  if (!settings) {
+    settings = await prisma.systemSettings.create({
+      data: {
+        appointmentFee: 0,
+        tenantId,
+      },
+    });
+  }
+  return settings;
 }
 
 export async function saveSystemSettings(formData: FormData) {
+  const tenantId = await getTenantIdOrThrow();
   const appointmentFee = parseFloat(
     (formData.get("appointmentFee") as string) || "0",
   );
+
   await prisma.systemSettings.update({
-    where: { id: "default" },
+    where: { tenantId },
     data: { appointmentFee },
   });
   revalidatePath("/admin");
 }
 
 export async function getAdminStats() {
+  const tenantId = await getTenantIdOrThrow();
   const todayStart = new Date(new Date().setHours(0, 0, 0, 0));
   const todayEnd = new Date(new Date().setHours(23, 59, 59, 999));
 
@@ -41,13 +56,16 @@ export async function getAdminStats() {
     recentProcedures,
     revenueByCategory,
   ] = await Promise.all([
-    prisma.patient.count(),
+    prisma.patient.count({
+      where: { tenantId },
+    }),
     prisma.procedure.aggregate({
-      where: { status: "PAID" },
+      where: { status: "PAID", tenantId },
       _sum: { cost: true },
     }),
     prisma.appointment.count({
       where: {
+        tenantId,
         appointmentDate: {
           gte: todayStart,
           lte: todayEnd,
@@ -55,17 +73,18 @@ export async function getAdminStats() {
       },
     }),
     prisma.procedure.aggregate({
-      where: { status: { in: ["PENDING", "BILLED"] } },
+      where: { status: { in: ["PENDING", "BILLED"] }, tenantId },
       _sum: { cost: true },
     }),
     prisma.procedure.findMany({
+      where: { tenantId },
       take: 5,
       orderBy: { createdAt: "desc" },
       include: { patient: true },
     }),
     prisma.procedure.groupBy({
       by: ["type"],
-      where: { status: "PAID" },
+      where: { status: "PAID", tenantId },
       _sum: { cost: true },
     }),
   ]);
@@ -84,8 +103,9 @@ export async function getAdminStats() {
 }
 
 export async function getPendingBillings() {
+  const tenantId = await getTenantIdOrThrow();
   return await prisma.procedure.findMany({
-    where: { status: "PENDING" },
+    where: { status: "PENDING", tenantId },
     include: { patient: true },
     orderBy: { procedureDate: "desc" },
   });
@@ -94,11 +114,12 @@ export async function getPendingBillings() {
 export async function getAllBillings(searchParams: {
   [key: string]: string | string[] | undefined;
 }) {
+  const tenantId = await getTenantIdOrThrow();
   const page = Number(searchParams?.page) || 1;
   const limit = 20;
   const skip = (page - 1) * limit;
 
-  const where: any = {};
+  const where: any = { tenantId };
 
   if (searchParams?.q) {
     const q = (searchParams.q as string).trim();
@@ -108,10 +129,11 @@ export async function getAllBillings(searchParams: {
       { type: { contains: q, mode: "insensitive" } },
       {
         patient: {
+          tenantId,
           OR: [
             { firstName: { contains: q, mode: "insensitive" } },
             { lastName: { contains: q, mode: "insensitive" } },
-            { phone: { contains: q } },
+            { phone: { contains: q, mode: "insensitive" } },
           ],
         },
       },
@@ -141,6 +163,14 @@ export async function getAllBillings(searchParams: {
 }
 
 export async function finalizeBilling(procedureId: string, billedCost: number) {
+  const tenantId = await getTenantIdOrThrow();
+  
+  // Ensure the procedure belongs to the tenant
+  const existing = await prisma.procedure.findFirst({
+    where: { id: procedureId, tenantId },
+  });
+  if (!existing) throw new Error("Procedure not found");
+
   await prisma.procedure.update({
     where: { id: procedureId },
     data: {
@@ -152,9 +182,12 @@ export async function finalizeBilling(procedureId: string, billedCost: number) {
 }
 
 export async function markPatientProceduresPaid(patientId: string) {
+  const tenantId = await getTenantIdOrThrow();
+
   const procedures = await prisma.procedure.findMany({
     where: {
       patientId,
+      tenantId,
       status: { in: ["PENDING", "BILLED"] },
     },
   });
@@ -167,15 +200,15 @@ export async function markPatientProceduresPaid(patientId: string) {
       });
 
       if (proc.appointmentId) {
-        const appt = await tx.appointment.findUnique({
-          where: { id: proc.appointmentId },
+        const appt = await tx.appointment.findFirst({
+          where: { id: proc.appointmentId, tenantId },
         });
         if (appt && appt.status === "PENDING_PAYMENT") {
           await tx.appointment.update({
             where: { id: proc.appointmentId },
             data: {
               isPaid: true,
-              status: "SCHEDULED", // Transition from PENDING_PAYMENT
+              status: "SCHEDULED",
             },
           });
         } else if (appt) {
@@ -191,7 +224,9 @@ export async function markPatientProceduresPaid(patientId: string) {
   revalidatePath("/");
   revalidatePath("/appointments");
 }
+
 export async function reviseBill(procedureId: string, formData: FormData) {
+  const tenantId = await getTenantIdOrThrow();
   const cost = parseFloat(formData.get("cost") as string);
   const status = formData.get("status") as string;
 
@@ -199,7 +234,12 @@ export async function reviseBill(procedureId: string, formData: FormData) {
     throw new Error("Invalid bill amount provided.");
   }
 
-  // Update the procedure record in the database
+  // Ensure procedure belongs to tenant
+  const existing = await prisma.procedure.findFirst({
+    where: { id: procedureId, tenantId },
+  });
+  if (!existing) throw new Error("Procedure not found");
+
   await prisma.procedure.update({
     where: { id: procedureId },
     data: {
@@ -208,19 +248,25 @@ export async function reviseBill(procedureId: string, formData: FormData) {
     },
   });
 
-  // Revalidate the billing history page so the frontend gets the new data instantly
-  revalidatePath("/billing-history"); // CHANGE THIS if your route URL is different (e.g. /history)
+  revalidatePath("/billing-history");
 }
 
 export async function saveCatalogItem(formData: FormData, id?: string) {
+  const tenantId = await getTenantIdOrThrow();
   const data = {
     name: formData.get("name") as string,
     category: formData.get("category") as string,
     baseCost: parseFloat((formData.get("baseCost") as string) || "0"),
     description: formData.get("description") as string,
+    tenantId,
   };
 
   if (id) {
+    const existing = await prisma.billingCatalog.findFirst({
+      where: { id, tenantId },
+    });
+    if (!existing) throw new Error("Catalog item not found");
+
     await prisma.billingCatalog.update({ where: { id }, data });
   } else {
     await prisma.billingCatalog.create({ data });
@@ -229,13 +275,20 @@ export async function saveCatalogItem(formData: FormData, id?: string) {
 }
 
 export async function deleteCatalogItem(id: string) {
+  const tenantId = await getTenantIdOrThrow();
+  const existing = await prisma.billingCatalog.findFirst({
+    where: { id, tenantId },
+  });
+  if (!existing) throw new Error("Catalog item not found");
+
   await prisma.billingCatalog.delete({ where: { id } });
   revalidatePath("/admin");
 }
 
 export async function markAsPaid(procedureId: string) {
-  const procedure = await prisma.procedure.findUnique({
-    where: { id: procedureId },
+  const tenantId = await getTenantIdOrThrow();
+  const procedure = await prisma.procedure.findFirst({
+    where: { id: procedureId, tenantId },
   });
 
   if (!procedure) return;
@@ -247,8 +300,8 @@ export async function markAsPaid(procedureId: string) {
     });
 
     if (procedure.appointmentId) {
-      const appt = await tx.appointment.findUnique({
-        where: { id: procedure.appointmentId },
+      const appt = await tx.appointment.findFirst({
+        where: { id: procedure.appointmentId, tenantId },
       });
       if (appt && appt.status === "PENDING_PAYMENT") {
         await tx.appointment.update({

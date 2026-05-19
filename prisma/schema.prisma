@@ -6,26 +6,57 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
 
+model Tenant {
+  id             String           @id @default(uuid())
+  name           String           @unique
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  users          User[]
+  patients       Patient[]
+  appointments   Appointment[]
+  billingCatalog BillingCatalog[]
+  procedures     Procedure[]
+  systemSettings SystemSettings[]
 }
 
 model User {
-  id              String          @id @default(uuid())
-  username        String          @unique
-  password        String
-  role            Role            @default(RECEPTIONIST)
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
-  appointments    Appointment[]   @relation("DoctorAppointments")
-  assignedRecords MedicalRecord[]
+  id                  String          @id @default(uuid())
+  username            String          @unique
+  password            String
+  role                Role            @default(RECEPTIONIST)
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  appointments        Appointment[]   @relation("DoctorAppointments")
+  assignedRecords     MedicalRecord[]
+  tenantId            String
+  tenant              Tenant          @relation(fields: [tenantId], references: [id])
+
+  // Doctor settings and profile fields
+  fullName            String?
+  dateOfBirth         DateTime?
+  phone               String?
+  email               String?
+  specialization      String?
+  nmcRegNo            String?
+  photoUrl            String?
+  notifyAppointment   Boolean         @default(false)
+  notifyWaiting       Boolean         @default(true)
+  notifyLabResults    Boolean         @default(false)
+  notifyDraftReminder Boolean         @default(true)
+  notifyDailySummary  Boolean         @default(false)
+  requireOtp          Boolean         @default(false)
+
+  @@index([tenantId])
 }
 
 model Patient {
   id            String         @id @default(uuid())
   firstName     String         @db.Citext
   lastName      String         @db.Citext
-  phone         String         @db.Citext @unique
-  email         String?        @db.Citext @unique
+  phone         String         @db.Citext
+  email         String?        @db.Citext
   dateOfBirth   DateTime
   gender        String?
   status        String         @default("ACTIVE")
@@ -42,10 +73,22 @@ model Patient {
   diagnoses     Diagnosis[]
   medicalRecord MedicalRecord?
   procedures    Procedure[]
+  
+  // Family linking fields
+  primaryAccountId String?
+  primaryAccount   Patient?       @relation("FamilyLink", fields: [primaryAccountId], references: [id], onDelete: SetNull)
+  familyMembers    Patient[]      @relation("FamilyLink")
+  familyRelation   String?        // e.g. "Spouse", "Child", "Parent", "Other"
+
+  tenantId      String
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
 
   @@index([firstName, lastName])
   @@index([phone])
   @@index([status])
+  @@index([tenantId])
+  @@unique([phone, tenantId])
+  @@unique([email, tenantId])
 }
 
 model MedicalRecord {
@@ -99,16 +142,25 @@ model Appointment {
   doctor          User?    @relation("DoctorAppointments", fields: [doctorId], references: [id])
   patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   procedures      Procedure[]
+  tenantId        String
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
 }
 
 model BillingCatalog {
   id          String   @id @default(uuid())
-  name        String   @unique
+  name        String
   category    String?
   baseCost    Float    @default(0)
   description String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@unique([name, tenantId])
+  @@index([tenantId])
 }
 
 model Procedure {
@@ -128,16 +180,24 @@ model Procedure {
   updatedAt     DateTime @updatedAt
   patient       Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   appointment   Appointment? @relation(fields: [appointmentId], references: [id])
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
 }
 
 model SystemSettings {
-  id             String   @id @default("default")
+  id             String   @id @default(uuid())
   appointmentFee Float    @default(0)
   updatedAt      DateTime @updatedAt
+  tenantId       String   @unique
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
 }
 
 enum Role {
+  SUPERADMIN
   ADMIN
   DOCTOR
   RECEPTIONIST
 }
+

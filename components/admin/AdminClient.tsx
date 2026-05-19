@@ -13,6 +13,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
   // User states
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [userFormError, setUserFormError] = useState("");
 
   // Catalog states
   const [isCatalogFormOpen, setIsCatalogFormOpen] = useState(false);
@@ -54,7 +55,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
 
         {activeTab === "Users" ? (
           <button
-            onClick={() => { setSelectedUser(null); setIsUserFormOpen(true); }}
+            onClick={() => { setSelectedUser(null); setUserFormError(""); setIsUserFormOpen(true); }}
             className="bg-brand-700 hover:bg-brand-800 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
           >
             <Plus className="w-5 h-5" /> Add New User
@@ -100,7 +101,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => { setSelectedUser(user); setIsUserFormOpen(true); }}
+                        onClick={() => { setSelectedUser(user); setUserFormError(""); setIsUserFormOpen(true); }}
                         className="p-2 text-slate-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition"
                       >
                         <Edit2 className="w-4 h-4" />
@@ -228,11 +229,22 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
             </div>
             <form
               action={async (formData) => {
-                await saveUser(formData, selectedUser?.id);
-                setIsUserFormOpen(false);
+                setUserFormError("");
+                try {
+                  await saveUser(formData, selectedUser?.id);
+                  setIsUserFormOpen(false);
+                } catch (err: any) {
+                  setUserFormError(err.message || "Failed to save user.");
+                }
               }}
               className="p-6 space-y-5"
             >
+              {userFormError && (
+                <div className="bg-red-50 border border-red-200 text-red-800 p-3.5 rounded-xl text-xs font-bold flex items-center gap-2">
+                  <span className="text-sm shrink-0">⚠️</span>
+                  <span>{userFormError}</span>
+                </div>
+              )}
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase">Username</label>
                 <input

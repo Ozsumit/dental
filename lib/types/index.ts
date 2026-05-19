@@ -3,8 +3,11 @@ import { Role } from "@prisma/client";
 export interface UserSession {
   id: string;
   username: string;
+  fullName?: string | null;
   role: Role;
   expires: Date;
+  tenantId: string;
+  tenantName: string;
 }
 
 export interface Patient {
@@ -31,13 +34,17 @@ export interface Patient {
   diagnoses?: Diagnosis[];
   createdAt: Date;
   updatedAt: Date;
+  primaryAccountId?: string | null;
+  primaryAccount?: Patient | null;
+  familyMembers?: Patient[];
+  familyRelation?: string | null;
 }
 
 export interface Appointment {
   id: string;
   patientId: string;
   doctorId?: string | null;
-  doctor?: { id: string; username: string } | null;
+  doctor?: { id: string; username: string; fullName?: string | null } | null;
   appointmentDate: Date;
   status: string;
   treatments: string;
@@ -68,7 +75,7 @@ export interface MedicalRecord {
   id: string;
   patientId: string;
   assignedDoctorId?: string | null;
-  assignedDoctor?: { id: string; username: string } | null;
+  assignedDoctor?: { id: string; username: string; fullName?: string | null } | null;
   complaints?: string | null;
   insurance?: string | null;
   insuranceNo?: string | null;
