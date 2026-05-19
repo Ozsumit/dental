@@ -2,6 +2,7 @@ import { Role } from "@prisma/client";
 
 export interface UserSession {
   id: string;
+  organizationId: string;
   username: string;
   role: Role;
   expires: Date;

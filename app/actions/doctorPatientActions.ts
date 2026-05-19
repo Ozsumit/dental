@@ -114,6 +114,7 @@ export async function getDoctorPatients() {
 
   const patients = await prisma.patient.findMany({
     where: {
+      organizationId: session.organizationId,
       appointments: {
         some: {
           appointmentDate: {
@@ -134,32 +135,25 @@ export async function getDoctorPatients() {
       },
     },
 
-    include: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      phone: true,
+      dateOfBirth: true,
+      gender: true,
       appointments: {
+        where: {
+          appointmentDate: {
+            gte: today,
+            lt: tomorrow,
+          },
+        },
         orderBy: {
           appointmentDate: "asc",
         },
-      },
-
-      procedures: {
-        orderBy: {
-          procedureDate: "desc",
-        },
-      },
-
-      medicalRecord: {
-        include: {
-          assignedDoctor: true,
-        },
-      },
-
-      diagnoses: {
-        orderBy: {
-          createdAt: "desc",
-        },
-
         take: 1,
-      },
+      }
     },
 
     orderBy: {

@@ -85,6 +85,7 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
         // Create follow-up appointment
         const followUpAppt = await prisma.appointment.create({
           data: {
+            organizationId: session.organizationId,
             patientId,
             doctorId: assignedDrId,
             appointmentDate: nextVisitDate,
@@ -96,6 +97,7 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
         // Generate the Bill (Procedure)
         await prisma.procedure.create({
           data: {
+            organizationId: session.organizationId,
             patientId,
             appointmentId: followUpAppt.id,
             name: "Follow-up Consultation",

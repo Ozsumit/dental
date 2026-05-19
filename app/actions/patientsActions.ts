@@ -3,15 +3,21 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { getSession } from "@/lib/auth/session";
 
 export async function getPatients(searchParams: {
   [key: string]: string | string[] | undefined;
 }) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
   const page = Number(searchParams?.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.PatientWhereInput = {};
+  const where: Prisma.PatientWhereInput = {
+    organizationId: session.organizationId,
+  };
 
   // 1. BULLETPROOF SEARCH
   if (searchParams?.q) {
@@ -78,7 +84,7 @@ export async function getPatients(searchParams: {
     orderBy = [{ firstName: "desc" }, { lastName: "desc" }];
   if (searchParams?.sort === "mostVisits") orderBy = { visitCount: "desc" };
 
-  // 6. FETCH DATA (Added 'include' to fetch history for the Profile View)
+  // 6. FETCH DATA (Optimized: Minimal data for list view)
   const [totalCount, patients] = await Promise.all([
     prisma.patient.count({ where }),
     prisma.patient.findMany({
@@ -86,21 +92,20 @@ export async function getPatients(searchParams: {
       skip,
       take: limit,
       orderBy,
-      include: {
-        appointments: {
-          orderBy: { appointmentDate: "desc" }, // Orders history from newest to oldest
-        },
-        procedures: {
-          orderBy: { procedureDate: "desc" },
-        },
-        medicalRecord: {
-          include: { assignedDoctor: true },
-        },
-        diagnoses: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
-      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        email: true,
+        dateOfBirth: true,
+        gender: true,
+        status: true,
+        role: true,
+        bloodGroup: true,
+        visitCount: true,
+        lastVisitDate: true,
+      }
     }),
   ]);
 
@@ -127,7 +132,11 @@ export async function savePatient(formData: FormData, id?: string) {
     return { error: "First Name, Last Name, and Phone are required." };
   }
 
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
   const patientData = {
+    organizationId: session.organizationId,
     firstName,
     lastName,
     phone,
@@ -284,6 +293,9 @@ export async function transferPatientDoctor(
 }
 
 export async function createAppointmentAction(formData: FormData) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
   const patientId = formData.get("patientId") as string;
   const doctorId = formData.get("doctorId") as string;
   if (!doctorId) throw new Error("Doctor assignment is compulsory.");
@@ -301,6 +313,7 @@ export async function createAppointmentAction(formData: FormData) {
   const [newAppt] = await prisma.$transaction(async (tx) => {
     const appt = await tx.appointment.create({
       data: {
+        organizationId: session.organizationId,
         patientId,
         doctorId,
         appointmentDate,
@@ -325,6 +338,7 @@ export async function createAppointmentAction(formData: FormData) {
     await prisma.procedure.create({
       data: {
         id: `appt-bill-${newAppt.id}`,
+        organizationId: session.organizationId,
         patientId,
         appointmentId: newAppt.id,
         name: `Appointment Fee: ${treatments}`,
@@ -341,6 +355,28 @@ export async function createAppointmentAction(formData: FormData) {
 }
 
 // EXPORT FUNCTIONALITY
+export async function getPatientById(id: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+  return await prisma.patient.findUnique({
+    where: { id, organizationId: session.organizationId },
+    include: {
+      appointments: {
+        orderBy: { appointmentDate: "desc" },
+      },
+      procedures: {
+        orderBy: { procedureDate: "desc" },
+      },
+      medicalRecord: {
+        include: { assignedDoctor: true },
+      },
+      diagnoses: {
+        orderBy: { createdAt: "desc" },
+      },
+    },
+  });
+}
+
 export async function getPatientsForExport(searchParams: {
   [key: string]: string | string[] | undefined;
 }) {

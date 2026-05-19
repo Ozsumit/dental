@@ -3,15 +3,21 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
+import { getSession } from "@/lib/auth/session";
 
 export async function getAppointments(searchParams: {
   [key: string]: string | string[] | undefined;
 }) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+
   const page = Number(searchParams?.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
 
-  const where: Prisma.AppointmentWhereInput = {};
+  const where: Prisma.AppointmentWhereInput = {
+    organizationId: session.organizationId,
+  };
 
   // 1. Handle Text Search (Name/Phone)
   if (searchParams?.q) {
@@ -72,6 +78,8 @@ export async function getAppointments(searchParams: {
 }
 
 export async function searchPatientsForDropdown(query: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
   if (!query || query.trim() === "") return [];
 
   const tokens = query.toLowerCase().trim().split(/\s+/);
@@ -79,6 +87,7 @@ export async function searchPatientsForDropdown(query: string) {
   // Use findMany with simple contains (since it's SQLite, it's case-insensitive by default for ASCII)
   return prisma.patient.findMany({
     where: {
+      organizationId: session.organizationId,
       AND: tokens.map((token) => ({
         OR: [
           { firstName: { contains: token } },
@@ -100,6 +109,8 @@ export async function searchPatientsForDropdown(query: string) {
 }
 
 export async function saveAppointment(formData: FormData, id?: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
   const patientId = formData.get("patientId") as string;
   const doctorId = formData.get("doctorId") as string;
 
@@ -142,6 +153,7 @@ export async function saveAppointment(formData: FormData, id?: string) {
   }
 
   const data = {
+    organizationId: session.organizationId,
     patientId,
     doctorId,
     appointmentDate,
@@ -189,6 +201,7 @@ export async function saveAppointment(formData: FormData, id?: string) {
           where: { id: `appt-bill-${updatedAppt.id}` }, // Fixed ID for appointment-linked bill
           create: {
             id: `appt-bill-${updatedAppt.id}`,
+            organizationId: session.organizationId,
             patientId,
             appointmentId: updatedAppt.id,
             name: `Appointment Fee: ${treatments}`,
@@ -224,6 +237,7 @@ export async function saveAppointment(formData: FormData, id?: string) {
       await prisma.procedure.create({
         data: {
           id: `appt-bill-${newAppt.id}`,
+          organizationId: session.organizationId,
           patientId,
           appointmentId: newAppt.id,
           name: `Appointment Fee: ${treatments}`,
@@ -245,6 +259,7 @@ export async function saveAppointment(formData: FormData, id?: string) {
         where: { id: `appt-bill-${updatedAppt.id}` },
         create: {
           id: `appt-bill-${updatedAppt.id}`,
+          organizationId: session.organizationId,
           patientId,
           appointmentId: updatedAppt.id,
           name: `Appointment Fee: ${treatments}`,
@@ -266,13 +281,20 @@ export async function saveAppointment(formData: FormData, id?: string) {
 }
 
 export async function deleteAppointment(id: string) {
-  await prisma.appointment.delete({ where: { id } });
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+  await prisma.appointment.delete({
+    where: { id, organizationId: session.organizationId },
+  });
   revalidatePath("/appointments");
 }
 // app/actions/appointmentActions.ts - Add this function
 export async function getAppointmentsByDateRange(start: Date, end: Date) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
   return await prisma.appointment.findMany({
     where: {
+      organizationId: session.organizationId,
       appointmentDate: { gte: start, lte: end },
     },
     include: { patient: true },
@@ -283,7 +305,11 @@ export async function getAppointmentsByDateRange(start: Date, end: Date) {
 export async function getAppointmentsForExport(searchParams: {
   [key: string]: string | string[] | undefined;
 }) {
-  const where: Prisma.AppointmentWhereInput = {};
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
+  const where: Prisma.AppointmentWhereInput = {
+    organizationId: session.organizationId,
+  };
 
   if (searchParams?.q) {
     const q = (searchParams.q as string).trim();
@@ -323,8 +349,10 @@ export async function getAppointmentsForExport(searchParams: {
   });
 }
 export async function getAppointmentById(id: string) {
+  const session = await getSession();
+  if (!session) throw new Error("Unauthorized");
   return await prisma.appointment.findUnique({
-    where: { id },
+    where: { id, organizationId: session.organizationId },
     include: {
       patient: {
         include: {
