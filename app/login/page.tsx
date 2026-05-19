@@ -74,6 +74,7 @@ export default function LoginPage() {
             )}
           </button>
         </form>
+       <p className="mt-4 text-sm text-slate-500">demo cred: admin: admin/12345, doctor: sumit/12345, receptionist: receptionist/12345</p>
       </div>
     </div>
   );
