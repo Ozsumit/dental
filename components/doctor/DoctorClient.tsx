@@ -391,7 +391,6 @@ export default function DoctorClient({
                     </span>
                     <span>{selectedPatient.phone}</span>
                     <span>{selectedPatient.address || "Kathmandu"}</span>
-                    <span>{selectedPatient.occupation || "Teacher"}</span>
                   </div>
                 </div>
                 <button className="bg-blue-50 text-blue-600 px-4 py-2 rounded-md text-sm font-semibold hover:bg-blue-100 transition-colors">
@@ -610,7 +609,7 @@ export default function DoctorClient({
                         <div className="bg-[#dcdfdc] rounded-xl aspect-[4/5] relative overflow-hidden flex items-center justify-center border border-slate-200">
                           <Image
                             src="/image.jpg"
-                            className="w-full h-full object-cover mix-blend-multiply opacity-80"
+                            className="w-full h-full object-contain mix-blend-multiply opacity-80"
                             alt="Body Chart"
                             fill
                             sizes="340px"
@@ -871,21 +870,20 @@ export default function DoctorClient({
                           </div>
                         </div>
                       </div>
-
-                      <div className="absolute bottom-10 right-10">
-                        <button
-                          type="submit"
-                          onClick={() => {
-                            const hiddenInput = document.getElementById(
-                              "finalize-input",
-                            ) as HTMLInputElement;
-                            if (hiddenInput) hiddenInput.value = "false";
-                          }}
-                          className="bg-brand-700 text-white px-6 py-2.5 rounded-md text-sm font-semibold hover:bg-brand-800 transition-colors"
-                        >
-                          Save Assessment
-                        </button>
-                      </div>
+                    </div>
+                    <div className="absolute bottom-10 right-10">
+                      <button
+                        type="submit"
+                        onClick={() => {
+                          const hiddenInput = document.getElementById(
+                            "finalize-input",
+                          ) as HTMLInputElement;
+                          if (hiddenInput) hiddenInput.value = "false";
+                        }}
+                        className="bg-brand-700 text-white px-6 py-2.5 rounded-md text-sm font-semibold hover:bg-brand-800 transition-colors"
+                      >
+                        Save Assessment
+                      </button>
                     </div>
                   </div>
                 )}
