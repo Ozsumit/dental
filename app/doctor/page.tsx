@@ -1,4 +1,4 @@
-import { getDoctorPatients, getDoctorHistory } from "../actions/doctorPatientActions";
+import { getDoctorPatients } from "../actions/doctorPatientActions";
 import DoctorDashboardClient from "@/components/doctor/DoctorDashboardClient";
 import prisma from "@/lib/prisma";
 import { getSession, getTenantIdOrThrow } from "@/lib/auth/session";
@@ -11,11 +11,21 @@ export default async function DoctorDashboardPage() {
     return null;
   }
 
-  // Fetch pending and completed patients for today
-  const [pendingPatients, completedPatients] = await Promise.all([
-    getDoctorPatients(),
-    getDoctorHistory(),
-  ]);
+  // Fetch all patients for today
+  const allPatients = await getDoctorPatients();
+
+  // Partition them strictly and cleanly into pending and completed lists matching the local day
+  const pendingPatients = allPatients.filter((p) =>
+    !p.appointments?.some(
+      (a) => a.status === "COMPLETED" && new Date(a.appointmentDate).toDateString() === new Date().toDateString()
+    )
+  );
+
+  const completedPatients = allPatients.filter((p) =>
+    p.appointments?.some(
+      (a) => a.status === "COMPLETED" && new Date(a.appointmentDate).toDateString() === new Date().toDateString()
+    )
+  );
 
   // Fetch appointments from last 7 days to compile a beautiful SVG chart
   const today = new Date();

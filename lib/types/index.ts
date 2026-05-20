@@ -32,6 +32,7 @@ export interface Patient {
   medicalRecord?: MedicalRecord | null;
   diagnosis?: Diagnosis | null;
   diagnoses?: Diagnosis[];
+  assessments?: ClinicalAssessment[];
   createdAt: Date;
   updatedAt: Date;
   primaryAccountId?: string | null;
@@ -83,6 +84,7 @@ export interface MedicalRecord {
   emergencyContactNo?: string | null;
   status?: string | null;
   title?: string | null;
+  medicalHistory?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -101,6 +103,21 @@ export interface Diagnosis {
   medicines?: string | null;
   objectiveData?: string | null;
   nextVisitDate?: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ClinicalAssessment {
+  id: string;
+  patientId: string;
+  diagnosisId: string;
+  toothChart?: string;
+  oralHygiene?: string;
+  tmj?: string;
+  biteOcclusion?: string;
+  softTissue?: string;
+  generalExam?: string;
+  diagnosticProcs?: string;
   createdAt: Date;
   updatedAt: Date;
 }

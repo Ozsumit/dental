@@ -27,7 +27,7 @@ async function main() {
   const tenant1 = await prisma.tenant.create({
     data: {
       id: "nepal-general",
-      name: "Nepal General Hospital",
+      name: "National Dental Hospital",
     },
   });
 
@@ -61,12 +61,14 @@ async function main() {
       patientCount: 30,
       fee: 250,
       catalog: [
-        { name: "Consultation", category: "General", baseCost: 250 },
-        { name: "Follow-up Consultation", category: "General", baseCost: 100 },
-        { name: "X-Ray Chest", category: "Radiology", baseCost: 500 },
-        { name: "Full Blood Count", category: "Laboratory", baseCost: 350 },
-        { name: "MRI Scan", category: "Radiology", baseCost: 4500 },
-        { name: "Physical Therapy Session", category: "Therapy", baseCost: 600 },
+        { name: "Dental Consultation", category: "General", baseCost: 250 },
+        { name: "Dental Follow-up", category: "General", baseCost: 150 },
+        { name: "Routine Dental scaling", category: "Dental", baseCost: 800 },
+        { name: "Composite Filling", category: "Dental", baseCost: 1200 },
+        { name: "Root Canal Therapy", category: "Dental", baseCost: 5000 },
+        { name: "Surgical Extraction", category: "Dental", baseCost: 1500 },
+        { name: "Panoramic Dental X-Ray", category: "Radiology", baseCost: 1000 },
+        { name: "Dental Crown", category: "Dental", baseCost: 8000 },
       ],
     },
     {
@@ -90,13 +92,14 @@ async function main() {
   ];
 
   const TREATMENT_OPTIONS = [
-    "Consultation",
-    "Follow-up",
-    "Cleaning",
-    "Extraction",
-    "X-Ray",
-    "Therapy",
-    "Checkup",
+    "Dental Consultation",
+    "Routine Checkup",
+    "Dental Cleaning",
+    "Tooth Extraction",
+    "Dental X-Ray",
+    "Root Canal Therapy",
+    "Dental Filling",
+    "Crown Placement",
   ];
 
   for (const config of tenantsConfig) {
@@ -108,7 +111,7 @@ async function main() {
       const isDrPriya = u.username === "doctor";
       const doctorData = u.role === "DOCTOR" ? {
         fullName: isDrPriya ? "Dr. Priya Thapa" : "Dr. Apex Doctor",
-        specialization: isDrPriya ? "Physiotherapy" : "Dentistry",
+        specialization: isDrPriya ? "Dentistry" : "Dentistry",
         nmcRegNo: isDrPriya ? "12847" : "54321",
         phone: isDrPriya ? "+977 9801234567" : "+977 9801112222",
         email: isDrPriya ? "priya.thapa@aashas.com" : "apex.doctor@apexdental.com",
@@ -174,7 +177,7 @@ async function main() {
             status: "ACTIVE",
             address: faker.location.streetAddress(),
             bloodGroup: faker.helpers.arrayElement(["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"]),
-            allergies: faker.helpers.arrayElement(["Peanuts", "Penicillin", "None", "Dust", "Latex"]),
+            allergies: faker.helpers.arrayElement(["Penicillin", "Latex", "None", "Local Anesthetics"]),
             role: faker.helpers.arrayElement(["VIP", "Regular", "New"]),
             visitCount: faker.number.int({ min: 1, max: 6 }),
             isOld: true,
@@ -188,7 +191,13 @@ async function main() {
           data: {
             patientId: patient.id,
             assignedDoctorId: doctorUser.id,
-            complaints: faker.lorem.sentence(),
+            complaints: faker.helpers.arrayElement([
+              "Severe pain in lower right back tooth",
+              "Bleeding gums while flossing",
+              "Sensitivity to cold water",
+              "Desire for routine checkup and cleaning",
+              "Loose dental crown"
+            ]),
             insurance: "HealthCare Plus",
             insuranceNo: faker.string.alphanumeric(10),
             emergencyContactName: faker.person.fullName(),
@@ -202,9 +211,19 @@ async function main() {
         await prisma.diagnosis.create({
           data: {
             patientId: patient.id,
-            currentComplaint: "Mild pain and irritation",
-            pastHistory: "No prior operations",
-            medicalHistory: JSON.stringify(["Hypertension", "Asthma"].slice(0, faker.number.int({ min: 0, max: 2 }))),
+            currentComplaint: faker.helpers.arrayElement([
+              "Toothache in lower left molar",
+              "Swollen gums in upper front area",
+              "Stained teeth and plaque buildup",
+              "Food impaction between upper premolars"
+            ]),
+            pastHistory: faker.helpers.arrayElement([
+              "Extraction of wisdom teeth 5 years ago",
+              "Root canal treatment on tooth #14",
+              "Orthodontic treatment in childhood",
+              "No prior major dental work"
+            ]),
+            medicalHistory: JSON.stringify(faker.helpers.arrayElements(["BleedingDisorders", "Hypertension", "Diabetes", "Pregnancy", "BloodThinners", "Cardiac"], { min: 0, max: 2 })),
           },
         });
 

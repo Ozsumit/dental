@@ -223,7 +223,7 @@ export default function DoctorSettingsClient({
             <div>
               <h3 className="text-lg font-bold text-slate-950">{fullName || profile.username}</h3>
               <p className="text-sm text-slate-500 font-medium">
-                {specialization || "Physiotherapist"} · Nepal General Hospital
+                {specialization || "Dentist"} · National Dental Hospital
               </p>
               
               {/* Tags */}
@@ -232,7 +232,7 @@ export default function DoctorSettingsClient({
                   NMC Reg: {nmcRegNo || "12847"}
                 </span>
                 <span className="px-3 py-1 bg-blue-50 text-blue-600 text-xs font-semibold rounded-full border border-blue-100">
-                  Dept: {specialization || "Physiotherapy"}
+                  Dept: {specialization || "Dentistry"}
                 </span>
               </div>
             </div>
@@ -320,7 +320,7 @@ export default function DoctorSettingsClient({
                 type="text"
                 value={specialization}
                 onChange={(e) => setSpecialization(e.target.value)}
-                placeholder="Physiotherapy"
+                placeholder="Dentistry / Orthodontics"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-900 focus:bg-white focus:ring-1 focus:ring-brand-700 focus:border-brand-700 outline-none transition-all"
               />
             </div>

@@ -44,7 +44,7 @@ export default function DoctorDashboardClient({
 
   return (
     <div className="p-8 space-y-8 max-w-[1600px] mx-auto w-full font-sans antialiased text-slate-800 animate-in fade-in duration-300">
-      
+
       {/* Top Banner Greeting */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
@@ -55,17 +55,12 @@ export default function DoctorDashboardClient({
             <Calendar className="w-4 h-4 text-brand-500" /> {todayStr}
           </p>
         </div>
-        <div className="bg-brand-50 border border-brand-100 px-4 py-2.5 rounded-xl flex items-center gap-3">
-          <Activity className="w-5 h-5 text-brand-700 animate-pulse" />
-          <span className="text-xs font-bold text-brand-800 uppercase tracking-wider">
-            Clinical Engine Active
-          </span>
-        </div>
+
       </div>
 
       {/* Analytics Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        
+
         {/* Total Patients */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs flex items-center justify-between hover:border-slate-300 transition group">
           <div className="space-y-1">
@@ -126,7 +121,7 @@ export default function DoctorDashboardClient({
 
       {/* Grid: Charts + Quick Queue */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        
+
         {/* Left Column: SVG Analytics Chart */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-xs lg:col-span-2 flex flex-col justify-between space-y-6">
           <div>
@@ -165,7 +160,7 @@ export default function DoctorDashboardClient({
                     onMouseLeave={() => setHoveredBar(null)}
                     style={{ width: `${100 / chartData.length}%` }}
                   >
-                    
+
                     {/* Tooltip */}
                     {isHovered && (
                       <div className="absolute -top-16 bg-slate-950 text-white text-[10px] p-2.5 rounded-lg shadow-lg z-20 flex flex-col gap-1 w-24 border border-slate-800 animate-in fade-in zoom-in-95 duration-150">
@@ -288,7 +283,7 @@ export default function DoctorDashboardClient({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              
+
               {/* Render Pending queue */}
               {pendingPatients.map((p) => (
                 <tr key={p.id} className="hover:bg-slate-50 transition group">

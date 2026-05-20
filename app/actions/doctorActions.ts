@@ -39,7 +39,6 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
   const diagnosisData = {
     currentHistory: formData.get("currentHistory")?.toString() || null,
     pastHistory: formData.get("pastHistory")?.toString() || null,
-    medicalHistory: medicalHistory,
     vasScore: isNaN(vasScore) ? 0 : vasScore,
     icd10Code: formData.get("icd10Code")?.toString() || null,
     treatmentPlan: formData.get("treatmentPlan")?.toString() || null,
@@ -53,11 +52,19 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
 
+  // Widen date windows by 12 hours earlier and 12 hours later to be robust against client-server timezone offsets
+  const startWindow = new Date(today);
+  startWindow.setHours(startWindow.getHours() - 12);
+  const endWindow = new Date(tomorrow);
+  endWindow.setHours(endWindow.getHours() + 12);
+
   try {
     // 1. Update/Create Diagnosis record
     const existingDiagnosis = await prisma.diagnosis.findFirst({
-      where: { patientId, createdAt: { gte: today, lt: tomorrow } },
+      where: { patientId, createdAt: { gte: startWindow, lt: endWindow } },
     });
+
+    let diagnosisId = existingDiagnosis?.id;
 
     if (existingDiagnosis) {
       await prisma.diagnosis.update({
@@ -65,17 +72,107 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
         data: diagnosisData,
       });
     } else {
-      await prisma.diagnosis.create({ data: { patientId, ...diagnosisData } });
+      const newDiag = await prisma.diagnosis.create({ data: { patientId, ...diagnosisData } });
+      diagnosisId = newDiag.id;
+    }
+
+    // Update Medical Record with medicalHistory
+    await prisma.medicalRecord.upsert({
+      where: { patientId },
+      update: { medicalHistory },
+      create: { patientId, medicalHistory }
+    });
+
+    // Handle ClinicalAssessment if objectiveData is present
+    const objDataStr = formData.get("objectiveData")?.toString();
+    if (objDataStr && diagnosisId) {
+      try {
+        const parsedObj = JSON.parse(objDataStr);
+        await prisma.clinicalAssessment.upsert({
+          where: { diagnosisId },
+          update: {
+            toothChart: JSON.stringify(parsedObj.toothChart || {}),
+            oralHygiene: JSON.stringify(parsedObj.oralHygiene || {}),
+            tmj: parsedObj.tmj || null,
+            biteOcclusion: parsedObj.biteOcclusion || null,
+            softTissue: parsedObj.softTissue || null,
+            generalExam: JSON.stringify(parsedObj.generalExamination || {}),
+            diagnosticProcs: JSON.stringify(parsedObj.diagnosticProcedures || []),
+          },
+          create: {
+            patientId,
+            diagnosisId,
+            toothChart: JSON.stringify(parsedObj.toothChart || {}),
+            oralHygiene: JSON.stringify(parsedObj.oralHygiene || {}),
+            tmj: parsedObj.tmj || null,
+            biteOcclusion: parsedObj.biteOcclusion || null,
+            softTissue: parsedObj.softTissue || null,
+            generalExam: JSON.stringify(parsedObj.generalExamination || {}),
+            diagnosticProcs: JSON.stringify(parsedObj.diagnosticProcedures || []),
+          }
+        });
+      } catch (e) {
+        console.error("Error saving clinical assessment", e);
+      }
+    }
+
+    // 1.5. Sync selected clinical procedures to billing catalog & Procedure table
+    const selectedProceduresRaw = formData.get("selectedProcedures")?.toString();
+    if (selectedProceduresRaw) {
+      const selectedProceduresNames: string[] = JSON.parse(selectedProceduresRaw);
+
+      // Find active appointment today to link procedures
+      const activeAppt = await prisma.appointment.findFirst({
+        where: {
+          patientId,
+          tenantId,
+          appointmentDate: { gte: startWindow, lt: endWindow },
+        },
+        orderBy: { appointmentDate: "desc" },
+      });
+
+      // Delete existing PENDING auto-generated procedures today to avoid duplicates on re-save
+      await prisma.procedure.deleteMany({
+        where: {
+          patientId,
+          tenantId,
+          status: "PENDING",
+          appointmentId: activeAppt?.id || null,
+          description: "Auto-generated from doctor clinical charting",
+        },
+      });
+
+      // Insert new procedures matching standard catalog pricing if available
+      for (const procName of selectedProceduresNames) {
+        const catalogItem = await prisma.billingCatalog.findFirst({
+          where: { name: procName, tenantId },
+        });
+
+        await prisma.procedure.create({
+          data: {
+            patientId,
+            appointmentId: activeAppt?.id || null,
+            name: procName,
+            type: catalogItem?.category || "Dental",
+            cost: catalogItem?.baseCost || 0,
+            status: "PENDING",
+            procedureDate: new Date(),
+            description: "Auto-generated from doctor clinical charting",
+            tenantId,
+          },
+        });
+      }
     }
 
     // 2. Finalization Logic
+
     if (finalize) {
       // Find appointments that are about to be completed
       const pendingAppointments = await prisma.appointment.findMany({
         where: {
           patientId,
           tenantId,
-          appointmentDate: { gte: today, lt: tomorrow },
+          appointmentDate: { gte: startWindow, lt: endWindow },
           status: { not: "COMPLETED" },
         },
       });
