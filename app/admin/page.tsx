@@ -1,14 +1,16 @@
 import { getUsers } from "@/app/actions/userActions";
 import { getBillingCatalog, getAdminStats, getSystemSettings } from "@/app/actions/billingActions";
+import { getTaxonomies } from "@/app/actions/taxonomyActions";
 import AdminClient from "@/components/admin/AdminClient";
 import { Users, DollarSign, Calendar } from "lucide-react";
 
 export default async function AdminPage() {
-  const [users, catalog, stats, settings] = await Promise.all([
+  const [users, catalog, stats, settings, taxonomies] = await Promise.all([
     getUsers(),
     getBillingCatalog(),
     getAdminStats(),
-    getSystemSettings()
+    getSystemSettings(),
+    getTaxonomies()
   ]);
 
   return (
@@ -54,7 +56,7 @@ export default async function AdminPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-           <AdminClient users={users} catalog={catalog} settings={settings} />
+           <AdminClient users={users} catalog={catalog} settings={settings} taxonomies={taxonomies} />
         </div>
         <div className="space-y-8">
            {/* Analytics Card */}

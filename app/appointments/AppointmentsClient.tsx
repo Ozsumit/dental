@@ -289,13 +289,13 @@ export default function AppointmentsClient({
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
           {loadingTodays ? (
             <div className="py-20 text-center font-bold text-slate-500 animate-pulse">
-              Loading today's queue...
+              Loading today&apos;s queue...
             </div>
           ) : (
             <>
               <div className="p-6 border-b border-slate-100 bg-amber-50/30 flex justify-between items-center">
                 <div>
-                  <h3 className="text-base font-extrabold text-amber-800">Today's Appointment Queue</h3>
+                  <h3 className="text-base font-extrabold text-amber-800">Today&apos;s Appointment Queue</h3>
                   <p className="text-xs text-amber-600 font-medium">Sorted chronologically with token numbers</p>
                 </div>
                 <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full border border-amber-200">

@@ -1,14 +1,27 @@
+
 "use client";
 
 import { useState } from "react";
 import { saveUser, deleteUser } from "@/app/actions/userActions";
 import { saveCatalogItem, deleteCatalogItem, saveSystemSettings } from "@/app/actions/billingActions";
-import { Plus, Edit2, Trash2, X, Shield, User as UserIcon, Receipt, Briefcase, Settings, Save } from "lucide-react";
-import { User, BillingCatalog, SystemSettings } from "@prisma/client";
+import { deleteTaxonomy } from "@/app/actions/taxonomyActions";
+import { Plus, Edit2, Trash2, X, Shield, User as UserIcon, Briefcase, Settings, Save } from "lucide-react";
+import { User, BillingCatalog, SystemSettings, Taxonomy } from "@prisma/client";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import TaxonomyFormModal from "./modals/TaxonomyFormModal";
 
-export default function AdminClient({ users, catalog, settings }: { users: User[], catalog: BillingCatalog[], settings: SystemSettings }) {
-  const [activeTab, setActiveTab] = useState<"Users" | "Catalog" | "Settings">("Users");
+export default function AdminClient({
+  users,
+  catalog,
+  settings,
+  taxonomies
+}: {
+  users: User[],
+  catalog: BillingCatalog[],
+  settings: SystemSettings,
+  taxonomies: Taxonomy[]
+}) {
+  const [activeTab, setActiveTab] = useState<"Users" | "Catalog" | "Taxonomies" | "Settings">("Users");
 
   // User states
   const [isUserFormOpen, setIsUserFormOpen] = useState(false);
@@ -19,7 +32,27 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
   const [isCatalogFormOpen, setIsCatalogFormOpen] = useState(false);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<BillingCatalog | null>(null);
 
+  // Taxonomy states
+  const [isTaxonomyFormOpen, setIsTaxonomyFormOpen] = useState(false);
+  const [selectedTaxonomy, setSelectedTaxonomy] = useState<Taxonomy | null>(null);
+
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: "User" | "Catalog" | "Taxonomy" } | null>(null);
+
+  const handleDeleteConfirm = async () => {
+    if (!itemToDelete) return;
+
+    if (itemToDelete.type === "User") {
+      await deleteUser(itemToDelete.id);
+    } else if (itemToDelete.type === "Catalog") {
+      await deleteCatalogItem(itemToDelete.id);
+    } else if (itemToDelete.type === "Taxonomy") {
+      await deleteTaxonomy(itemToDelete.id);
+    }
+
+    setIsDeleteModalOpen(false);
+    setItemToDelete(null);
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -44,6 +77,12 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                   Billing Catalog
                </button>
                <button
+                 onClick={() => setActiveTab("Taxonomies")}
+                 className={`text-xs font-bold uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === "Taxonomies" ? "border-brand-700 text-brand-700" : "border-transparent text-slate-400 hover:text-slate-600"}`}
+               >
+                  Clinical Taxonomies
+               </button>
+               <button
                  onClick={() => setActiveTab("Settings")}
                  className={`text-xs font-bold uppercase tracking-widest pb-1 border-b-2 transition-all ${activeTab === "Settings" ? "border-brand-700 text-brand-700" : "border-transparent text-slate-400 hover:text-slate-600"}`}
                >
@@ -53,21 +92,32 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
           </div>
         </div>
 
-        {activeTab === "Users" ? (
-          <button
-            onClick={() => { setSelectedUser(null); setUserFormError(""); setIsUserFormOpen(true); }}
-            className="bg-brand-700 hover:bg-brand-800 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
-          >
-            <Plus className="w-5 h-5" /> Add New User
-          </button>
-        ) : activeTab === "Catalog" ? (
-          <button
-            onClick={() => { setSelectedCatalogItem(null); setIsCatalogFormOpen(true); }}
-            className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
-          >
-            <Plus className="w-5 h-5" /> Add Procedure
-          </button>
-        ) : null}
+        <div className="flex gap-2">
+          {activeTab === "Users" && (
+            <button
+              onClick={() => { setSelectedUser(null); setUserFormError(""); setIsUserFormOpen(true); }}
+              className="bg-brand-700 hover:bg-brand-800 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
+            >
+              <Plus className="w-5 h-5" /> Add New User
+            </button>
+          )}
+          {activeTab === "Catalog" && (
+            <button
+              onClick={() => { setSelectedCatalogItem(null); setIsCatalogFormOpen(true); }}
+              className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
+            >
+              <Plus className="w-5 h-5" /> Add Procedure
+            </button>
+          )}
+          {activeTab === "Taxonomies" && (
+            <button
+              onClick={() => { setSelectedTaxonomy(null); setIsTaxonomyFormOpen(true); }}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
+            >
+              <Plus className="w-5 h-5" /> Add Taxonomy
+            </button>
+          )}
+        </div>
       </div>
 
       {activeTab === "Users" && (
@@ -107,7 +157,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => { setSelectedUser(user); setIsDeleteModalOpen(true); }}
+                        onClick={() => { setItemToDelete({ id: user.id, type: "User" }); setIsDeleteModalOpen(true); }}
                         className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -158,7 +208,7 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => { setSelectedCatalogItem(item); setIsDeleteModalOpen(true); }}
+                        onClick={() => { setItemToDelete({ id: item.id, type: "Catalog" }); setIsDeleteModalOpen(true); }}
                         className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -167,11 +217,51 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                   </td>
                 </tr>
               ))}
-              {catalog.length === 0 && (
-                <tr>
-                   <td colSpan={4} className="py-20 text-center text-slate-400 italic">No procedures in catalog.</td>
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {activeTab === "Taxonomies" && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in duration-300">
+          <table className="min-w-full text-left text-sm text-slate-600">
+            <thead className="bg-slate-50 text-slate-700 uppercase font-bold text-xs border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-5">Group / Category</th>
+                <th className="px-6 py-5">Label</th>
+                <th className="px-6 py-5">Value</th>
+                <th className="px-6 py-5 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {taxonomies.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50 transition">
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">{item.group}</span>
+                      <span className="text-xs font-bold text-slate-400">{item.category || "Uncategorized"}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 font-bold text-slate-900">{item.label}</td>
+                  <td className="px-6 py-4 font-mono text-xs text-slate-500">{item.value}</td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => { setSelectedTaxonomy(item); setIsTaxonomyFormOpen(true); }}
+                        className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => { setItemToDelete({ id: item.id, type: "Taxonomy" }); setIsDeleteModalOpen(true); }}
+                        className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
                 </tr>
-              )}
+              ))}
             </tbody>
           </table>
         </div>
@@ -200,7 +290,6 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
                   className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none font-black text-slate-700"
                 />
               </div>
-              <p className="text-[10px] text-slate-400 mt-2 font-medium">This fee will be automatically pre-filled when creating new appointments.</p>
             </div>
 
             <button
@@ -213,190 +302,102 @@ export default function AdminClient({ users, catalog, settings }: { users: User[
         </div>
       )}
 
+      {/* User Form Modal */}
       {isUserFormOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
-              <h2 className="text-xl font-bold text-slate-800">
-                {selectedUser ? "Update User" : "Create New User"}
-              </h2>
-              <button
-                onClick={() => setIsUserFormOpen(false)}
-                className="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <h2 className="text-xl font-bold text-slate-800">{selectedUser ? "Update User" : "Create New User"}</h2>
+              <button onClick={() => setIsUserFormOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full"><X className="w-5 h-5" /></button>
             </div>
-            <form
-              action={async (formData) => {
-                setUserFormError("");
-                try {
-                  await saveUser(formData, selectedUser?.id);
-                  setIsUserFormOpen(false);
-                } catch (err: any) {
-                  setUserFormError(err.message || "Failed to save user.");
-                }
-              }}
-              className="p-6 space-y-5"
-            >
-              {userFormError && (
-                <div className="bg-red-50 border border-red-200 text-red-800 p-3.5 rounded-xl text-xs font-bold flex items-center gap-2">
-                  <span className="text-sm shrink-0">⚠️</span>
-                  <span>{userFormError}</span>
-                </div>
-              )}
+            <form action={async (formData) => {
+              setUserFormError("");
+              try { await saveUser(formData, selectedUser?.id); setIsUserFormOpen(false); }
+              catch (err: any) { setUserFormError(err.message || "Failed to save user."); }
+            }} className="p-6 space-y-5">
+              {userFormError && <div className="bg-red-50 border border-red-200 text-red-800 p-3.5 rounded-xl text-xs font-bold flex items-center gap-2"><span>⚠️</span><span>{userFormError}</span></div>}
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase">Username</label>
-                <input
-                  required
-                  name="username"
-                  defaultValue={selectedUser?.username}
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none"
-                />
+                <input required name="username" defaultValue={selectedUser?.username} className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none" />
               </div>
               <div>
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  {selectedUser ? "New Password (leave blank to keep current)" : "Password"}
-                </label>
-                <input
-                  required={!selectedUser}
-                  name="password"
-                  type="password"
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none"
-                  placeholder={selectedUser ? "••••••••" : ""}
-                />
+                <label className="text-xs font-bold text-slate-500 uppercase">{selectedUser ? "New Password" : "Password"}</label>
+                <input required={!selectedUser} name="password" type="password" className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none" placeholder={selectedUser ? "••••••••" : ""} />
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase">Role</label>
-                <select
-                  name="role"
-                  defaultValue={selectedUser?.role || "RECEPTIONIST"}
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white font-bold"
-                >
+                <select name="role" defaultValue={selectedUser?.role || "RECEPTIONIST"} className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white font-bold">
                   <option value="RECEPTIONIST">Receptionist</option>
                   <option value="DOCTOR">Doctor</option>
                   <option value="ADMIN">Admin</option>
                 </select>
               </div>
               <div className="pt-2 flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setIsUserFormOpen(false)}
-                  className="px-6 py-3 text-slate-700 font-bold hover:bg-slate-100 rounded-xl transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-brand-700 text-white font-bold hover:bg-brand-800 rounded-xl shadow-md transition"
-                >
-                  Save User
-                </button>
+                <button type="button" onClick={() => setIsUserFormOpen(false)} className="px-6 py-3 text-slate-700 font-bold hover:bg-slate-100 rounded-xl transition">Cancel</button>
+                <button type="submit" className="px-6 py-3 bg-brand-700 text-white font-bold hover:bg-brand-800 rounded-xl shadow-md transition">Save User</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      <ConfirmationModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
-        onConfirm={async () => {
-          if (activeTab === "Users" && selectedUser) {
-            await deleteUser(selectedUser.id);
-          } else if (activeTab === "Catalog" && selectedCatalogItem) {
-            await deleteCatalogItem(selectedCatalogItem.id);
-          }
-        }}
-        title={`Delete ${activeTab === "Users" ? "User" : "Procedure"}?`}
-        message={`Are you sure you want to remove this ${activeTab === "Users" ? "user account" : "catalog item"}? This action cannot be undone.`}
-        confirmText="Yes, Delete"
-        variant="danger"
-      />
-
+      {/* Catalog Form Modal */}
       {isCatalogFormOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
-              <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-                <Receipt className="w-5 h-5 text-brand-500" />
-                {selectedCatalogItem ? "Edit Procedure" : "New Procedure"}
-              </h2>
-              <button
-                onClick={() => setIsCatalogFormOpen(false)}
-                className="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <h2 className="text-xl font-bold text-slate-800">{selectedCatalogItem ? "Edit Procedure" : "New Procedure"}</h2>
+              <button onClick={() => setIsCatalogFormOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full"><X className="w-5 h-5" /></button>
             </div>
-            <form
-              action={async (formData) => {
-                await saveCatalogItem(formData, selectedCatalogItem?.id);
-                setIsCatalogFormOpen(false);
-              }}
-              className="p-6 space-y-5"
-            >
+            <form action={async (formData) => {
+              await saveCatalogItem(formData, selectedCatalogItem?.id);
+              setIsCatalogFormOpen(false);
+            }} className="p-6 space-y-5">
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase">Procedure Name</label>
-                <input
-                  required
-                  name="name"
-                  defaultValue={selectedCatalogItem?.name}
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-bold"
-                  placeholder="e.g. Tooth Extraction"
-                />
+                <input required name="name" defaultValue={selectedCatalogItem?.name} className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-bold" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">Category</label>
-                  <input
-                    name="category"
-                    defaultValue={selectedCatalogItem?.category || ""}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-medium"
-                    placeholder="e.g. Dental"
-                  />
+                  <input name="category" defaultValue={selectedCatalogItem?.category || ""} className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-medium" />
                 </div>
                 <div>
                   <label className="text-xs font-bold text-slate-500 uppercase">Base Cost ($)</label>
-                  <input
-                    required
-                    name="baseCost"
-                    type="number"
-                    step="0.01"
-                    defaultValue={selectedCatalogItem?.baseCost}
-                    className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-black text-slate-700"
-                  />
+                  <input required name="baseCost" type="number" step="0.01" defaultValue={selectedCatalogItem?.baseCost} className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-black text-slate-700" />
                 </div>
               </div>
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase">Description</label>
-                <textarea
-                  name="description"
-                  defaultValue={selectedCatalogItem?.description || ""}
-                  rows={3}
-                  className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none resize-none"
-                  placeholder="Optional details about the procedure..."
-                />
+                <textarea name="description" defaultValue={selectedCatalogItem?.description || ""} rows={3} className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none resize-none" />
               </div>
               <div className="pt-2 flex justify-end gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={() => setIsCatalogFormOpen(false)}
-                  className="px-6 py-3 text-slate-700 font-bold hover:bg-slate-100 rounded-xl transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-3 bg-brand-600 text-white font-bold hover:bg-brand-700 rounded-xl shadow-md transition"
-                >
-                  Save Procedure
-                </button>
+                <button type="button" onClick={() => setIsCatalogFormOpen(false)} className="px-6 py-3 text-slate-700 font-bold hover:bg-slate-100 rounded-xl transition">Cancel</button>
+                <button type="submit" className="px-6 py-3 bg-brand-600 text-white font-bold hover:bg-brand-700 rounded-xl shadow-md transition">Save Procedure</button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Taxonomy Form Modal */}
+      <TaxonomyFormModal
+        isOpen={isTaxonomyFormOpen}
+        onClose={() => setIsTaxonomyFormOpen(false)}
+        selectedTaxonomy={selectedTaxonomy}
+        tenantId={settings.tenantId}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title={`Delete ${itemToDelete?.type}?`}
+        message="Are you sure you want to remove this item? This action cannot be undone."
+        confirmText="Yes, Delete"
+        variant="danger"
+      />
     </div>
   );
 }

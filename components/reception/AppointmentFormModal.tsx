@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Calendar, AlertCircle } from "lucide-react";
+import { Calendar, AlertCircle } from "lucide-react";
 import { createAppointmentAction } from "@/app/actions/patientsActions";
 import { Patient } from "@/lib/types/index";
 
