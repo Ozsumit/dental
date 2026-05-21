@@ -4,6 +4,11 @@ import { useState } from "react";
 import { X, AlertCircle, Calendar } from "lucide-react";
 import { savePatient } from "@/app/actions/patientsActions";
 import { Patient } from "@/lib/types/index";
+import { formValidation } from "@/services/validations";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
+import { Button } from "@/components/ui/Button";
 
 interface PatientFormModalProps {
   isOpen: boolean;
@@ -25,7 +30,9 @@ export default function PatientFormModal({
   const [patientError, setPatientError] = useState<string | null>(null);
   const [isSavingPatient, setIsSavingPatient] = useState(false);
   const [createApptToggle, setCreateApptToggle] = useState(false);
-  const [apptBillAmount, setApptBillAmount] = useState<string | number>(defaultFee);
+  const [apptBillAmount, setApptBillAmount] = useState<string | number>(
+    defaultFee,
+  );
 
   if (!isOpen) return null;
 
@@ -56,20 +63,15 @@ export default function PatientFormModal({
 
         <form
           action={async (formData) => {
-            setPatientError(null);
+            const err = formValidation(formData);
+            if (err) return setPatientError(err);
+
             setIsSavingPatient(true);
-            try {
-              const result = await savePatient(formData, selectedPatient?.id);
-              if (result && "error" in result && result.error) {
-                setPatientError(result.error as string);
-              } else {
-                onSuccess();
-              }
-            } catch (error: any) {
-              setPatientError(error.message || "A database error occurred.");
-            } finally {
-              setIsSavingPatient(false);
-            }
+            const res = await savePatient(formData, selectedPatient?.id).catch((e) => ({ error: e.message || "Database error" }));
+            setIsSavingPatient(false);
+
+            if (res && "error" in res && res.error) setPatientError(res.error as string);
+            else onSuccess();
           }}
           className="flex flex-col flex-1 overflow-hidden"
         >
@@ -80,83 +82,58 @@ export default function PatientFormModal({
                 Personal Details
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                    First Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    required
-                    name="firstName"
-                    defaultValue={selectedPatient?.firstName}
-                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                    Last Name <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    required
-                    name="lastName"
-                    defaultValue={selectedPatient?.lastName}
-                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all"
-                  />
-                </div>
+                <Input
+                  label="First Name *"
+                  required
+                  type="text"
+                  name="firstName"
+                  defaultValue={selectedPatient?.firstName}
+                />
+                <Input
+                  label="Last Name *"
+                  required
+                  name="lastName"
+                  defaultValue={selectedPatient?.lastName}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                    Birth Date <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    required
-                    type="date"
-                    name="dateOfBirth"
-                    defaultValue={
-                      selectedPatient?.dateOfBirth
-                        ? new Date(selectedPatient.dateOfBirth)
-                            .toISOString()
-                            .split("T")[0]
-                        : ""
-                    }
-                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all text-slate-600"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                    Gender
-                  </label>
-                  <select
-                    name="gender"
-                    defaultValue={selectedPatient?.gender || ""}
-                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all font-medium"
-                  >
-                    <option value="">Select...</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                    Blood Group
-                  </label>
-                  <select
-                    name="bloodGroup"
-                    defaultValue={selectedPatient?.bloodGroup || ""}
-                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all font-medium"
-                  >
-                    <option value="">Select...</option>
-                    {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
-                      (bg) => (
-                        <option key={bg} value={bg}>
-                          {bg}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </div>
+                <Input
+                  label="Birth Date *"
+                  required
+                  type="date"
+                  name="dateOfBirth"
+                  defaultValue={
+                    selectedPatient?.dateOfBirth
+                      ? new Date(selectedPatient.dateOfBirth)
+                        .toISOString()
+                        .split("T")[0]
+                      : ""
+                  }
+                />
+                <Select
+                  label="Gender *"
+                  name="gender"
+                  required
+                  defaultValue={selectedPatient?.gender || ""}
+                  options={[
+                    { label: "Select...", value: "" },
+                    { label: "Male", value: "Male" },
+                    { label: "Female", value: "Female" },
+                    { label: "Other", value: "Other" },
+                  ]}
+                />
+                <Select
+                  label="Blood Group"
+                  name="bloodGroup"
+                  defaultValue={selectedPatient?.bloodGroup || ""}
+                  options={[
+                    { label: "Select...", value: "" },
+                    ...["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
+                      (bg) => ({ label: bg, value: bg })
+                    ),
+                  ]}
+                />
               </div>
             </div>
 
@@ -166,41 +143,26 @@ export default function PatientFormModal({
                 Contact Information
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                    Phone Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    required
-                    type="tel"
-                    name="phone"
-                    defaultValue={selectedPatient?.phone}
-                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    defaultValue={selectedPatient?.email || ""}
-                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                  Residential Address
-                </label>
-                <textarea
-                  name="address"
-                  defaultValue={selectedPatient?.address || ""}
-                  rows={2}
-                  className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all resize-none"
+                <Input
+                  label="Phone Number *"
+                  required
+                  type="tel"
+                  name="phone"
+                  defaultValue={selectedPatient?.phone}
+                />
+                <Input
+                  label="Email Address"
+                  type="email"
+                  name="email"
+                  defaultValue={selectedPatient?.email || ""}
                 />
               </div>
+              <Textarea
+                label="Residential Address"
+                name="address"
+                defaultValue={selectedPatient?.address || ""}
+                rows={2}
+              />
             </div>
 
             {/* Medical & Insurance Section */}
@@ -209,34 +171,25 @@ export default function PatientFormModal({
                 Medical & Insurance
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                    Patient Category
-                  </label>
-                  <select
-                    name="role"
-                    defaultValue={selectedPatient?.role || "Regular"}
-                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all font-medium"
-                  >
-                    <option value="Regular">Regular</option>
-                    <option value="VIP">VIP</option>
-                    <option value="New">New</option>
-                    <option value="Senior">Senior</option>
-                    <option value="Child">Child</option>
-                    <option value="Corporate">Corporate</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">
-                    Known Allergies
-                  </label>
-                  <input
-                    name="allergies"
-                    defaultValue={selectedPatient?.allergies || ""}
-                    className="w-full p-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all"
-                    placeholder="e.g. Penicillin, Peanuts"
-                  />
-                </div>
+                <Select
+                  label="Patient Category"
+                  name="role"
+                  defaultValue={selectedPatient?.role || "Regular"}
+                  options={[
+                    { label: "Regular", value: "Regular" },
+                    { label: "VIP", value: "VIP" },
+                    { label: "New", value: "New" },
+                    { label: "Senior", value: "Senior" },
+                    { label: "Child", value: "Child" },
+                    { label: "Corporate", value: "Corporate" },
+                  ]}
+                />
+                <Input
+                  label="Known Allergies"
+                  name="allergies"
+                  defaultValue={selectedPatient?.allergies || ""}
+                  placeholder="e.g. Penicillin, Peanuts"
+                />
               </div>
             </div>
 
@@ -254,14 +207,12 @@ export default function PatientFormModal({
                       onChange={(e) => setCreateApptToggle(e.target.checked)}
                     />
                     <div
-                      className={`block w-12 h-7 rounded-full transition-colors ${
-                        createApptToggle ? "bg-brand-600" : "bg-slate-200"
-                      }`}
+                      className={`block w-12 h-7 rounded-full transition-colors ${createApptToggle ? "bg-brand-600" : "bg-slate-200"
+                        }`}
                     ></div>
                     <div
-                      className={`absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform ${
-                        createApptToggle ? "translate-x-5" : ""
-                      }`}
+                      className={`absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform ${createApptToggle ? "translate-x-5" : ""
+                        }`}
                     ></div>
                   </div>
                   <div>
@@ -281,52 +232,37 @@ export default function PatientFormModal({
                     </h3>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className="text-[10px] font-black text-brand-400 uppercase tracking-widest block mb-2">
-                          Preferred Date <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          required={createApptToggle}
-                          type="date"
-                          name="appointmentDate"
-                          defaultValue={new Date().toISOString().split("T")[0]}
-                          className="w-full p-3.5 bg-white border border-brand-100 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-700"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-black text-brand-400 uppercase tracking-widest block mb-2">
-                          Assign Doctor <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                          required={createApptToggle}
-                          name="doctorId"
-                          className="w-full p-3.5 bg-white border border-brand-100 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-700"
-                        >
-                          <option value="">Select Doctor...</option>
-                          {initialDoctors.map((d) => (
-                            <option key={d.id} value={d.id}>
-                              Dr. {d.fullName || d.username}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                      <Input
+                        label="Preferred Date *"
+                        required={createApptToggle}
+                        type="date"
+                        name="appointmentDate"
+                        defaultValue={new Date().toISOString().split("T")[0]}
+                      />
+                      <Select
+                        label="Assign Doctor *"
+                        required={createApptToggle}
+                        name="doctorId"
+                        options={[
+                          { label: "Select Doctor...", value: "" },
+                          ...initialDoctors.map((d) => ({
+                            label: `Dr. ${d.fullName || d.username}`,
+                            value: d.id,
+                          })),
+                        ]}
+                      />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                      <div>
-                        <label className="text-[10px] font-black text-brand-400 uppercase tracking-widest block mb-2">
-                          Bill Amount
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          name="billAmount"
-                          value={apptBillAmount}
-                          onChange={(e) => setApptBillAmount(e.target.value)}
-                          placeholder="0.00"
-                          className="w-full p-3.5 bg-white border border-brand-100 rounded-xl focus:ring-4 focus:ring-brand-900/10 focus:border-brand-500 outline-none transition-all font-medium text-slate-700"
-                        />
-                      </div>
+                      <Input
+                        label="Bill Amount"
+                        type="number"
+                        step="0.01"
+                        name="billAmount"
+                        value={apptBillAmount}
+                        onChange={(e) => setApptBillAmount(e.target.value)}
+                        placeholder="0.00"
+                      />
                       <div className="flex items-end pb-3">
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input
@@ -380,21 +316,22 @@ export default function PatientFormModal({
           </div>
 
           <div className="p-6 bg-white border-t border-slate-100 flex justify-end gap-3 shrink-0">
-            <button
+            <Button
               type="button"
+              variant="outline"
               disabled={isSavingPatient}
               onClick={onClose}
-              className="px-6 py-3 text-slate-600 font-bold hover:bg-slate-100 rounded-xl transition cursor-pointer"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
               disabled={isSavingPatient}
-              className="px-8 py-3 bg-brand-600 text-white font-bold hover:bg-brand-700 rounded-xl shadow-lg shadow-brand-100 transition disabled:opacity-70 flex items-center gap-2 cursor-pointer"
+              loading={isSavingPatient}
             >
               {isSavingPatient ? "Saving..." : "Confirm & Save"}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

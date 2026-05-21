@@ -1,9 +1,12 @@
-
 "use client";
 
 import { saveTaxonomy } from "@/app/actions/taxonomyActions";
 import { X, Save } from "lucide-react";
 import { Taxonomy } from "@prisma/client";
+import { Input } from "@/components/ui/Input";
+import { Select } from "@/components/ui/Select";
+import { Textarea } from "@/components/ui/Textarea";
+import { Button } from "@/components/ui/Button";
 
 interface TaxonomyFormModalProps {
   isOpen: boolean;
@@ -28,7 +31,7 @@ export default function TaxonomyFormModal({ isOpen, onClose, selectedTaxonomy, t
         </div>
         <form
           action={async (formData) => {
-            await saveTaxonomy(formData);
+            await saveTaxonomy(formData).catch(e => alert(e.message));
             onClose();
           }}
           className="p-6 space-y-5"
@@ -37,92 +40,70 @@ export default function TaxonomyFormModal({ isOpen, onClose, selectedTaxonomy, t
           <input type="hidden" name="tenantId" value={tenantId} />
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Group</label>
-              <select
-                required
-                name="group"
-                defaultValue={selectedTaxonomy?.group || "DIAGNOSIS"}
-                className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl outline-none bg-white font-bold text-sm"
-              >
-                <option value="MEDICAL_HISTORY">Medical History</option>
-                <option value="INTAKE_QUESTION">Intake Question</option>
-                <option value="EXAMINATION">Examination</option>
-                <option value="PROBLEM">Problem</option>
-                <option value="DIAGNOSIS">Diagnosis</option>
-                <option value="INVESTIGATION">Investigation</option>
-                <option value="TREATMENT">Treatment</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Order</label>
-              <input
-                name="order"
-                type="number"
-                defaultValue={selectedTaxonomy?.order || 0}
-                className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Category (Optional)</label>
-            <input
-              name="category"
-              defaultValue={selectedTaxonomy?.category || ""}
-              className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none"
-              placeholder="e.g. Systemic Diseases"
+            <Select
+              label="Group"
+              required
+              name="group"
+              defaultValue={selectedTaxonomy?.group || "DIAGNOSIS"}
+              options={[
+                { label: "Medical History", value: "MEDICAL_HISTORY" },
+                { label: "Intake Question", value: "INTAKE_QUESTION" },
+                { label: "Examination", value: "EXAMINATION" },
+                { label: "Problem", value: "PROBLEM" },
+                { label: "Diagnosis", value: "DIAGNOSIS" },
+                { label: "Investigation", value: "INVESTIGATION" },
+                { label: "Treatment", value: "TREATMENT" },
+              ]}
+            />
+            <Input
+              label="Order"
+              name="order"
+              type="number"
+              defaultValue={selectedTaxonomy?.order || 0}
             />
           </div>
+
+          <Input
+            label="Category (Optional)"
+            name="category"
+            defaultValue={selectedTaxonomy?.category || ""}
+            placeholder="e.g. Systemic Diseases"
+          />
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Label</label>
-              <input
-                required
-                name="label"
-                defaultValue={selectedTaxonomy?.label}
-                className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none"
-                placeholder="e.g. Diabetes Mellitus"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-slate-500 uppercase">Value / ID</label>
-              <input
-                required
-                name="value"
-                defaultValue={selectedTaxonomy?.value}
-                className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none font-mono text-sm"
-                placeholder="e.g. DIABETES"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs font-bold text-slate-500 uppercase">Metadata JSON (Optional)</label>
-            <textarea
-              name="metadata"
-              defaultValue={selectedTaxonomy?.metadata ? JSON.stringify(selectedTaxonomy.metadata) : ""}
-              rows={3}
-              className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-600 outline-none font-mono text-xs resize-none"
-              placeholder='{"type": "critical", "options": ["A", "B"]}'
+            <Input
+              label="Label"
+              required
+              name="label"
+              defaultValue={selectedTaxonomy?.label}
+              placeholder="e.g. Diabetes Mellitus"
+            />
+            <Input
+              label="Value / ID"
+              required
+              name="value"
+              defaultValue={selectedTaxonomy?.value}
+              placeholder="e.g. DIABETES"
+              className="font-mono"
             />
           </div>
 
+          <Textarea
+            label="Metadata JSON (Optional)"
+            name="metadata"
+            defaultValue={selectedTaxonomy?.metadata ? JSON.stringify(selectedTaxonomy.metadata) : ""}
+            rows={3}
+            placeholder='{"type": "critical", "options": ["A", "B"]}'
+            className="font-mono text-xs"
+          />
+
           <div className="pt-2 flex justify-end gap-3 mt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-3 text-slate-700 font-bold hover:bg-slate-100 rounded-xl transition"
-            >
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-3 bg-brand-700 text-white font-bold hover:bg-brand-800 rounded-xl shadow-md transition flex items-center gap-2"
-            >
-              <Save className="w-4 h-4" /> Save Taxonomy
-            </button>
+            </Button>
+            <Button type="submit" variant="primary">
+              <Save className="w-4 h-4 mr-2" /> Save Taxonomy
+            </Button>
           </div>
         </form>
       </div>

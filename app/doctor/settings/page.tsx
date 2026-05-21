@@ -1,4 +1,4 @@
-import DoctorSettingsClient from "@/components/doctor/DoctorSettingsClient";
+import SettingsClient from "@/components/shared/SettingsClient";
 import { getDoctorProfile } from "@/app/actions/doctorSettingsActions";
 import { redirect } from "next/navigation";
 
@@ -18,7 +18,7 @@ export default async function DoctorSettingsPage() {
 
   return (
     <div className="h-full bg-slate-50 overflow-y-auto">
-      <DoctorSettingsClient initialProfile={formattedProfile} />
+      <SettingsClient initialProfile={formattedProfile as any} role="DOCTOR" />
     </div>
   );
 }

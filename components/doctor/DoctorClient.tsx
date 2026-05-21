@@ -1,13 +1,24 @@
-
 "use client";
 
 import { useState, useMemo, useEffect, useTransition, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { updateDiagnosis } from "@/app/actions/doctorActions";
-import { User, BillingCatalog, Taxonomy } from "@prisma/client";
+import { User, BillingCatalog } from "@prisma/client";
 import { ExtendedPatient, ObjectiveData, TaxonomyItem } from "@/lib/types";
+
+// --- STATIC TAXONOMY IMPORTS ---
 import {
-  Search, Clock, ChevronLeft, Loader2, Save,
+  MEDICAL_HISTORY_TAXONOMY,
+  DENTAL_RELEVANT_QUESTIONS,
+  ON_EXAMINATION_TAXONOMY,
+  DENTAL_PROBLEM_TAXONOMY,
+  DENTAL_DIAGNOSIS_TAXONOMY,
+  DENTAL_INVESTIGATION_TAXONOMY,
+  DENTAL_TREATMENT_TAXONOMY
+} from "@/constants/taxonomy";
+
+import {
+  Search, Clock, ChevronLeft, Loader2, Save, User as UserIcon,
   CheckCircle, Stethoscope
 } from "lucide-react";
 import PatientProfileModal from "@/components/reception/PatientProfileModal";
@@ -39,12 +50,11 @@ interface TaxonomyGroupConfig {
 
 export default function DoctorClient({
   patients,
-  taxonomies = []
 }: {
   patients: ExtendedPatient[];
   doctors: Partial<User>[];
   catalog: BillingCatalog[];
-  taxonomies?: Taxonomy[];
+  taxonomies?: any[];
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -90,99 +100,22 @@ export default function DoctorClient({
     selectedTreatments: [],
   });
 
-  // Controlled states for definitive diagnosis and treatment/medicines plan
   const [treatmentPlanText, setTreatmentPlanText] = useState("");
   const [medicinesText, setMedicinesText] = useState("");
 
-  // Accordion expanded states for the Assessment & Plan tab catalogs
   const [expandedAPDiagnoses, setExpandedAPDiagnoses] = useState<Record<string, boolean>>({});
   const [expandedAPInvestigations, setExpandedAPInvestigations] = useState<Record<string, boolean>>({});
   const [expandedAPTreatments, setExpandedAPTreatments] = useState<Record<string, boolean>>({});
 
-  // Grouped Taxonomies from Props or Database
-  const MEDICAL_HISTORY_TAXONOMY = useMemo(() => {
-     const grouped: Record<string, TaxonomyItem[]> = {};
-     taxonomies.filter(t => t.group === "MEDICAL_HISTORY").forEach(t => {
-        const cat = t.category || "General";
-        if (!grouped[cat]) grouped[cat] = [];
-        const metadata = (t.metadata || {}) as { type?: string };
-        grouped[cat].push({ id: t.value, label: t.label, type: metadata?.type || "info" });
-     });
-     return Object.keys(grouped).length > 0 ? grouped : { "General": [] };
-  }, [taxonomies]);
-
-  const DENTAL_RELEVANT_QUESTIONS = useMemo(() =>
-     taxonomies.filter(t => t.group === "INTAKE_QUESTION").map(t => {
-        const metadata = (t.metadata || {}) as { type?: string };
-        return { id: t.value, label: t.label, type: metadata?.type || "info" };
-     }),
-  [taxonomies]);
-
-  const ON_EXAMINATION_TAXONOMY = useMemo(() => {
-     const grouped: Record<string, TaxonomyItem[]> = {};
-     taxonomies.filter(t => t.group === "EXAMINATION").forEach(t => {
-        const cat = t.category || "General";
-        if (!grouped[cat]) grouped[cat] = [];
-        const metadata = (t.metadata || {}) as { type?: string; placeholder?: string; options?: string[] };
-        grouped[cat].push({
-           id: t.value,
-           label: t.label,
-           type: (metadata?.type as "text" | "checkbox" | "select") || "checkbox",
-           placeholder: metadata?.placeholder,
-           options: metadata?.options
-        });
-     });
-     return grouped;
-  }, [taxonomies]);
-
-  const DENTAL_PROBLEM_TAXONOMY = useMemo(() => {
-     const grouped: Record<string, string[]> = {};
-     taxonomies.filter(t => t.group === "PROBLEM").forEach(t => {
-        const cat = t.category || "General";
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(t.label);
-     });
-     return grouped;
-  }, [taxonomies]);
-
-  const DENTAL_DIAGNOSIS_TAXONOMY = useMemo(() => {
-     const grouped: Record<string, string[]> = {};
-     taxonomies.filter(t => t.group === "DIAGNOSIS").forEach(t => {
-        const cat = t.category || "General";
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(t.label);
-     });
-     return grouped;
-  }, [taxonomies]);
-
-  const DENTAL_INVESTIGATION_TAXONOMY = useMemo(() => {
-     const grouped: Record<string, string[]> = {};
-     taxonomies.filter(t => t.group === "INVESTIGATION").forEach(t => {
-        const cat = t.category || "General";
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(t.label);
-     });
-     return grouped;
-  }, [taxonomies]);
-
-  const DENTAL_TREATMENT_TAXONOMY = useMemo(() => {
-     const grouped: Record<string, string[]> = {};
-     taxonomies.filter(t => t.group === "TREATMENT").forEach(t => {
-        const cat = t.category || "General";
-        if (!grouped[cat]) grouped[cat] = [];
-        grouped[cat].push(t.label);
-     });
-     return grouped;
-  }, [taxonomies]);
-
+  // Memoize Exam Groups based on the static constant
   const EXAM_GROUPS = useMemo(() => {
-     const categories = Object.keys(ON_EXAMINATION_TAXONOMY);
-     return [
-       { title: "General & Extraoral", categories: categories.filter(c => c.includes("General") || c.includes("Extraoral")) },
-       { title: "Intraoral Examination", categories: categories.filter(c => c.includes("Intraoral") || c.includes("Hard Tissue")) },
-       { title: "Specialty Evaluations", categories: categories.filter(c => !c.includes("General") && !c.includes("Extraoral") && !c.includes("Intraoral") && !c.includes("Hard Tissue")) }
-     ];
-  }, [ON_EXAMINATION_TAXONOMY]);
+    const categories = Object.keys(ON_EXAMINATION_TAXONOMY);
+    return [
+      { title: "General & Extraoral", categories: categories.filter(c => c.includes("General") || c.includes("Extraoral")) },
+      { title: "Intraoral Examination", categories: categories.filter(c => c.includes("Intraoral") || c.includes("Hard Tissue")) },
+      { title: "Specialty Evaluations", categories: categories.filter(c => !c.includes("General") && !c.includes("Extraoral") && !c.includes("Intraoral") && !c.includes("Hard Tissue")) }
+    ];
+  }, []);
 
   const filteredPatients = useMemo(() => {
     const tokens = searchTerm.toLowerCase().trim().split(/\s+/);
@@ -252,11 +185,6 @@ export default function DoctorClient({
 
     try {
       const objData = JSON.parse(latestDiagnosis?.objectiveData || "{}");
-      let parsedExam: Record<string, string> = {};
-      if (objData.generalExamination) {
-         parsedExam = objData.generalExamination;
-      }
-
       setObjectiveData({
         toothChart: objData.toothChart || {},
         oralHygiene: objData.oralHygiene || { plaque: "None", inflammation: "None", pocketing: "None", calculus: "None" },
@@ -264,20 +192,16 @@ export default function DoctorClient({
         biteOcclusion: objData.biteOcclusion || "Class I (Normal)",
         softTissue: objData.softTissue || "Healthy",
         diagnosticProcedures: objData.diagnosticProcedures || [],
-        generalExamination: parsedExam,
+        generalExamination: objData.generalExamination || {},
         selectedDiagnoses: objData.selectedDiagnoses || [],
         selectedInvestigations: objData.selectedInvestigations || [],
         selectedTreatments: objData.selectedTreatments || [],
       });
     } catch {
       setObjectiveData({
-        toothChart: {},
-        oralHygiene: { plaque: "None", inflammation: "None", pocketing: "None", calculus: "None" },
+        toothChart: {}, oralHygiene: { plaque: "None", inflammation: "None", pocketing: "None", calculus: "None" },
         tmj: "Normal", biteOcclusion: "Class I (Normal)", softTissue: "Healthy", diagnosticProcedures: [],
-        generalExamination: {},
-        selectedDiagnoses: [],
-        selectedInvestigations: [],
-        selectedTreatments: [],
+        generalExamination: {}, selectedDiagnoses: [], selectedInvestigations: [], selectedTreatments: [],
       });
     }
   }, []);
@@ -287,8 +211,8 @@ export default function DoctorClient({
     if (patientIdParam && patients.length > 0 && !initializedRef.current) {
       const p = patients.find((p) => p.id === patientIdParam);
       if (p) {
-         initializedRef.current = true;
-         handlePatientSelect(p);
+        initializedRef.current = true;
+        handlePatientSelect(p);
       }
     }
   }, [patientIdParam, patients, handlePatientSelect]);
@@ -382,7 +306,6 @@ export default function DoctorClient({
 
   const handleFormAction = (formData: FormData) => {
     setSaveStatus("saving");
-
     const finalizeInput = document.getElementById("finalize-input") as HTMLInputElement;
     const finalizeVal = finalizeInput ? finalizeInput.value : "false";
     formData.set("finalize", finalizeVal);
@@ -390,29 +313,16 @@ export default function DoctorClient({
     formData.append("medicalHistory", JSON.stringify(selectedConditions));
     formData.append("vasScore", vasScore.toString());
     formData.append("nextVisitDate", nextVisitDate);
-    formData.append("referredDoctorId", "");
-
-    const selectedBillingProcedures = [
-      ...(objectiveData.selectedInvestigations || []),
-      ...(objectiveData.selectedTreatments || []),
-    ];
-    formData.append("selectedProcedures", JSON.stringify(selectedBillingProcedures));
+    formData.append("selectedProcedures", JSON.stringify([...(objectiveData.selectedInvestigations || []), ...(objectiveData.selectedTreatments || [])]));
     formData.append("objectiveData", JSON.stringify(objectiveData));
 
     startTransition(async () => {
       try {
-        if (selectedPatient) {
-          await updateDiagnosis(selectedPatient.id, formData);
-        }
+        if (selectedPatient) await updateDiagnosis(selectedPatient.id, formData);
         setSaveStatus("success");
         setTimeout(() => setSaveStatus("idle"), 3000);
-
         router.refresh();
-
-        if (finalizeVal === "true") {
-          setSelectedPatient(null);
-          setViewMode("list");
-        }
+        if (finalizeVal === "true") { setSelectedPatient(null); setViewMode("list"); }
       } catch (err) {
         console.error(err);
         setSaveStatus("idle");
@@ -425,38 +335,18 @@ export default function DoctorClient({
     return Object.entries(config.taxonomy).map(([category, items]) => {
       const isExpanded = !!config.expanded[category];
       const activeCount = (items as (string | TaxonomyItem)[]).filter((item: string | TaxonomyItem) =>
-         typeof item === 'string' ? config.active.includes(item) : config.active.includes(item.id)
+        typeof item === 'string' ? config.active.includes(item) : config.active.includes(item.id)
       ).length;
 
       return (
-        <div
-          key={category}
-          className={`bg-white rounded-xl border transition-all duration-200 ${isExpanded ? `${config.theme.border} shadow-sm` : "border-slate-200 hover:border-slate-300"
-            }`}
-        >
-          <button
-            type="button"
-            onClick={() => config.setExpanded({ ...config.expanded, [category]: !isExpanded })}
-            className="w-full flex items-center justify-between p-3 text-left rounded-xl outline-none"
-          >
+        <div key={category} className={`bg-white rounded-xl border transition-all duration-200 ${isExpanded ? `${config.theme.border} shadow-sm` : "border-slate-200 hover:border-slate-300"}`}>
+          <button type="button" onClick={() => config.setExpanded({ ...config.expanded, [category]: !isExpanded })} className="w-full flex items-center justify-between p-3 text-left rounded-xl outline-none">
             <div className="flex items-center gap-2">
-              <span className={`text-sm font-semibold ${isExpanded ? config.theme.text : "text-slate-700"}`}>
-                {category}
-              </span>
-              {activeCount > 0 && (
-                <span className={`${config.theme.badgeBg} ${config.theme.text} font-bold text-xs px-2 py-0.5 rounded-md`}>
-                  {activeCount}
-                </span>
-              )}
+              <span className={`text-sm font-semibold ${isExpanded ? config.theme.text : "text-slate-700"}`}>{category}</span>
+              {activeCount > 0 && <span className={`${config.theme.badgeBg} ${config.theme.text} font-bold text-xs px-2 py-0.5 rounded-md`}>{activeCount}</span>}
             </div>
-            <span
-              className={`text-xs font-bold transition-transform duration-200 ${isExpanded ? `rotate-90 ${config.theme.icon}` : "text-slate-300"
-                }`}
-            >
-              ▶
-            </span>
+            <span className={`text-xs font-bold transition-transform duration-200 ${isExpanded ? `rotate-90 ${config.theme.icon}` : "text-slate-300"}`}>▶</span>
           </button>
-
           {isExpanded && (
             <div className="p-2 border-t border-slate-100 bg-slate-50/50 rounded-b-xl animate-in fade-in slide-in-from-top-1 duration-200">
               <div className="grid grid-cols-1 gap-1">
@@ -465,22 +355,8 @@ export default function DoctorClient({
                   const itemLabel = typeof item === 'string' ? item : item.label;
                   const isChecked = config.active.includes(itemValue);
                   return (
-                    <label
-                      key={itemValue}
-                      className={`flex items-start gap-3 p-2 rounded-lg text-sm cursor-pointer select-none transition-colors border ${isChecked
-                        ? `${config.theme.bg} border-transparent ${config.theme.text} font-semibold`
-                        : "border-transparent text-slate-600 hover:bg-white font-medium"
-                        }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={() => config.toggle(itemValue)}
-                        className={`mt-0.5 w-4 h-4 rounded border-slate-300 ${config.theme.icon.replace(
-                          "text",
-                          "text"
-                        )} ${config.theme.focus} cursor-pointer`}
-                      />
+                    <label key={itemValue} className={`flex items-start gap-3 p-2 rounded-lg text-sm cursor-pointer select-none transition-colors border ${isChecked ? `${config.theme.bg} border-transparent ${config.theme.text} font-semibold` : "border-transparent text-slate-600 hover:bg-white font-medium"}`}>
+                      <input type="checkbox" checked={isChecked} onChange={() => config.toggle(itemValue)} className={`mt-0.5 w-4 h-4 rounded border-slate-300 ${config.theme.focus} cursor-pointer`} />
                       <span className="leading-tight">{itemLabel}</span>
                     </label>
                   );
@@ -494,14 +370,14 @@ export default function DoctorClient({
   };
 
   const activeAlerts = useMemo(() => {
-     const allItems = [...Object.values(MEDICAL_HISTORY_TAXONOMY).flat(), ...DENTAL_RELEVANT_QUESTIONS];
-     return allItems.filter(c => selectedConditions.includes(c.id) && c.type === 'critical');
-  }, [selectedConditions, MEDICAL_HISTORY_TAXONOMY, DENTAL_RELEVANT_QUESTIONS]);
+    const allItems = [...Object.values(MEDICAL_HISTORY_TAXONOMY).flat(), ...DENTAL_RELEVANT_QUESTIONS];
+    return allItems.filter(c => selectedConditions.includes(c.id) && c.type === 'critical');
+  }, [selectedConditions]);
 
   const activeWarnings = useMemo(() => {
-     const allItems = [...Object.values(MEDICAL_HISTORY_TAXONOMY).flat(), ...DENTAL_RELEVANT_QUESTIONS];
-     return allItems.filter(c => selectedConditions.includes(c.id) && c.type === 'warning');
-  }, [selectedConditions, MEDICAL_HISTORY_TAXONOMY, DENTAL_RELEVANT_QUESTIONS]);
+    const allItems = [...Object.values(MEDICAL_HISTORY_TAXONOMY).flat(), ...DENTAL_RELEVANT_QUESTIONS];
+    return allItems.filter(c => selectedConditions.includes(c.id) && c.type === 'warning');
+  }, [selectedConditions]);
 
   return (
     <div className="h-full bg-slate-50 flex flex-col font-sans">
@@ -528,29 +404,15 @@ export default function DoctorClient({
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="Search by patient name or phone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-base focus:ring-1 focus:ring-brand-600 outline-none transition-all"
-                />
+                <input type="text" placeholder="Search by patient name or phone..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-slate-50 border border-slate-200 rounded-xl text-base focus:ring-1 focus:ring-brand-600 outline-none transition-all" />
               </div>
               <div className="flex gap-4">
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-600 font-bold focus:ring-1 focus:ring-brand-600 cursor-pointer min-w-[140px]"
-                >
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-600 font-bold focus:ring-1 focus:ring-brand-600 cursor-pointer min-w-[140px]">
                   <option value="ALL">All Statuses</option>
                   <option value="PENDING">Pending</option>
                   <option value="COMPLETED">Completed</option>
                 </select>
-                <select
-                  value={purposeFilter}
-                  onChange={(e) => setPurposeFilter(e.target.value)}
-                  className="px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-600 font-bold focus:ring-1 focus:ring-brand-600 cursor-pointer min-w-[160px]"
-                >
+                <select value={purposeFilter} onChange={(e) => setPurposeFilter(e.target.value)} className="px-4 py-4 bg-slate-50 border border-slate-200 rounded-xl outline-none text-sm text-slate-600 font-bold focus:ring-1 focus:ring-brand-600 cursor-pointer min-w-[160px]">
                   <option value="ALL">All Purposes</option>
                   <option value="Checkup">Checkup</option>
                   <option value="Cleaning">Cleaning</option>
@@ -581,9 +443,7 @@ export default function DoctorClient({
                     <tr key={p.id} className="hover:bg-slate-50 transition-colors group">
                       <td className="px-8 py-4">
                         <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-base ${isCompleted ? "bg-brand-50 text-brand-600" : "bg-brand-100 text-brand-800"}`}>
-                            {p.firstName[0]}{p.lastName[0]}
-                          </div>
+                          <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-bold text-base ${isCompleted ? "bg-brand-50 text-brand-600" : "bg-brand-100 text-brand-800"}`}>{p.firstName[0]}{p.lastName[0]}</div>
                           <div>
                             <p className="font-bold text-slate-900 text-base">{p.firstName} {p.lastName}</p>
                             <p className="text-xs text-slate-500 font-medium mt-0.5">{calculateAge(p.dateOfBirth)} yrs · {p.gender}</p>
@@ -591,29 +451,17 @@ export default function DoctorClient({
                         </div>
                       </td>
                       <td className="px-8 py-4 font-medium text-slate-700">
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-slate-400" />
-                          {p.appointments?.[0] ? new Date(p.appointments[0].appointmentDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "N/A"}
-                        </div>
+                        <div className="flex items-center gap-2"><Clock className="w-4 h-4 text-slate-400" /> {p.appointments?.[0] ? new Date(p.appointments[0].appointmentDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "N/A"}</div>
                       </td>
                       <td className="px-8 py-4 font-medium text-slate-600">{p.phone}</td>
                       <td className="px-8 py-4">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${isCompleted ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"}`}>
-                            {isCompleted ? "Completed" : "Pending"}
-                          </span>
-                          <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-slate-50 text-slate-500 border-slate-200">
-                            {p.appointments?.[0]?.treatments || "General Checkup"}
-                          </span>
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${isCompleted ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-amber-50 text-amber-700 border-amber-100"}`}>{isCompleted ? "Completed" : "Pending"}</span>
+                          <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border bg-slate-50 text-slate-500 border-slate-200">{p.appointments?.[0]?.treatments || "General Checkup"}</span>
                         </div>
                       </td>
                       <td className="px-8 py-4 text-right">
-                        <button
-                          onClick={() => handlePatientSelect(p)}
-                          className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${isCompleted ? "bg-slate-100 text-slate-600 hover:bg-slate-200" : "bg-brand-700 text-white hover:bg-brand-800"}`}
-                        >
-                          {isCompleted ? "View Assessment" : "Start Charting"}
-                        </button>
+                        <button onClick={() => handlePatientSelect(p)} className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${isCompleted ? "bg-slate-100 text-slate-600 hover:bg-slate-200" : "bg-brand-700 text-white hover:bg-brand-800"}`}>{isCompleted ? "View Assessment" : "Start Charting"}</button>
                       </td>
                     </tr>
                   );
@@ -626,12 +474,8 @@ export default function DoctorClient({
         <div className="flex flex-col h-full overflow-hidden w-full relative bg-slate-50 animate-in slide-in-from-right duration-500">
           {selectedPatient ? (
             <>
-              {/* Top Navbar */}
               <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-slate-200 shrink-0">
-                <button
-                  onClick={() => { setViewMode("list"); setSelectedPatient(null); }}
-                  className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                >
+                <button onClick={() => { setViewMode("list"); setSelectedPatient(null); }} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                   <ChevronLeft className="w-5 h-5 text-slate-400" />
                   <h1 className="text-lg font-bold text-slate-900">Clinical Workspace</h1>
                 </button>
@@ -641,164 +485,64 @@ export default function DoctorClient({
                 </div>
               </div>
 
-              {/* Patient Header */}
               <div className="bg-white border-b border-slate-200 px-6 py-4 shrink-0 flex items-start justify-between border-t-[3px] border-t-brand-600 shadow-sm z-10">
                 <div>
                   <div className="flex items-center gap-4 mb-1">
-                    <h2 className="text-[22px] font-black text-slate-900 tracking-tight">
-                      {selectedPatient.firstName} {selectedPatient.lastName}
-                    </h2>
+                    <h2 className="text-[22px] font-black text-slate-900 tracking-tight">{selectedPatient.firstName} {selectedPatient.lastName}</h2>
                     <PatientRiskAlerts activeAlerts={activeAlerts} activeWarnings={activeWarnings} />
                   </div>
                   <div className="flex items-center gap-8 mt-2 text-[13px] text-slate-600 font-medium">
-                    <span className="flex items-center gap-1.5"><User className="w-4 h-4 text-slate-400" /> {calculateAge(selectedPatient.dateOfBirth)} yrs · {selectedPatient.gender}</span>
+                    <span className="flex items-center gap-1.5"><UserIcon className="w-4 h-4 text-slate-400" /> {calculateAge(selectedPatient.dateOfBirth)} yrs · {selectedPatient.gender}</span>
                     <span className="flex items-center gap-1.5">📞 {selectedPatient.phone}</span>
-                    {selectedPatient.appointments?.[0]?.treatments && (
-                      <span className="bg-brand-50 text-brand-800 px-2.5 py-1 rounded font-bold text-xs border border-brand-100">
-                        Purpose: {selectedPatient.appointments[0].treatments}
-                      </span>
-                    )}
+                    {selectedPatient.appointments?.[0]?.treatments && <span className="bg-brand-50 text-brand-800 px-2.5 py-1 rounded font-bold text-xs border border-brand-100">Purpose: {selectedPatient.appointments[0].treatments}</span>}
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setIsProfileModalOpen(true)}
-                  className="bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-md text-sm font-semibold hover:bg-slate-200 transition-colors cursor-pointer"
-                >
-                  View Full Profile
-                </button>
+                <button type="button" onClick={() => setIsProfileModalOpen(true)} className="bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-md text-sm font-semibold hover:bg-slate-200 transition-colors cursor-pointer">View Full Profile</button>
               </div>
 
-              {/* Sticky Tabs */}
               <div className="bg-white px-6 border-b border-slate-200 shrink-0 flex gap-8 relative z-0">
                 {(["Subjective", "Objective", "Assessment & Plan"] as DoctorTab[]).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    className={`py-3.5 px-2 text-[14px] font-bold border-b-[3px] transition-all -mb-[1px] ${activeTab === tab ? "border-brand-700 text-brand-800" : "border-transparent text-slate-500 hover:text-slate-700"
-                      }`}
-                  >
-                    {tab === "Objective" ? "Objective (Exam)" : tab}
-                  </button>
+                  <button key={tab} onClick={() => setActiveTab(tab)} className={`py-3.5 px-2 text-[14px] font-bold border-b-[3px] transition-all -mb-[1px] ${activeTab === tab ? "border-brand-700 text-brand-800" : "border-transparent text-slate-500 hover:text-slate-700"}`}>{tab === "Objective" ? "Objective (Exam)" : tab}</button>
                 ))}
               </div>
 
               <form action={handleFormAction} className="flex-1 min-h-0 overflow-hidden relative flex flex-col bg-slate-50">
                 <input type="hidden" name="finalize" id="finalize-input" defaultValue="false" />
-
                 <div className="flex-1 min-h-0 w-full relative flex flex-col">
                   {activeTab === "Subjective" && (
-                    <SubjectiveTab
-                       selectedPatient={selectedPatient}
-                       MEDICAL_HISTORY_TAXONOMY={MEDICAL_HISTORY_TAXONOMY}
-                       DENTAL_RELEVANT_QUESTIONS={DENTAL_RELEVANT_QUESTIONS}
-                       selectedConditions={selectedConditions}
-                       toggleCondition={toggleCondition}
-                       expandedMedicalCategories={expandedMedicalCategories}
-                       setExpandedMedicalCategories={setExpandedMedicalCategories}
-                       vasScore={vasScore}
-                       setVasScore={setVasScore}
-                    />
+                    <SubjectiveTab selectedPatient={selectedPatient} MEDICAL_HISTORY_TAXONOMY={MEDICAL_HISTORY_TAXONOMY} DENTAL_RELEVANT_QUESTIONS={DENTAL_RELEVANT_QUESTIONS} selectedConditions={selectedConditions} toggleCondition={toggleCondition} expandedMedicalCategories={expandedMedicalCategories} setExpandedMedicalCategories={setExpandedMedicalCategories} vasScore={vasScore} setVasScore={setVasScore} />
                   )}
-
                   {activeTab === "Objective" && (
-                    <ObjectiveTab
-                       objectiveData={objectiveData}
-                       setObjectiveData={setObjectiveData}
-                       selectedTooth={selectedTooth}
-                       setSelectedTooth={setSelectedTooth}
-                       EXAM_GROUPS={EXAM_GROUPS}
-                       ON_EXAMINATION_TAXONOMY={ON_EXAMINATION_TAXONOMY}
-                       expandedExamCategories={expandedExamCategories}
-                       setExpandedExamCategories={setExpandedExamCategories}
-                       expandedCategories={expandedCategories}
-                       setExpandedCategories={setExpandedCategories}
-                       DENTAL_PROBLEM_TAXONOMY={DENTAL_PROBLEM_TAXONOMY}
-                       toggleProblem={toggleProblem}
-                       removeProblem={removeProblem}
-                       ToothButton={ToothButton}
-                    />
+                    <ObjectiveTab objectiveData={objectiveData} setObjectiveData={setObjectiveData} selectedTooth={selectedTooth} setSelectedTooth={setSelectedTooth} EXAM_GROUPS={EXAM_GROUPS} ON_EXAMINATION_TAXONOMY={ON_EXAMINATION_TAXONOMY} expandedExamCategories={expandedExamCategories} setExpandedExamCategories={setExpandedExamCategories} expandedCategories={expandedCategories} setExpandedCategories={setExpandedCategories} DENTAL_PROBLEM_TAXONOMY={DENTAL_PROBLEM_TAXONOMY} toggleProblem={toggleProblem} removeProblem={removeProblem} ToothButton={ToothButton} />
                   )}
-
                   {activeTab === "Assessment & Plan" && (
-                    <AssessmentPlanTab
-                       selectedPatient={selectedPatient}
-                       treatmentPlanText={treatmentPlanText}
-                       setTreatmentPlanText={setTreatmentPlanText}
-                       medicinesText={medicinesText}
-                       setMedicinesText={setMedicinesText}
-                       nextVisitDate={nextVisitDate}
-                       setNextVisitDate={setNextVisitDate}
-                       activePreset={activePreset}
-                       handleNextVisitPreset={handleNextVisitPreset}
-                       objectiveData={objectiveData}
-                       DENTAL_DIAGNOSIS_TAXONOMY={DENTAL_DIAGNOSIS_TAXONOMY}
-                       DENTAL_INVESTIGATION_TAXONOMY={DENTAL_INVESTIGATION_TAXONOMY}
-                       DENTAL_TREATMENT_TAXONOMY={DENTAL_TREATMENT_TAXONOMY}
-                       expandedAPDiagnoses={expandedAPDiagnoses}
-                       setExpandedAPDiagnoses={setExpandedAPDiagnoses}
-                       expandedAPInvestigations={expandedAPInvestigations}
-                       setExpandedAPInvestigations={setExpandedAPInvestigations}
-                       expandedAPTreatments={expandedAPTreatments}
-                       setExpandedAPTreatments={setExpandedAPTreatments}
-                       toggleDiagnosis={toggleDiagnosis}
-                       toggleInvestigation={toggleInvestigation}
-                       toggleTreatment={toggleTreatment}
-                       renderTaxonomyGroup={renderTaxonomyGroup}
-                    />
+                    <AssessmentPlanTab selectedPatient={selectedPatient} treatmentPlanText={treatmentPlanText} setTreatmentPlanText={setTreatmentPlanText} medicinesText={medicinesText} setMedicinesText={setMedicinesText} nextVisitDate={nextVisitDate} setNextVisitDate={setNextVisitDate} activePreset={activePreset} handleNextVisitPreset={handleNextVisitPreset} objectiveData={objectiveData} DENTAL_DIAGNOSIS_TAXONOMY={DENTAL_DIAGNOSIS_TAXONOMY} DENTAL_INVESTIGATION_TAXONOMY={DENTAL_INVESTIGATION_TAXONOMY} DENTAL_TREATMENT_TAXONOMY={DENTAL_TREATMENT_TAXONOMY} expandedAPDiagnoses={expandedAPDiagnoses} setExpandedAPDiagnoses={setExpandedAPDiagnoses} expandedAPInvestigations={expandedAPInvestigations} setExpandedAPInvestigations={setExpandedAPInvestigations} expandedAPTreatments={expandedAPTreatments} setExpandedAPTreatments={setExpandedAPTreatments} toggleDiagnosis={toggleDiagnosis} toggleInvestigation={toggleInvestigation} toggleTreatment={toggleTreatment} renderTaxonomyGroup={renderTaxonomyGroup} />
                   )}
                 </div>
 
                 <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-20">
                   <div className="flex items-center gap-4">
-                    <span className="text-[13px] font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md">
-                      Current Patient: <span className="text-slate-800">{selectedPatient.firstName} {selectedPatient.lastName}</span>
-                    </span>
+                    <span className="text-[13px] font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md">Current Patient: <span className="text-slate-800">{selectedPatient.firstName} {selectedPatient.lastName}</span></span>
                   </div>
                   <div className="flex gap-4">
-                    <button
-                      type="submit"
-                      disabled={isPending}
-                      onClick={() => { (document.getElementById("finalize-input") as HTMLInputElement).value = "false"; }}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-lg text-sm hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-50"
-                    >
-                      <Save className="w-4 h-4" /> Save Draft
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isPending}
-                      onClick={() => { (document.getElementById("finalize-input") as HTMLInputElement).value = "true"; }}
-                      className="flex items-center gap-2 px-8 py-2.5 bg-brand-700 text-white font-bold rounded-lg text-sm hover:bg-brand-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50"
-                    >
-                      {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />}
-                      Lock & Finalize Chart
-                    </button>
+                    <button type="submit" disabled={isPending} onClick={() => { (document.getElementById("finalize-input") as HTMLInputElement).value = "false"; }} className="flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-lg text-sm hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-50"><Save className="w-4 h-4" /> Save Draft</button>
+                    <button type="submit" disabled={isPending} onClick={() => { (document.getElementById("finalize-input") as HTMLInputElement).value = "true"; }} className="flex items-center gap-2 px-8 py-2.5 bg-brand-700 text-white font-bold rounded-lg text-sm hover:bg-brand-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50">{isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Lock & Finalize Chart</button>
                   </div>
                 </div>
               </form>
             </>
           ) : (
             <div className="h-full flex flex-col items-center justify-center p-12 text-center bg-slate-50">
-              <div className="w-24 h-24 bg-white shadow-sm border border-slate-100 rounded-full flex items-center justify-center mb-6">
-                <Stethoscope className="w-10 h-10 text-brand-700" />
-              </div>
+              <div className="w-24 h-24 bg-white shadow-sm border border-slate-100 rounded-full flex items-center justify-center mb-6"><Stethoscope className="w-10 h-10 text-brand-700" /></div>
               <h2 className="text-xl font-bold text-slate-800">Clinical Workspace</h2>
-              <p className="text-slate-500 font-medium text-sm mt-2 max-w-sm">
-                Select a patient from the queue to review history, log examinations, and chart treatments.
-              </p>
+              <p className="text-slate-500 font-medium text-sm mt-2 max-w-sm">Select a patient from the queue to review history, log examinations, and chart treatments.</p>
             </div>
           )}
         </div>
       )}
 
       {selectedPatient && (
-        <PatientProfileModal
-          isOpen={isProfileModalOpen}
-          onClose={() => setIsProfileModalOpen(false)}
-          patientId={selectedPatient.id}
-          patientName={`${selectedPatient.firstName} ${selectedPatient.lastName}`}
-          patientPhone={selectedPatient.phone}
-        />
+        <PatientProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} patientId={selectedPatient.id} patientName={`${selectedPatient.firstName} ${selectedPatient.lastName}`} patientPhone={selectedPatient.phone} />
       )}
     </div>
   );

@@ -22,6 +22,12 @@ export type ExtendedPatient = Patient & {
   diagnosis?: Diagnosis | null;
 };
 
+export type ExtendedAppointment = Appointment & {
+  patient?: Patient | null;
+  doctor?: User | null;
+};
+
+
 export interface ObjectiveData {
   toothChart: Record<string, { status: string; notes: string; problems?: string[] }>;
   oralHygiene: { plaque: string; inflammation: string; pocketing: string; calculus: string; };

@@ -105,7 +105,7 @@ export async function getAdminStats() {
 export async function getPendingBillings() {
   const tenantId = await getTenantIdOrThrow();
   return await prisma.procedure.findMany({
-    where: { status: "PENDING", tenantId },
+    where: { status: { in: ["PENDING", "BILLED"] }, tenantId },
     include: { patient: true },
     orderBy: { procedureDate: "desc" },
   });
@@ -193,28 +193,32 @@ export async function markPatientProceduresPaid(patientId: string) {
   });
 
   await prisma.$transaction(async (tx) => {
+    // 1. Mark all pending procedures as PAID
     for (const proc of procedures) {
       await tx.procedure.update({
         where: { id: proc.id },
         data: { status: "PAID" },
       });
+    }
 
-      if (proc.appointmentId) {
-        const appt = await tx.appointment.findFirst({
-          where: { id: proc.appointmentId, tenantId },
-        });
-        if (appt && appt.status === "PENDING_PAYMENT") {
+    // 2. Find unique appointment IDs affected
+    const appointmentIds = [...new Set(procedures.map(p => p.appointmentId).filter(Boolean))] as string[];
+
+    // 3. For each appointment, check if all its procedures are now PAID
+    for (const appId of appointmentIds) {
+      const unpaidCount = await tx.procedure.count({
+        where: { appointmentId: appId, status: { not: "PAID" } }
+      });
+
+      if (unpaidCount === 0) {
+        const appt = await tx.appointment.findUnique({ where: { id: appId } });
+        if (appt) {
           await tx.appointment.update({
-            where: { id: proc.appointmentId },
+            where: { id: appId },
             data: {
               isPaid: true,
-              status: "SCHEDULED",
-            },
-          });
-        } else if (appt) {
-          await tx.appointment.update({
-            where: { id: proc.appointmentId },
-            data: { isPaid: true },
+              status: appt.status === "PENDING_PAYMENT" ? "SCHEDULED" : undefined
+            }
           });
         }
       }
@@ -300,22 +304,23 @@ export async function markAsPaid(procedureId: string) {
     });
 
     if (procedure.appointmentId) {
-      const appt = await tx.appointment.findFirst({
-        where: { id: procedure.appointmentId, tenantId },
+      const unpaidCount = await tx.procedure.count({
+        where: { appointmentId: procedure.appointmentId, status: { not: "PAID" } }
       });
-      if (appt && appt.status === "PENDING_PAYMENT") {
-        await tx.appointment.update({
-          where: { id: procedure.appointmentId },
-          data: {
-            isPaid: true,
-            status: "SCHEDULED",
-          },
+
+      if (unpaidCount === 0) {
+        const appt = await tx.appointment.findFirst({
+          where: { id: procedure.appointmentId, tenantId },
         });
-      } else if (appt) {
-        await tx.appointment.update({
-          where: { id: procedure.appointmentId },
-          data: { isPaid: true },
-        });
+        if (appt) {
+          await tx.appointment.update({
+            where: { id: procedure.appointmentId },
+            data: {
+              isPaid: true,
+              status: appt.status === "PENDING_PAYMENT" ? "SCHEDULED" : undefined,
+            },
+          });
+        }
       }
     }
   });

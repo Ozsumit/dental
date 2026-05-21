@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { User, Phone, Calendar, X } from "lucide-react";
 import { getPatientDetails } from "@/app/actions/patientsActions";
-import ReceptionistPatientView from "@/components/ReceptionistPatientView";
+import ReceptionistPatientView from "@/components/reception/ReceptionistPatientView";
 import { ExtendedPatient } from "@/lib/types";
 
 interface PatientProfileModalProps {
