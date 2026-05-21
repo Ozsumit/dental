@@ -4,16 +4,13 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { saveProcedure } from "@/app/actions/receptionistActions";
 import {
-  transferPatientDoctor,
   linkFamilyMember,
   unlinkFamilyMember,
   searchPatientsToLink,
   getPatientDetails
 } from "@/app/actions/patientsActions";
-import { getDoctors } from "@/app/actions/userActions";
 import { Patient, Procedure, Appointment } from "@/lib/types/index";
 import {
-  Clipboard,
   Activity,
   Plus,
   X,
@@ -21,8 +18,6 @@ import {
   Phone,
   Mail,
   MapPin,
-  Droplets,
-  Tag,
   Calendar,
   Shield,
   Heart,
@@ -236,9 +231,6 @@ export default function ReceptionistPatientView({
     }
   };
   const [isProcedureModalOpen, setIsProcedureModalOpen] = useState(false);
-  const [doctors, setDoctors] = useState<{ id: string; username: string; fullName?: string | null }[]>(
-    [],
-  );
   const [expandedProcedure, setExpandedProcedure] = useState<string | null>(
     null,
   );
@@ -252,9 +244,6 @@ export default function ReceptionistPatientView({
     }
     return age;
   };
-  useEffect(() => {
-    getDoctors().then(setDoctors);
-  }, []);
 
   const parseJson = (str: string | null | undefined) => {
     if (!str) return [];
@@ -287,7 +276,7 @@ export default function ReceptionistPatientView({
   return (
     <div className="space-y-6">
       {/* Header Info */}
-      {/* <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex gap-4 items-center">
           <div className="bg-brand-100 p-4 rounded-full text-brand-600">
             <User className="w-8 h-8" />
@@ -298,7 +287,7 @@ export default function ReceptionistPatientView({
             </h2>
             <div className="flex flex-wrap gap-3 mt-1">
               <span className="flex items-center gap-1 text-xs font-bold text-slate-500 uppercase">
-                <Tag className="w-3 h-3" /> {patient.role || "Regular"}
+                {patient.role || "Regular"}
               </span>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
@@ -318,7 +307,7 @@ export default function ReceptionistPatientView({
         >
           <Plus className="w-5 h-5" /> Record Payment
         </button>
-      </div> */}
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Personal & Medical Details */}
@@ -583,7 +572,7 @@ export default function ReceptionistPatientView({
         {/* Middle & Right Column: Clinical Data */}
         <div className="lg:col-span-2 space-y-6">
           {/* Pending Billing Alert */}
-          {/* {pendingProcedures.length > 0 && (
+          {pendingProcedures.length > 0 && (
             <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-black text-amber-800 uppercase tracking-widest flex items-center gap-2">
@@ -602,8 +591,7 @@ export default function ReceptionistPatientView({
                         {proc.name}
                       </p>
                       <p className="text-[10px] text-slate-400 font-bold uppercase">
-                        {proc.type} • Recommended by Dr.{" "}
-                        {patient.medicalRecord?.assignedDoctor?.fullName || patient.medicalRecord?.assignedDoctor?.username}
+                        {proc.type}
                       </p>
                     </div>
                     <div className="flex items-center gap-3 w-full md:w-auto">
@@ -632,7 +620,7 @@ export default function ReceptionistPatientView({
                 ))}
               </div>
             </div>
-          )} */}
+          )}
 
           {/* Premium Tabbed Navigation */}
           <div className="flex border-b border-slate-200 gap-6 mb-6">

@@ -28,7 +28,6 @@ import {
   Database,
   Search,
   Lock,
-  Edit2,
   CheckCircle,
 } from "lucide-react";
 

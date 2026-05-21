@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { User, Phone, Calendar, X } from "lucide-react";
 import { getPatientDetails } from "@/app/actions/patientsActions";
 import ReceptionistPatientView from "@/components/ReceptionistPatientView";
+import { ExtendedPatient } from "@/lib/types";
 
 interface PatientProfileModalProps {
   isOpen: boolean;
@@ -22,15 +23,19 @@ export default function PatientProfileModal({
   patientPhone,
   openNewAppointment,
 }: PatientProfileModalProps) {
-  const [detailedPatient, setDetailedPatient] = useState<any>(null);
+  const [detailedPatient, setDetailedPatient] = useState<ExtendedPatient | null>(null);
   const [loading, setLoading] = useState(true);
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     if (isOpen && patientId) {
-      setLoading(true);
+      startTransition(() => {
+        setLoading(true);
+      });
+
       getPatientDetails(patientId)
         .then((res) => {
-          setDetailedPatient(res);
+          setDetailedPatient(res as ExtendedPatient);
           setLoading(false);
         })
         .catch((err) => {

@@ -1,7 +1,7 @@
 "use client";
 
 import { Patient } from "@/lib/types/index";
-import { Users, Clock, CheckCircle2, AlertTriangle, ArrowRight, Activity, Calendar } from "lucide-react";
+import { Users, Clock, CheckCircle2, AlertTriangle, ArrowRight, Calendar } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
