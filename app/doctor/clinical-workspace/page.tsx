@@ -3,12 +3,14 @@ import DoctorClient from "@/components/doctor/DoctorClient";
 import { getDoctorPatients } from "../../actions/doctorPatientActions";
 import { getDoctors } from "../../actions/userActions";
 import { getBillingCatalog } from "../../actions/billingActions";
+import { getTaxonomies } from "../../actions/taxonomyActions";
 
 export default async function DoctorClinicalWorkspacePage() {
-  const [patients, doctors, catalog] = await Promise.all([
+  const [patients, doctors, catalog, taxonomies] = await Promise.all([
     getDoctorPatients(),
     getDoctors(),
-    getBillingCatalog()
+    getBillingCatalog(),
+    getTaxonomies()
   ]);
 
   return (
@@ -21,7 +23,7 @@ export default async function DoctorClinicalWorkspacePage() {
           </div>
         </div>
       }>
-        <DoctorClient patients={patients} doctors={doctors} catalog={catalog} />
+        <DoctorClient patients={patients} doctors={doctors} catalog={catalog} taxonomies={taxonomies} />
       </Suspense>
     </div>
   );

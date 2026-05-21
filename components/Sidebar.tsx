@@ -109,9 +109,7 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
           <span className="text-sm font-black text-white block truncate uppercase tracking-wider">
             {session?.tenantName || "DentalCRM"}
           </span>
-          <span className="text-[10px] font-bold text-brand-300 block uppercase tracking-widest mt-0.5">
-            SaaS Workspace
-          </span>
+
         </div>
       </div>
 
@@ -126,11 +124,10 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition ${
-                isActive
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition ${isActive
                   ? "bg-brand-800 text-brand-100 shadow-sm"
                   : "text-slate-200 hover:bg-brand-800 hover:text-slate-100"
-              }`}
+                }`}
             >
               <Icon
                 className={`w-5 h-5 ${isActive ? "text-slate-200" : "text-slate-100"}`}

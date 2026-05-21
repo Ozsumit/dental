@@ -60,6 +60,7 @@ export default function BillingClient({
     patient: Patient;
     items: Procedure[];
     total: number;
+    invoiceNo: number;
   } | null>(null);
 
   const showToast = useCallback(
@@ -78,8 +79,8 @@ export default function BillingClient({
     try {
       const data = await getPendingBillings();
       setPending(data as Procedure[]);
-    } catch (error) {
-      console.error("Failed to sync billings", error);
+    } catch (err) {
+      console.error("Failed to sync billings", err);
     }
   }, []);
 
@@ -93,7 +94,7 @@ export default function BillingClient({
       await finalizeBilling(id, cost);
       showToast("Procedure cost updated", "success");
       fetchPendingSilently();
-    } catch (error) {
+    } catch {
       showToast("Failed to update cost", "error");
       fetchPendingSilently();
     } finally {
@@ -121,7 +122,7 @@ export default function BillingClient({
             total: remainingItems.reduce((s, i) => s + i.cost, 0),
           });
       }
-    } catch (error) {
+    } catch {
       showToast("Failed to process payment", "error");
       fetchPendingSilently();
     } finally {
@@ -137,7 +138,7 @@ export default function BillingClient({
       await markPatientProceduresPaid(patientId);
       showToast(`Settled ${formatCurrency(total)} balance`, "success");
       fetchPendingSilently();
-    } catch (error) {
+    } catch {
       showToast("Failed to settle balance", "error");
       fetchPendingSilently();
     } finally {
@@ -326,7 +327,7 @@ export default function BillingClient({
                       </p>
                     </div>
                     <button
-                      onClick={() => setInvoiceGroup(group)}
+                      onClick={() => setInvoiceGroup({ ...group, invoiceNo: Math.floor(100000 + Math.random() * 900000) })}
                       className="flex items-center gap-2 bg-brand-600 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-sm shadow-brand-900/20 hover:bg-brand-700 transition-all active:scale-95 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
                     >
                       <FileText className="w-4 h-4" /> Itemized Bill
@@ -518,7 +519,7 @@ export default function BillingClient({
                     Invoice
                   </h2>
                   <p className="text-sm font-bold text-slate-800 mt-2">
-                    INV-{Math.floor(100000 + Math.random() * 900000)}
+                    INV-{invoiceGroup.invoiceNo}
                   </p>
                   <p className="text-sm font-medium text-slate-500">
                     Date: {new Date().toLocaleDateString()}

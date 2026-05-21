@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { User, Phone, Calendar, X } from "lucide-react";
 import { getPatientDetails } from "@/app/actions/patientsActions";
-import ReceptionistPatientView from "@/components/ReceptionistPatientView";
+import ReceptionistPatientView from "@/components/reception/ReceptionistPatientView";
+import { ExtendedPatient } from "@/lib/types";
 
 interface PatientProfileModalProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface PatientProfileModalProps {
   patientId: string;
   patientName: string;
   patientPhone: string;
-  openNewAppointment: () => void;
+  openNewAppointment?: () => void;
 }
 
 export default function PatientProfileModal({
@@ -22,15 +23,19 @@ export default function PatientProfileModal({
   patientPhone,
   openNewAppointment,
 }: PatientProfileModalProps) {
-  const [detailedPatient, setDetailedPatient] = useState<any>(null);
+  const [detailedPatient, setDetailedPatient] = useState<ExtendedPatient | null>(null);
   const [loading, setLoading] = useState(true);
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     if (isOpen && patientId) {
-      setLoading(true);
+      startTransition(() => {
+        setLoading(true);
+      });
+
       getPatientDetails(patientId)
         .then((res) => {
-          setDetailedPatient(res);
+          setDetailedPatient(res as ExtendedPatient);
           setLoading(false);
         })
         .catch((err) => {
@@ -62,12 +67,14 @@ export default function PatientProfileModal({
             </div>
           </div>
           <div className="flex gap-3 w-full md:w-auto">
-            <button
-              onClick={openNewAppointment}
-              className="flex-1 md:flex-none bg-brand-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-100 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Calendar className="w-4 h-4" /> New Appointment
-            </button>
+            {openNewAppointment && (
+              <button
+                onClick={openNewAppointment}
+                className="flex-1 md:flex-none bg-brand-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-brand-700 transition-all shadow-lg shadow-brand-100 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Calendar className="w-4 h-4" /> New Appointment
+              </button>
+            )}
             <button
               onClick={onClose}
               className="p-3 bg-white text-slate-400 hover:text-slate-800 rounded-xl border border-slate-200 transition-all cursor-pointer"

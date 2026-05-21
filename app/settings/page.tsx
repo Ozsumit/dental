@@ -1,4 +1,4 @@
-import ReceptionistSettingsClient from "@/components/reception/ReceptionistSettingsClient";
+import SettingsClient from "@/components/shared/SettingsClient";
 import { getReceptionistProfile } from "@/app/actions/receptionistSettingsActions";
 import { redirect } from "next/navigation";
 
@@ -18,7 +18,7 @@ export default async function ReceptionistSettingsPage() {
 
   return (
     <div className="h-full bg-slate-50 overflow-y-auto">
-      <ReceptionistSettingsClient initialProfile={formattedProfile} />
+      <SettingsClient initialProfile={formattedProfile as any} role={profile.role as "RECEPTIONIST" | "ADMIN"} />
     </div>
   );
 }
