@@ -59,7 +59,7 @@ export function StatusBadge({
             case "COMPLETED":
                 return "primary";
             case "SCHEDULED":
-                return "brand-dark";
+                return "info";
             case "PENDING":
             case "PENDING_PAYMENT":
             case "BILLED":

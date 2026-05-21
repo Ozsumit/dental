@@ -25,6 +25,7 @@ export async function getSystemSettings() {
         appointmentFee: 0,
         tenantId,
       },
+
     });
   }
   return settings;
@@ -164,7 +165,7 @@ export async function getAllBillings(searchParams: {
 
 export async function finalizeBilling(procedureId: string, billedCost: number) {
   const tenantId = await getTenantIdOrThrow();
-  
+
   // Ensure the procedure belongs to the tenant
   const existing = await prisma.procedure.findFirst({
     where: { id: procedureId, tenantId },
