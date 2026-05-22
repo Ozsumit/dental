@@ -1,6 +1,13 @@
 "use client";
 
-import { Search, Filter, Download, Plus, RefreshCcw, BarChart3 } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Download,
+  Plus,
+  RefreshCcw,
+  BarChart3,
+} from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 interface PatientFilterProps {
@@ -46,7 +53,7 @@ export default function PatientFilter({
           />
         </div>
 
-        <button
+        {/* <button
           onClick={() => setShowAnalytics(!showAnalytics)}
           className={`px-5 py-3 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors ${
             showAnalytics
@@ -56,7 +63,7 @@ export default function PatientFilter({
         >
           <BarChart3 className="w-5 h-5" />
           Analytics
-        </button>
+        </button> */}
 
         <button
           onClick={() => setShowFilters(!showFilters)}
@@ -159,13 +166,11 @@ export default function PatientFilter({
               onChange={(e) => updateQuery("bloodGroup", e.target.value)}
             >
               <option value="">All Types</option>
-              {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
-                (bg) => (
-                  <option key={bg} value={bg}>
-                    {bg}
-                  </option>
-                ),
-              )}
+              {["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map((bg) => (
+                <option key={bg} value={bg}>
+                  {bg}
+                </option>
+              ))}
             </select>
           </div>
 
