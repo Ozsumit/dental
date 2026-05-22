@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { Loader2, Code2, Check, AlertCircle, Shield, Bell, User as UserIcon, Lock } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -19,6 +19,7 @@ import {
   updateReceptionistNotifications,
   updateReceptionistSecurity,
 } from "@/app/actions/receptionistSettingsActions";
+import { useMutation } from "@tanstack/react-query";
 
 export interface SettingsProfileData {
   id: string;
@@ -46,7 +47,6 @@ interface SettingsClientProps {
 
 export default function SettingsClient({ initialProfile, role }: SettingsClientProps) {
   const [profile, setProfile] = useState<SettingsProfileData>(initialProfile);
-  const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Edit details form state
@@ -85,6 +85,58 @@ export default function SettingsClient({ initialProfile, role }: SettingsClientP
 
   const isDoctor = role === "DOCTOR";
 
+  const profileMutation = useMutation({
+    mutationFn: (formData: FormData) => isDoctor ? updateDoctorProfile(formData) : updateReceptionistProfile(formData),
+    onSuccess: (res, variables) => {
+        if (res.success) {
+            const updated = Object.fromEntries(variables.entries());
+            setProfile((prev) => ({ ...prev, ...updated } as SettingsProfileData));
+            setMessage({ type: "success", text: "Personal details saved successfully." });
+        } else {
+            setMessage({ type: "error", text: res.error || "Something went wrong." });
+        }
+    }
+  });
+
+  const notifMutation = useMutation({
+    mutationFn: (updated: any) => isDoctor ? updateDoctorNotifications(updated) : updateReceptionistNotifications(updated),
+    onSuccess: (res, variables) => {
+        if (res.success) {
+            setProfile(prev => ({ ...prev, ...variables }));
+            setNotifs(variables);
+        } else {
+            setNotifs(notifs);
+            setMessage({ type: "error", text: res.error || "Update failed." });
+        }
+    }
+  });
+
+  const securityMutation = useMutation({
+    mutationFn: (formData: FormData) => isDoctor ? updateDoctorSecurity(formData) : updateReceptionistSecurity(formData),
+    onSuccess: (res, variables) => {
+        if (res.success) {
+            const isPasswordChange = variables.has("newPassword");
+            if (isPasswordChange) {
+                setPassSuccess("Password updated successfully!");
+                setPasswordForm({ newPassword: "", confirmPassword: "" });
+                setTimeout(() => setShowPasswordModal(false), 1500);
+            } else {
+                const newVal = variables.get("requireOtp") === "true";
+                setProfile(prev => ({ ...prev, requireOtp: newVal }));
+                setRequireOtp(newVal);
+            }
+        } else {
+            const isPasswordChange = variables.has("newPassword");
+            if (isPasswordChange) {
+                setPassError(res.error || "Failed to change password.");
+            } else {
+                setRequireOtp(requireOtp);
+                setMessage({ type: "error", text: res.error || "Update failed." });
+            }
+        }
+    }
+  });
+
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage(null);
@@ -95,41 +147,19 @@ export default function SettingsClient({ initialProfile, role }: SettingsClientP
 
     const formData = new FormData();
     Object.entries(profileData).forEach(([k, v]) => formData.append(k, v as string));
-
-    startTransition(async () => {
-      const res = isDoctor ? await updateDoctorProfile(formData) : await updateReceptionistProfile(formData);
-      if (res.success) {
-        setProfile((prev) => ({ ...prev, ...profileData } as SettingsProfileData));
-        setMessage({ type: "success", text: "Personal details saved successfully." });
-      } else {
-        setMessage({ type: "error", text: res.error || "Something went wrong." });
-      }
-    });
+    profileMutation.mutate(formData);
   };
 
   const handleToggleNotif = async (key: keyof typeof notifs) => {
     const updatedNotifs = { ...notifs, [key]: !notifs[key] };
-    setNotifs(updatedNotifs);
-
-    startTransition(async () => {
-      const res = isDoctor ? await updateDoctorNotifications(updatedNotifs as any) : await updateReceptionistNotifications(updatedNotifs);
-      if (res.success) setProfile(prev => ({ ...prev, ...updatedNotifs }));
-      else { setNotifs(notifs); setMessage({ type: "error", text: res.error || "Update failed." }); }
-    });
+    notifMutation.mutate(updatedNotifs);
   };
 
   const handleToggleOtp = async () => {
     const newVal = !requireOtp;
-    setRequireOtp(newVal);
-
     const formData = new FormData();
     formData.append("requireOtp", newVal.toString());
-
-    startTransition(async () => {
-      const res = isDoctor ? await updateDoctorSecurity(formData) : await updateReceptionistSecurity(formData);
-      if (res.success) setProfile(prev => ({ ...prev, requireOtp: newVal }));
-      else { setRequireOtp(!newVal); setMessage({ type: "error", text: res.error || "Update failed." }); }
-    });
+    securityMutation.mutate(formData);
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -142,15 +172,7 @@ export default function SettingsClient({ initialProfile, role }: SettingsClientP
     const formData = new FormData();
     formData.append("newPassword", passwordForm.newPassword);
     formData.append("requireOtp", requireOtp.toString());
-
-    startTransition(async () => {
-      const res = isDoctor ? await updateDoctorSecurity(formData) : await updateReceptionistSecurity(formData);
-      if (res.success) {
-        setPassSuccess("Password updated successfully!");
-        setPasswordForm({ newPassword: "", confirmPassword: "" });
-        setTimeout(() => setShowPasswordModal(false), 1500);
-      } else setPassError(res.error || "Failed to change password.");
-    });
+    securityMutation.mutate(formData);
   };
 
   // Get initials for profile banner
@@ -322,7 +344,7 @@ export default function SettingsClient({ initialProfile, role }: SettingsClientP
             <Button
               type="submit"
               variant="primary"
-              loading={isPending}
+              loading={profileMutation.isPending}
             >
               Save Changes
             </Button>
@@ -347,6 +369,7 @@ export default function SettingsClient({ initialProfile, role }: SettingsClientP
             </div>
             <button
               onClick={() => handleToggleNotif("notifyAppointment")}
+              disabled={notifMutation.isPending}
               className={`relative w-[48px] h-6 rounded-full transition-colors duration-200 cursor-pointer ${
                 notifs.notifyAppointment ? "bg-brand-600" : "bg-slate-200"
               }`}
@@ -367,6 +390,7 @@ export default function SettingsClient({ initialProfile, role }: SettingsClientP
             </div>
             <button
               onClick={() => handleToggleNotif("notifyWaiting")}
+              disabled={notifMutation.isPending}
               className={`relative w-[48px] h-6 rounded-full transition-colors duration-200 cursor-pointer ${
                 notifs.notifyWaiting ? "bg-brand-600" : "bg-slate-200"
               }`}
@@ -388,6 +412,7 @@ export default function SettingsClient({ initialProfile, role }: SettingsClientP
               </div>
               <button
                 onClick={() => handleToggleNotif("notifyLabResults")}
+                disabled={notifMutation.isPending}
                 className={`relative w-[48px] h-6 rounded-full transition-colors duration-200 cursor-pointer ${
                   notifs.notifyLabResults ? "bg-brand-600" : "bg-slate-200"
                 }`}
@@ -410,6 +435,7 @@ export default function SettingsClient({ initialProfile, role }: SettingsClientP
               </div>
               <button
                 onClick={() => handleToggleNotif("notifyDraftReminder")}
+                disabled={notifMutation.isPending}
                 className={`relative w-[48px] h-6 rounded-full transition-colors duration-200 cursor-pointer ${
                   notifs.notifyDraftReminder ? "bg-brand-600" : "bg-slate-200"
                 }`}
@@ -431,6 +457,7 @@ export default function SettingsClient({ initialProfile, role }: SettingsClientP
             </div>
             <button
               onClick={() => handleToggleNotif("notifyDailySummary")}
+              disabled={notifMutation.isPending}
               className={`relative w-[48px] h-6 rounded-full transition-colors duration-200 cursor-pointer ${
                 notifs.notifyDailySummary ? "bg-brand-600" : "bg-slate-200"
               }`}
@@ -474,7 +501,7 @@ export default function SettingsClient({ initialProfile, role }: SettingsClientP
                 type="button"
                 variant="primary"
                 onClick={handleProfileSubmit}
-                disabled={isPending || username === profile.username}
+                disabled={profileMutation.isPending || username === profile.username}
               >
                 Save
               </Button>
@@ -504,6 +531,7 @@ export default function SettingsClient({ initialProfile, role }: SettingsClientP
             </div>
             <button
               onClick={handleToggleOtp}
+              disabled={securityMutation.isPending}
               className={`relative w-[48px] h-6 rounded-full transition-colors duration-200 cursor-pointer ${
                 requireOtp ? "bg-brand-600" : "bg-slate-200"
               }`}
@@ -572,7 +600,7 @@ export default function SettingsClient({ initialProfile, role }: SettingsClientP
               <Button
                 type="submit"
                 variant="primary"
-                loading={isPending}
+                loading={securityMutation.isPending}
               >
                 Confirm Update
               </Button>

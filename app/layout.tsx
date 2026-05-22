@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { getSession } from "@/lib/auth/session";
 import DashboardLayout from "@/components/dashboardlayout";
+import QueryProvider from "@/components/providers/QueryProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,7 +21,9 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.className} text-slate-800`}>
-        <DashboardLayout session={session}>{children}</DashboardLayout>
+        <QueryProvider>
+          <DashboardLayout session={session}>{children}</DashboardLayout>
+        </QueryProvider>
       </body>
     </html>
   );

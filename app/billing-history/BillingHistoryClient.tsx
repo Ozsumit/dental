@@ -5,12 +5,13 @@ import { useCallback, useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
 import { Search, ChevronLeft, ChevronRight, Edit2, X } from "lucide-react";
 // Import your server action (you will create this in Step 2)
-import { reviseBill } from "@/app/actions/billingActions";
+import { reviseBill, getAllBillings } from "@/app/actions/billingActions";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function BillingHistoryClient({
-  data,
-  totalPages,
-  currentPage,
+  data: initialData,
+  totalPages: initialTotalPages,
+  currentPage: initialCurrentPage,
 }: {
   data: any[];
   totalPages: number;
@@ -18,11 +19,33 @@ export default function BillingHistoryClient({
 }) {
   const router = useRouter();
   const params = useSearchParams();
+  const queryClient = useQueryClient();
+  const currentFilters = Object.fromEntries(params.entries());
+
+  const { data: historyData } = useQuery({
+    queryKey: ["billingHistory", currentFilters],
+    queryFn: () => getAllBillings(currentFilters),
+    initialData: {
+        data: initialData,
+        totalPages: initialTotalPages,
+        currentPage: initialCurrentPage,
+        totalCount: 0
+    }
+  });
+
+  const reviseMutation = useMutation({
+    mutationFn: ({ id, formData }: { id: string, formData: FormData }) => reviseBill(id, formData),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["billingHistory"] });
+        setIsReviseOpen(false);
+        setSelectedBill(null);
+    },
+    onError: (error: any) => alert("Failed to revise bill: " + error.message)
+  });
 
   // State for the Revise Bill Modal
   const [isReviseOpen, setIsReviseOpen] = useState(false);
   const [selectedBill, setSelectedBill] = useState<any>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateQuery = useCallback(
     (name: string, value: string) => {
@@ -30,7 +53,9 @@ export default function BillingHistoryClient({
       if (value) newParams.set(name, value);
       else newParams.delete(name);
 
-      if (name !== "page") newParams.set("page", "1");
+      if (name !== "page") {
+        newParams.set("page", "1");
+      }
 
       router.push(`?${newParams.toString()}`);
     },
@@ -43,17 +68,7 @@ export default function BillingHistoryClient({
 
   const handleReviseSubmit = async (formData: FormData) => {
     if (!selectedBill) return;
-    setIsSubmitting(true);
-    try {
-      // Call the server action to update the database
-      await reviseBill(selectedBill.id, formData);
-      setIsReviseOpen(false);
-      setSelectedBill(null);
-    } catch (error: any) {
-      alert("Failed to revise bill: " + error.message);
-    } finally {
-      setIsSubmitting(false);
-    }
+    reviseMutation.mutate({ id: selectedBill.id, formData });
   };
 
   return (
@@ -109,14 +124,14 @@ export default function BillingHistoryClient({
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.length === 0 ? (
+            {historyData.data.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-12 text-center text-slate-500">
                   No billing records found.
                 </td>
               </tr>
             ) : (
-              data.map((proc) => (
+              historyData.data.map((proc: any) => (
                 <tr key={proc.id} className="hover:bg-slate-50 transition">
                   <td className="px-6 py-4 font-medium whitespace-nowrap">
                     {new Date(proc.procedureDate).toLocaleDateString()}
@@ -170,19 +185,19 @@ export default function BillingHistoryClient({
         {/* PAGINATION */}
         <div className="flex items-center justify-between px-6 py-4 bg-slate-50 border-t border-slate-200">
           <p className="text-sm text-slate-500">
-            Page {currentPage} of {totalPages || 1}
+            Page {historyData.currentPage} of {historyData.totalPages || 1}
           </p>
           <div className="flex gap-2">
             <button
-              disabled={currentPage <= 1}
-              onClick={() => updateQuery("page", String(currentPage - 1))}
+              disabled={historyData.currentPage <= 1}
+              onClick={() => updateQuery("page", String(historyData.currentPage - 1))}
               className="p-2 bg-white border border-slate-300 rounded-lg disabled:opacity-30"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             <button
-              disabled={currentPage >= totalPages}
-              onClick={() => updateQuery("page", String(currentPage + 1))}
+              disabled={historyData.currentPage >= historyData.totalPages}
+              onClick={() => updateQuery("page", String(historyData.currentPage + 1))}
               className="p-2 bg-white border border-slate-300 rounded-lg disabled:opacity-30"
             >
               <ChevronRight className="w-5 h-5" />
@@ -267,10 +282,10 @@ export default function BillingHistoryClient({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={reviseMutation.isPending}
                   className="px-6 py-3 bg-brand-700 text-white font-bold hover:bg-brand-800 rounded-xl shadow-md disabled:opacity-50 flex items-center justify-center min-w-[140px]"
                 >
-                  {isSubmitting ? "Saving..." : "Save Revision"}
+                  {reviseMutation.isPending ? "Saving..." : "Save Revision"}
                 </button>
               </div>
             </form>

@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
 import { User, Phone, Calendar, X } from "lucide-react";
 import { getPatientDetails } from "@/app/actions/patientsActions";
 import ReceptionistPatientView from "@/components/reception/ReceptionistPatientView";
 import { ExtendedPatient } from "@/lib/types";
+import { useQuery } from "@tanstack/react-query";
 
 interface PatientProfileModalProps {
   isOpen: boolean;
@@ -23,27 +23,11 @@ export default function PatientProfileModal({
   patientPhone,
   openNewAppointment,
 }: PatientProfileModalProps) {
-  const [detailedPatient, setDetailedPatient] = useState<ExtendedPatient | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [, startTransition] = useTransition();
-
-  useEffect(() => {
-    if (isOpen && patientId) {
-      startTransition(() => {
-        setLoading(true);
-      });
-
-      getPatientDetails(patientId)
-        .then((res) => {
-          setDetailedPatient(res as ExtendedPatient);
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error("Error loading patient details:", err);
-          setLoading(false);
-        });
-    }
-  }, [isOpen, patientId]);
+  const { data: detailedPatient, isLoading: loading } = useQuery({
+    queryKey: ["patientDetails", patientId],
+    queryFn: () => getPatientDetails(patientId) as Promise<ExtendedPatient>,
+    enabled: isOpen && !!patientId,
+  });
 
   if (!isOpen) return null;
 

@@ -10,6 +10,7 @@ import { validateAppointmentForm } from "@/services/validations";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface AppointmentFormModalProps {
     isOpen: boolean;
@@ -17,7 +18,6 @@ interface AppointmentFormModalProps {
     selectedAppt: ExtendedAppointment | null;
     doctors: { id: string; username: string; fullName?: string | null }[];
     defaultFee: number;
-    onSuccess: () => Promise<void> | void;
 }
 
 export function AppointmentFormModal({
@@ -26,7 +26,6 @@ export function AppointmentFormModal({
     selectedAppt,
     doctors,
     defaultFee,
-    onSuccess,
 }: AppointmentFormModalProps) {
     const [selectedDoctorId, setSelectedDoctorId] = useState("");
     const [patientSearchQuery, setPatientSearchQuery] = useState("");
@@ -44,7 +43,39 @@ export function AppointmentFormModal({
     
     // Zod validation error state
     const [apptError, setApptError] = useState<string | null>(null);
-    const [isSaving, setIsSaving] = useState(false);
+
+    const queryClient = useQueryClient();
+
+    const mutation = useMutation({
+        mutationFn: async (formData: FormData) => {
+            if (isCreatingPatient) {
+                const pForm = new FormData();
+                pForm.append("firstName", newPatientData.firstName);
+                pForm.append("lastName", newPatientData.lastName);
+                pForm.append("phone", newPatientData.phone);
+                pForm.append("skipAutoAppt", "true");
+
+                const newPatient = await savePatient(pForm).catch(e => ({ error: e.message }));
+                if (newPatient && "error" in newPatient && newPatient.error) throw new Error(newPatient.error as string);
+                if (newPatient && "id" in newPatient) formData.append("patientId", newPatient.id);
+            }
+
+            const apptRes = await saveAppointment(formData, selectedAppt?.id).catch(e => ({ error: e.message }));
+            if (apptRes && "error" in apptRes && apptRes.error) throw new Error(apptRes.error as string);
+            return apptRes;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["todaysAppointments"] });
+            queryClient.invalidateQueries({ queryKey: ["adminStats"] });
+            queryClient.invalidateQueries({ queryKey: ["patientAnalytics"] });
+            queryClient.invalidateQueries({ queryKey: ["appointments"] });
+            onClose();
+            setApptError(null);
+        },
+        onError: (error: any) => {
+            setApptError(error.message || "Database error");
+        },
+    });
 
     useEffect(() => {
         if (selectedAppt) {
@@ -108,7 +139,7 @@ export function AppointmentFormModal({
                 )}
 
                 <form
-                    action={async (formData) => {
+                    action={(formData) => {
                         setApptError(null);
                         formData.set("doctorId", selectedDoctorId);
                         
@@ -122,31 +153,7 @@ export function AppointmentFormModal({
 
                         const err = validateAppointmentForm(formData, isCreatingPatient);
                         if (err) return setApptError(err);
-
-                        setIsSaving(true);
-                        try {
-                            if (isCreatingPatient) {
-                                const pForm = new FormData();
-                                pForm.append("firstName", newPatientData.firstName);
-                                pForm.append("lastName", newPatientData.lastName);
-                                pForm.append("phone", newPatientData.phone);
-                                pForm.append("skipAutoAppt", "true");
-
-                                const newPatient = await savePatient(pForm).catch(e => ({ error: e.message }));
-                                if (newPatient && "error" in newPatient && newPatient.error) throw new Error(newPatient.error as string);
-                                if (newPatient && "id" in newPatient) formData.append("patientId", newPatient.id);
-                            }
-                            
-                            const apptRes = await saveAppointment(formData, selectedAppt?.id).catch(e => ({ error: e.message }));
-                            if (apptRes && "error" in apptRes && apptRes.error) throw new Error(apptRes.error as string);
-                            
-                            await onSuccess();
-                            onClose();
-                        } catch (e: any) {
-                            setApptError(e.message || "Database error");
-                        } finally {
-                            setIsSaving(false);
-                        }
+                        mutation.mutate(formData);
                     }}
                     className="p-6 space-y-5 max-h-[75vh] overflow-y-auto"
                 >
@@ -346,15 +353,15 @@ export function AppointmentFormModal({
                             type="button"
                             variant="outline"
                             onClick={onClose}
-                            disabled={isSaving}
+                            disabled={mutation.isPending}
                         >
                             Cancel
                         </Button>
                         <Button
                             type="submit"
                             variant="primary"
-                            loading={isSaving}
-                            disabled={isSaving}
+                            loading={mutation.isPending}
+                            disabled={mutation.isPending}
                         >
                             Save Appointment
                         </Button>
