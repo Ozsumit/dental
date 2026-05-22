@@ -8,6 +8,7 @@ import {
   HeartPulse,
   Shield,
   LogOut,
+  ChartNoAxesCombined as Graph,
   Receipt,
   ListOrdered,
   LayoutDashboard,
@@ -80,6 +81,13 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
       icon: Settings,
       roles: ["DOCTOR"],
     },
+    {
+      name: "Analytics",
+      href: "/##",
+      icon: Graph,
+      roles: ["DOCTOR", "ADMIN", "SUPERADMIN", "RECEPTIONIST"],
+    },
+
     {
       name: "Settings",
       href: "/settings",
@@ -154,21 +162,24 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
 export function TopRightProfile({ session }: TopRightProfileProps) {
   if (!session) return null;
 
-  const colors = [
-    "from-pink-500 to-rose-500",
-    "from-brand-600 to-brand-600",
-    "from-brand-600 to-brand-500",
-    "from-yellow-500 to-orange-500",
-    "from-purple-500 to-fuchsia-500",
-  ];
+  // const colors = [
+  //   "from-pink-500 to-rose-500",
+  //   "from-brand-600 to-brand-600",
+  //   "from-brand-600 to-brand-500",
+  //   "from-yellow-500 to-orange-500",
+  //   "from-purple-500 to-fuchsia-500",
+  // ];
 
-  const getColor = (name = "") => {
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
-  };
+  // const getColor = (name = "") => {
+  //   let hash = 0;
+  //   for (let i = 0; i < name.length; i++) {
+  //     hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  //   }
+  //   return colors[Math.abs(hash) % colors.length];
+  // };
+  function settitle(session: UserSession) {
+    if (session.role === "DOCTOR") return "Dr. ";
+  }
 
   const getInitial = (name = "") =>
     name?.trim()?.charAt(0)?.toUpperCase() || "?";
@@ -176,10 +187,10 @@ export function TopRightProfile({ session }: TopRightProfileProps) {
   const displayName = session.fullName || session.username;
 
   return (
-    <div className="flex items-center gap-3 bg-white  border-slate-200 rounded-2xl p-2 pr-4 hover:border-slate-300 transition duration-150">
+    <div className="flex items-center justify-center gap-3 bg-white  border-slate-200 rounded-2xl p-2 pr-4 hover:border-slate-300 transition duration-150">
       {/* Avatar Indicator */}
       <div
-        className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black text-white bg-gradient-to-br ${getColor(displayName)} shrink-0`}
+        className={`w-9 h-9 rounded-sm flex items-center justify-center text-lg font-black text-white bg-linear-to-br from-brand-600 to-brand-800 shrink-0`}
       >
         {getInitial(displayName)}
       </div>
@@ -187,6 +198,7 @@ export function TopRightProfile({ session }: TopRightProfileProps) {
       {/* Name and Role Stack */}
       <div className="text-left min-w-0">
         <p className="text-xs font-black capitalize text-slate-900 truncate tracking-tight">
+          <span>{settitle(session)}</span>
           {displayName}
         </p>
         <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">

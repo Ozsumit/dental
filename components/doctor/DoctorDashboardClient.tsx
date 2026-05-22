@@ -58,9 +58,9 @@ export default function DoctorDashboardClient({
 
       {/* Analytics Summary Cards */}
       <AnalyticsSummary
-        totalPatientsCount={totalPatientsCount}
-        pendingPatientsCount={pendingPatientsCount}
-        completedPatientsCount={completedPatientsCount}
+        totalCount={totalPatientsCount}
+        pendingCount={pendingPatientsCount}
+        completedCount={completedPatientsCount}
         averageVas={averageVas}
       />
 
@@ -70,12 +70,11 @@ export default function DoctorDashboardClient({
           <VolumeChart chartData={chartData} />
         </div>
         <div className="w-full lg:w-[400px] flex-col flex gap-4">
-          <RecentTreatmentsTimeline completedPatients={completedPatients} />
-
           <TodayProgress
             completedPatientsCount={completedPatientsCount}
             totalPatientsCount={totalPatientsCount}
           />
+          <RecentTreatmentsTimeline completedPatients={completedPatients} />
         </div>
       </div>
       {/* Patient Queue List */}
