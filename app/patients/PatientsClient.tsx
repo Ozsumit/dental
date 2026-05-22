@@ -3,7 +3,10 @@
 import { useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";
-import { deletePatient, getPatientsForExport } from "./actions/patientsActions";
+import {
+  deletePatient,
+  getPatientsForExport,
+} from "../actions/patientsActions";
 import { Patient } from "@/lib/types/index";
 import * as XLSX from "xlsx";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
@@ -14,9 +17,11 @@ import PatientTable from "@/components/reception/PatientTable";
 import PatientFormModal from "@/components/reception/PatientFormModal";
 import AppointmentFormModal from "@/components/reception/AppointmentFormModal";
 import PatientProfileModal from "@/components/reception/PatientProfileModal";
-import PatientAnalytics, { PatientAnalyticsData } from "@/components/reception/PatientAnalytics";
+import PatientAnalytics, {
+  PatientAnalyticsData,
+} from "@/components/reception/PatientAnalytics";
 
-interface DashboardClientProps {
+interface PatientsClientProps {
   patients: Patient[];
   totalPages: number;
   currentPage: number;
@@ -26,14 +31,14 @@ interface DashboardClientProps {
   analytics: PatientAnalyticsData;
 }
 
-export default function DashboardClient({
+export default function PatientsClient({
   patients,
   totalPages,
   currentPage,
   initialDoctors = [],
   defaultFee = 0,
   analytics,
-}: DashboardClientProps) {
+}: PatientsClientProps) {
   const router = useRouter();
   const params = useSearchParams();
 
@@ -166,11 +171,11 @@ export default function DashboardClient({
       />
 
       {/* Analytics Dashboard */}
-      {showAnalytics && analytics && (
+      {/* {showAnalytics && analytics && (
         <div className="animate-in fade-in slide-in-from-top-4 duration-300">
           <PatientAnalytics analytics={analytics} updateQuery={updateQuery} />
         </div>
-      )}
+      )} */}
 
       {/* Patient Listings Directory */}
       <PatientTable

@@ -72,7 +72,9 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
         data: diagnosisData,
       });
     } else {
-      const newDiag = await prisma.diagnosis.create({ data: { patientId, ...diagnosisData } });
+      const newDiag = await prisma.diagnosis.create({
+        data: { patientId, ...diagnosisData },
+      });
       diagnosisId = newDiag.id;
     }
 
@@ -80,7 +82,7 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
     await prisma.medicalRecord.upsert({
       where: { patientId },
       update: { medicalHistory },
-      create: { patientId, medicalHistory }
+      create: { patientId, medicalHistory },
     });
 
     // Handle ClinicalAssessment if objectiveData is present
@@ -97,7 +99,9 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
             biteOcclusion: parsedObj.biteOcclusion || null,
             softTissue: parsedObj.softTissue || null,
             generalExam: JSON.stringify(parsedObj.generalExamination || {}),
-            diagnosticProcs: JSON.stringify(parsedObj.diagnosticProcedures || []),
+            diagnosticProcs: JSON.stringify(
+              parsedObj.diagnosticProcedures || [],
+            ),
           },
           create: {
             patientId,
@@ -108,8 +112,10 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
             biteOcclusion: parsedObj.biteOcclusion || null,
             softTissue: parsedObj.softTissue || null,
             generalExam: JSON.stringify(parsedObj.generalExamination || {}),
-            diagnosticProcs: JSON.stringify(parsedObj.diagnosticProcedures || []),
-          }
+            diagnosticProcs: JSON.stringify(
+              parsedObj.diagnosticProcedures || [],
+            ),
+          },
         });
       } catch (e) {
         console.error("Error saving clinical assessment", e);
@@ -117,9 +123,13 @@ export async function updateDiagnosis(patientId: string, formData: FormData) {
     }
 
     // 1.5. Sync selected clinical procedures to billing catalog & Procedure table
-    const selectedProceduresRaw = formData.get("selectedProcedures")?.toString();
+    const selectedProceduresRaw = formData
+      .get("selectedProcedures")
+      ?.toString();
     if (selectedProceduresRaw) {
-      const selectedProceduresNames: string[] = JSON.parse(selectedProceduresRaw);
+      const selectedProceduresNames: string[] = JSON.parse(
+        selectedProceduresRaw,
+      );
 
       // Find active appointment today to link procedures
       const activeAppt = await prisma.appointment.findFirst({

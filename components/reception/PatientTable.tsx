@@ -1,6 +1,14 @@
 "use client";
 
-import { User, Eye, Edit2, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  User,
+  Eye,
+  Edit2,
+  Trash2,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Patient } from "@/lib/types/index";
 
 interface PatientTableProps {
@@ -50,10 +58,7 @@ export default function PatientTable({
         </thead>
         <tbody className="divide-y divide-slate-100">
           {patients.map((patient: Patient) => (
-            <tr
-              key={patient.id}
-              className="hover:bg-slate-50 transition group"
-            >
+            <tr key={patient.id} className="hover:bg-slate-50 transition group">
               <td className="px-6 py-4 flex items-center gap-3">
                 <div className="bg-brand-50 p-2.5 rounded-xl text-brand-800 border border-brand-100 shrink-0">
                   <User className="w-5 h-5" />

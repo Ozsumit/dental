@@ -52,7 +52,7 @@ export default function BillingClient({
     isOpen: false,
     title: "",
     message: "",
-    onConfirm: async () => {},
+    onConfirm: async () => { },
   });
 
   // Itemized Invoice State

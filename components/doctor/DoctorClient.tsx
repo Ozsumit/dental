@@ -518,16 +518,34 @@ export default function DoctorClient({
                   {activeTab === "Assessment & Plan" && (
                     <AssessmentPlanTab selectedPatient={selectedPatient} treatmentPlanText={treatmentPlanText} setTreatmentPlanText={setTreatmentPlanText} medicinesText={medicinesText} setMedicinesText={setMedicinesText} nextVisitDate={nextVisitDate} setNextVisitDate={setNextVisitDate} activePreset={activePreset} handleNextVisitPreset={handleNextVisitPreset} objectiveData={objectiveData} DENTAL_DIAGNOSIS_TAXONOMY={DENTAL_DIAGNOSIS_TAXONOMY} DENTAL_INVESTIGATION_TAXONOMY={DENTAL_INVESTIGATION_TAXONOMY} DENTAL_TREATMENT_TAXONOMY={DENTAL_TREATMENT_TAXONOMY} expandedAPDiagnoses={expandedAPDiagnoses} setExpandedAPDiagnoses={setExpandedAPDiagnoses} expandedAPInvestigations={expandedAPInvestigations} setExpandedAPInvestigations={setExpandedAPInvestigations} expandedAPTreatments={expandedAPTreatments} setExpandedAPTreatments={setExpandedAPTreatments} toggleDiagnosis={toggleDiagnosis} toggleInvestigation={toggleInvestigation} toggleTreatment={toggleTreatment} renderTaxonomyGroup={renderTaxonomyGroup} />
                   )}
-                </div>
-
-                <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-20">
-                  <div className="flex items-center gap-4">
-                    <span className="text-[13px] font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md">Current Patient: <span className="text-slate-800">{selectedPatient.firstName} {selectedPatient.lastName}</span></span>
-                  </div>
-                  <div className="flex gap-4">
-                    <button type="submit" disabled={isPending} onClick={() => { (document.getElementById("finalize-input") as HTMLInputElement).value = "false"; }} className="flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-lg text-sm hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-50"><Save className="w-4 h-4" /> Save Draft</button>
-                    <button type="submit" disabled={isPending} onClick={() => { (document.getElementById("finalize-input") as HTMLInputElement).value = "true"; }} className="flex items-center gap-2 px-8 py-2.5 bg-brand-700 text-white font-bold rounded-lg text-sm hover:bg-brand-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50">{isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Lock & Finalize Chart</button>
-                  </div>
+                  {activeTab === "Assessment & Plan" ? (
+                    <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-8 py-4 flex items-center justify-between shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-20">
+                      <div className="flex items-center gap-4">
+                        <span className="text-[13px] font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md">Current Patient: <span className="text-slate-800">{selectedPatient.firstName} {selectedPatient.lastName}</span></span>
+                      </div>
+                      <div className="flex gap-4">
+                        <button type="submit" disabled={isPending} onClick={() => { (document.getElementById("finalize-input") as HTMLInputElement).value = "false"; }} className="flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-lg text-sm hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-50">
+                          <Save className="w-4 h-4" /> Save Draft
+                        </button>
+                        <button type="submit" disabled={isPending} onClick={() => { (document.getElementById("finalize-input") as HTMLInputElement).value = "true"; }} className="flex items-center gap-2 px-8 py-2.5 bg-brand-700 text-white font-bold rounded-lg text-sm hover:bg-brand-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50">
+                          {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Lock & Finalize Chart
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-200 px-8 py-4 flex items-center justify-end shrink-0 shadow-[0_-10px_20px_-10px_rgba(0,0,0,0.05)] z-20">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (activeTab === "Subjective") setActiveTab("Objective");
+                          else if (activeTab === "Objective") setActiveTab("Assessment & Plan");
+                        }}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-brand-700 text-white font-bold rounded-lg text-sm hover:bg-brand-800 transition-all"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  )}
                 </div>
               </form>
             </>

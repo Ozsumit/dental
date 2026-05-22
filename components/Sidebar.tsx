@@ -5,38 +5,26 @@ import { usePathname } from "next/navigation";
 import {
   Users,
   CalendarDays,
-  Activity,
+  HeartPulse,
   Shield,
-  Stethoscope,
   LogOut,
   Receipt,
+  ListOrdered,
   LayoutDashboard,
   Settings,
   Globe,
+  HelpCircle,
 } from "lucide-react";
 import { handleLogout } from "@/app/actions/authActions";
 import { UserSession } from "@/lib/types";
 
+interface TopRightProfileProps {
+  session: UserSession | null;
+}
+
 export default function Sidebar({ session }: { session: UserSession | null }) {
   const pathname = usePathname();
-  const colors = [
-    "from-pink-500 to-rose-500",
-    "from-brand-600 to-brand-600",
-    "from-brand-600 to-brand-500",
-    "from-yellow-500 to-orange-500",
-    "from-purple-500 to-fuchsia-500",
-  ];
 
-  const getColor = (name = "") => {
-    let hash = 0;
-    for (let i = 0; i < name.length; i++) {
-      hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return colors[Math.abs(hash) % colors.length];
-  };
-
-  const getInitial = (name = "") =>
-    name?.trim()?.charAt(0)?.toUpperCase() || "?";
   const allItems = [
     {
       name: "Tenants Overview",
@@ -45,8 +33,14 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
       roles: ["SUPERADMIN"],
     },
     {
-      name: "Patients",
+      name: "Dashboard",
       href: "/",
+      icon: LayoutDashboard,
+      roles: ["RECEPTIONIST", "ADMIN"],
+    },
+    {
+      name: "Patients",
+      href: "/patients",
       icon: Users,
       roles: ["RECEPTIONIST", "ADMIN"],
     },
@@ -75,9 +69,9 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
       roles: ["DOCTOR"],
     },
     {
-      name: "Clinical Workspace",
+      name: "Queue",
       href: "/doctor/clinical-workspace",
-      icon: Stethoscope,
+      icon: ListOrdered,
       roles: ["DOCTOR", "ADMIN"],
     },
     {
@@ -100,21 +94,17 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
   );
 
   return (
-    <div className="w-64 bg-brand-900 border-r border-slate-200 h-screen flex flex-col shadow-sm">
-      <div className="p-6 border-b border-brand-800 flex items-center gap-3">
-        <div className="bg-brand-700 p-2.5 rounded-xl text-white shadow-md shadow-brand-950">
-          <Activity className="w-6 h-6" />
-        </div>
-        <div className="min-w-0">
-          <span className="text-sm font-black text-white block truncate uppercase tracking-wider">
-            {session?.tenantName || "DentalCRM"}
-          </span>
-
+    <div className="w-64 bg-brand-900 border-r border-brand-800 h-screen flex flex-col shadow-sm shrink-0">
+      {/* BRANDING HEADER */}
+      <div className="p-6 border-b justify-center border-brand-800 flex items-center gap-3 shrink-0">
+        <div className="bg-brand-800 text-brand-300 rounded-full p-2 border border-brand-700 shadow-inner shrink-0">
+          <HeartPulse className="w-12 h-12" />
         </div>
       </div>
 
+      {/* NAVIGATION MENU */}
       <div className="p-4 flex-1 space-y-2 overflow-y-auto">
-        <p className="px-4 text-xs font-bold text-slate-100 uppercase tracking-widest mb-4">
+        <p className="px-4 text-[10px] font-bold text-brand-400 uppercase tracking-widest mb-4">
           Main Menu
         </p>
         {navItems.map((item) => {
@@ -124,10 +114,11 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition ${isActive
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-medium transition ${
+                isActive
                   ? "bg-brand-800 text-brand-100 shadow-sm"
                   : "text-slate-200 hover:bg-brand-800 hover:text-slate-100"
-                }`}
+              }`}
             >
               <Icon
                 className={`w-5 h-5 ${isActive ? "text-slate-200" : "text-slate-100"}`}
@@ -138,36 +129,69 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
         })}
       </div>
 
-      <div className="p-4 border-t border-slate-100 space-y-2">
-        <div className="px-4 w-full py-3 bg-[#0f172a] rounded-xl mb-4 flex flex-col items-start justify-between gap-3">
-          {/* Left: avatar + text */}
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            {/* Avatar (no image version) */}
-            <div
-              className={`w-10 h-10 rounded-full flex items-center justify-center text-xl font-bold text-white bg-gradient-to-br ${getColor(session?.fullName || session?.username)} flex-shrink-0`}
-            >
-              {getInitial(session?.fullName || session?.username)}
-            </div>
+      {/* FOOTER ACTIONS */}
+      <div className="p-4 border-t border-brand-800 space-y-1 shrink-0">
+        <Link
+          href="/help"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-200 hover:bg-brand-800 hover:text-slate-100 transition"
+        >
+          <HelpCircle className="w-5 h-5 text-slate-100" />
+          Help & Support
+        </Link>
 
-            {/* Text */}
-            <div className="min-w-0">
-              <p className="text-sm font-semibold capitalize text-slate-100 truncate">
-                {session?.fullName || session?.username}
-              </p>
-              <p className="text-xs font-medium text-slate-400 truncate">
-                {session?.role}
-              </p>
-            </div>
-          </div>
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-red-200 hover:bg-red-950/40 hover:text-red-100 transition text-left cursor-pointer"
+        >
+          <LogOut className="w-5 h-5 text-red-400" />
+          Logout
+        </button>
+      </div>
+    </div>
+  );
+}
 
-          {/* Right: button */}
-          <button
-            onClick={handleLogout}
-            className="flex-shrink-0 flex items-center w-full gap-2 px-3 py-2 rounded-lg text-xs font-medium text-red-100 bg-red-600 hover:bg-red-700 transition whitespace-nowrap"
-          >
-            <LogOut className="w-4 h-4" /> Sign Out
-          </button>
-        </div>
+export function TopRightProfile({ session }: TopRightProfileProps) {
+  if (!session) return null;
+
+  const colors = [
+    "from-pink-500 to-rose-500",
+    "from-brand-600 to-brand-600",
+    "from-brand-600 to-brand-500",
+    "from-yellow-500 to-orange-500",
+    "from-purple-500 to-fuchsia-500",
+  ];
+
+  const getColor = (name = "") => {
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    return colors[Math.abs(hash) % colors.length];
+  };
+
+  const getInitial = (name = "") =>
+    name?.trim()?.charAt(0)?.toUpperCase() || "?";
+
+  const displayName = session.fullName || session.username;
+
+  return (
+    <div className="flex items-center gap-3 bg-white  border-slate-200 rounded-2xl p-2 pr-4 hover:border-slate-300 transition duration-150">
+      {/* Avatar Indicator */}
+      <div
+        className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black text-white bg-gradient-to-br ${getColor(displayName)} shrink-0`}
+      >
+        {getInitial(displayName)}
+      </div>
+
+      {/* Name and Role Stack */}
+      <div className="text-left min-w-0">
+        <p className="text-xs font-black capitalize text-slate-900 truncate tracking-tight">
+          {displayName}
+        </p>
+        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+          {session.role}
+        </p>
       </div>
     </div>
   );

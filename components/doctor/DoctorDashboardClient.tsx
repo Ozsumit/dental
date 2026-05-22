@@ -8,7 +8,8 @@ import { AnalyticsSummary } from "@/components/doctor/doctorAnalytics";
 import { VolumeChart } from "@/components/doctor/weeklyVolumeChart";
 import { TodayProgress } from "@/components/doctor/todayProgressCard";
 import { PatientQueueTable } from "@/components/doctor/patientqueue";
-
+import { RecentTreatmentsTimeline } from "@/components/doctor/recentpatient";
+import PatientsClient from "../../app/patients/PatientsClient";
 interface ChartDayData {
   day: string;
   date: string;
@@ -46,7 +47,8 @@ export default function DoctorDashboardClient({
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-xs">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            Welcome Back, Dr. <span className="capitalize text-brand-700">{username}</span>
+            Welcome Back, Dr.{" "}
+            <span className="capitalize text-brand-700">{username}</span>
           </h1>
           <p className="text-slate-500 font-medium mt-1 flex items-center gap-2">
             <Calendar className="w-4 h-4 text-brand-500" /> {todayStr}
@@ -63,15 +65,19 @@ export default function DoctorDashboardClient({
       />
 
       {/* Charts + Quick Queue Grid */}
-      <div className="grid grid-cols-2 lg:gap-10 lg:grid-cols-3 gap-8">
-        <VolumeChart chartData={chartData} />
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="flex-1 mr-6">
+          <VolumeChart chartData={chartData} />
+        </div>
+        <div className="w-full lg:w-[400px] flex-col flex gap-4">
+          <RecentTreatmentsTimeline completedPatients={completedPatients} />
 
-        <TodayProgress
-          completedPatientsCount={completedPatientsCount}
-          totalPatientsCount={totalPatientsCount}
-        />
+          <TodayProgress
+            completedPatientsCount={completedPatientsCount}
+            totalPatientsCount={totalPatientsCount}
+          />
+        </div>
       </div>
-
       {/* Patient Queue List */}
       <PatientQueueTable
         pendingPatients={pendingPatients}
