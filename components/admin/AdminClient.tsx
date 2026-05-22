@@ -1,20 +1,21 @@
-
 "use client";
 
 import { useState } from "react";
-import { saveUser, deleteUser } from "@/app/actions/userActions";
-import { saveCatalogItem, deleteCatalogItem, saveSystemSettings } from "@/app/actions/billingActions";
-import { deleteTaxonomy } from "@/app/actions/taxonomyActions";
-import { Plus, Edit2, Trash2, X, Shield, User as UserIcon, Briefcase, Settings, Save } from "lucide-react";
+import { saveUser, deleteUser, getUsers } from "@/app/actions/userActions";
+import { saveCatalogItem, deleteCatalogItem, saveSystemSettings, getBillingCatalog, getSystemSettings } from "@/app/actions/billingActions";
+import { deleteTaxonomy, getTaxonomies } from "@/app/actions/taxonomyActions";
+import { Plus, Edit2, Trash2, X, Shield, User as UserIcon, Briefcase, Settings, Save, Loader2 } from "lucide-react";
 import { User, BillingCatalog, SystemSettings, Taxonomy } from "@prisma/client";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
 import TaxonomyFormModal from "./modals/TaxonomyFormModal";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUIStore } from "@/lib/store/useUIStore";
 
 export default function AdminClient({
-  users,
-  catalog,
-  settings,
-  taxonomies
+  users: initialUsers,
+  catalog: initialCatalog,
+  settings: initialSettings,
+  taxonomies: initialTaxonomies
 }: {
   users: User[],
   catalog: BillingCatalog[],
@@ -22,36 +23,88 @@ export default function AdminClient({
   taxonomies: Taxonomy[]
 }) {
   const [activeTab, setActiveTab] = useState<"Users" | "Catalog" | "Taxonomies" | "Settings">("Users");
+  const queryClient = useQueryClient();
 
-  // User states
-  const [isUserFormOpen, setIsUserFormOpen] = useState(false);
+  const {
+    isUserFormOpen, setUserFormOpen,
+    isCatalogFormOpen, setCatalogFormOpen,
+    isTaxonomyFormOpen, setTaxonomyFormOpen,
+    isDeleteConfirmOpen, setDeleteConfirmOpen
+  } = useUIStore();
+
+  const { data: users = [] } = useQuery({
+    queryKey: ["users"],
+    queryFn: () => getUsers(),
+    initialData: initialUsers,
+  });
+
+  const { data: catalog = [] } = useQuery({
+    queryKey: ["catalog"],
+    queryFn: () => getBillingCatalog(),
+    initialData: initialCatalog,
+  });
+
+  const { data: taxonomies = [] } = useQuery({
+    queryKey: ["taxonomies"],
+    queryFn: () => getTaxonomies(),
+    initialData: initialTaxonomies,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ["systemSettings"],
+    queryFn: () => getSystemSettings(),
+    initialData: initialSettings,
+  });
+
+  // Local selection states
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [userFormError, setUserFormError] = useState("");
-
-  // Catalog states
-  const [isCatalogFormOpen, setIsCatalogFormOpen] = useState(false);
   const [selectedCatalogItem, setSelectedCatalogItem] = useState<BillingCatalog | null>(null);
-
-  // Taxonomy states
-  const [isTaxonomyFormOpen, setIsTaxonomyFormOpen] = useState(false);
   const [selectedTaxonomy, setSelectedTaxonomy] = useState<Taxonomy | null>(null);
-
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: "User" | "Catalog" | "Taxonomy" } | null>(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: async (item: { id: string, type: "User" | "Catalog" | "Taxonomy" }) => {
+        if (item.type === "User") await deleteUser(item.id);
+        else if (item.type === "Catalog") await deleteCatalogItem(item.id);
+        else if (item.type === "Taxonomy") await deleteTaxonomy(item.id);
+    },
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["users"] });
+        queryClient.invalidateQueries({ queryKey: ["catalog"] });
+        queryClient.invalidateQueries({ queryKey: ["taxonomies"] });
+        setDeleteConfirmOpen(false);
+        setItemToDelete(null);
+    }
+  });
+
+  const saveUserMutation = useMutation({
+    mutationFn: ({ formData, id }: { formData: FormData, id?: string }) => saveUser(formData, id),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["users"] });
+        setUserFormOpen(false);
+    },
+    onError: (err: any) => setUserFormError(err.message || "Failed to save user.")
+  });
+
+  const saveCatalogMutation = useMutation({
+    mutationFn: ({ formData, id }: { formData: FormData, id?: string }) => saveCatalogItem(formData, id),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["catalog"] });
+        setCatalogFormOpen(false);
+    }
+  });
+
+  const saveSettingsMutation = useMutation({
+    mutationFn: (formData: FormData) => saveSystemSettings(formData),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["systemSettings"] });
+    }
+  });
 
   const handleDeleteConfirm = async () => {
     if (!itemToDelete) return;
-
-    if (itemToDelete.type === "User") {
-      await deleteUser(itemToDelete.id);
-    } else if (itemToDelete.type === "Catalog") {
-      await deleteCatalogItem(itemToDelete.id);
-    } else if (itemToDelete.type === "Taxonomy") {
-      await deleteTaxonomy(itemToDelete.id);
-    }
-
-    setIsDeleteModalOpen(false);
-    setItemToDelete(null);
+    deleteMutation.mutate(itemToDelete);
   };
 
   return (
@@ -95,7 +148,7 @@ export default function AdminClient({
         <div className="flex gap-2">
           {activeTab === "Users" && (
             <button
-              onClick={() => { setSelectedUser(null); setUserFormError(""); setIsUserFormOpen(true); }}
+              onClick={() => { setSelectedUser(null); setUserFormError(""); setUserFormOpen(true); }}
               className="bg-brand-700 hover:bg-brand-800 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
             >
               <Plus className="w-5 h-5" /> Add New User
@@ -103,7 +156,7 @@ export default function AdminClient({
           )}
           {activeTab === "Catalog" && (
             <button
-              onClick={() => { setSelectedCatalogItem(null); setIsCatalogFormOpen(true); }}
+              onClick={() => { setSelectedCatalogItem(null); setCatalogFormOpen(true); }}
               className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
             >
               <Plus className="w-5 h-5" /> Add Procedure
@@ -111,7 +164,7 @@ export default function AdminClient({
           )}
           {activeTab === "Taxonomies" && (
             <button
-              onClick={() => { setSelectedTaxonomy(null); setIsTaxonomyFormOpen(true); }}
+              onClick={() => { setSelectedTaxonomy(null); setTaxonomyFormOpen(true); }}
               className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
             >
               <Plus className="w-5 h-5" /> Add Taxonomy
@@ -151,13 +204,13 @@ export default function AdminClient({
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => { setSelectedUser(user); setUserFormError(""); setIsUserFormOpen(true); }}
+                        onClick={() => { setSelectedUser(user); setUserFormError(""); setUserFormOpen(true); }}
                         className="p-2 text-slate-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => { setItemToDelete({ id: user.id, type: "User" }); setIsDeleteModalOpen(true); }}
+                        onClick={() => { setItemToDelete({ id: user.id, type: "User" }); setDeleteConfirmOpen(true); }}
                         className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -202,13 +255,13 @@ export default function AdminClient({
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => { setSelectedCatalogItem(item); setIsCatalogFormOpen(true); }}
+                        onClick={() => { setSelectedCatalogItem(item); setCatalogFormOpen(true); }}
                         className="p-2 text-slate-500 hover:text-brand-600 hover:bg-brand-50 rounded-lg transition"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => { setItemToDelete({ id: item.id, type: "Catalog" }); setIsDeleteModalOpen(true); }}
+                        onClick={() => { setItemToDelete({ id: item.id, type: "Catalog" }); setDeleteConfirmOpen(true); }}
                         className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -247,13 +300,13 @@ export default function AdminClient({
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button
-                        onClick={() => { setSelectedTaxonomy(item); setIsTaxonomyFormOpen(true); }}
+                        onClick={() => { setSelectedTaxonomy(item); setTaxonomyFormOpen(true); }}
                         className="p-2 text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => { setItemToDelete({ id: item.id, type: "Taxonomy" }); setIsDeleteModalOpen(true); }}
+                        onClick={() => { setItemToDelete({ id: item.id, type: "Taxonomy" }); setDeleteConfirmOpen(true); }}
                         className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -276,7 +329,7 @@ export default function AdminClient({
             <h2 className="text-xl font-bold text-slate-800">System Configuration</h2>
           </div>
 
-          <form action={saveSystemSettings} className="max-w-md space-y-6">
+          <form action={saveSettingsMutation.mutate} className="max-w-md space-y-6">
             <div>
               <label className="text-xs font-bold text-slate-500 uppercase tracking-widest block mb-2">Default Appointment Fee ($)</label>
               <div className="relative">
@@ -294,9 +347,10 @@ export default function AdminClient({
 
             <button
               type="submit"
-              className="w-full bg-brand-700 text-white px-6 py-4 rounded-xl font-bold hover:bg-brand-800 transition flex items-center justify-center gap-2 shadow-lg shadow-brand-100"
+              disabled={saveSettingsMutation.isPending}
+              className="w-full bg-brand-700 text-white px-6 py-4 rounded-xl font-bold hover:bg-brand-800 transition flex items-center justify-center gap-2 shadow-lg shadow-brand-100 disabled:opacity-50"
             >
-              <Save className="w-5 h-5" /> Update Settings
+              {saveSettingsMutation.isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />} Update Settings
             </button>
           </form>
         </div>
@@ -308,13 +362,9 @@ export default function AdminClient({
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
               <h2 className="text-xl font-bold text-slate-800">{selectedUser ? "Update User" : "Create New User"}</h2>
-              <button onClick={() => setIsUserFormOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full"><X className="w-5 h-5" /></button>
+              <button onClick={() => setUserFormOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full"><X className="w-5 h-5" /></button>
             </div>
-            <form action={async (formData) => {
-              setUserFormError("");
-              try { await saveUser(formData, selectedUser?.id); setIsUserFormOpen(false); }
-              catch (err: any) { setUserFormError(err.message || "Failed to save user."); }
-            }} className="p-6 space-y-5">
+            <form action={(formData) => saveUserMutation.mutate({ formData, id: selectedUser?.id })} className="p-6 space-y-5">
               {userFormError && <div className="bg-red-50 border border-red-200 text-red-800 p-3.5 rounded-xl text-xs font-bold flex items-center gap-2"><span>⚠️</span><span>{userFormError}</span></div>}
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase">Username</label>
@@ -333,8 +383,10 @@ export default function AdminClient({
                 </select>
               </div>
               <div className="pt-2 flex justify-end gap-3 mt-6">
-                <button type="button" onClick={() => setIsUserFormOpen(false)} className="px-6 py-3 text-slate-700 font-bold hover:bg-slate-100 rounded-xl transition">Cancel</button>
-                <button type="submit" className="px-6 py-3 bg-brand-700 text-white font-bold hover:bg-brand-800 rounded-xl shadow-md transition">Save User</button>
+                <button type="button" onClick={() => setUserFormOpen(false)} className="px-6 py-3 text-slate-700 font-bold hover:bg-slate-100 rounded-xl transition">Cancel</button>
+                <button type="submit" disabled={saveUserMutation.isPending} className="px-6 py-3 bg-brand-700 text-white font-bold hover:bg-brand-800 rounded-xl shadow-md transition disabled:opacity-50">
+                  {saveUserMutation.isPending ? "Saving..." : "Save User"}
+                </button>
               </div>
             </form>
           </div>
@@ -347,12 +399,9 @@ export default function AdminClient({
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
               <h2 className="text-xl font-bold text-slate-800">{selectedCatalogItem ? "Edit Procedure" : "New Procedure"}</h2>
-              <button onClick={() => setIsCatalogFormOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full"><X className="w-5 h-5" /></button>
+              <button onClick={() => setCatalogFormOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full"><X className="w-5 h-5" /></button>
             </div>
-            <form action={async (formData) => {
-              await saveCatalogItem(formData, selectedCatalogItem?.id);
-              setIsCatalogFormOpen(false);
-            }} className="p-6 space-y-5">
+            <form action={(formData) => saveCatalogMutation.mutate({ formData, id: selectedCatalogItem?.id })} className="p-6 space-y-5">
               <div>
                 <label className="text-xs font-bold text-slate-500 uppercase">Procedure Name</label>
                 <input required name="name" defaultValue={selectedCatalogItem?.name} className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none font-bold" />
@@ -372,8 +421,10 @@ export default function AdminClient({
                 <textarea name="description" defaultValue={selectedCatalogItem?.description || ""} rows={3} className="mt-1.5 w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-brand-500 outline-none resize-none" />
               </div>
               <div className="pt-2 flex justify-end gap-3 mt-6">
-                <button type="button" onClick={() => setIsCatalogFormOpen(false)} className="px-6 py-3 text-slate-700 font-bold hover:bg-slate-100 rounded-xl transition">Cancel</button>
-                <button type="submit" className="px-6 py-3 bg-brand-600 text-white font-bold hover:bg-brand-700 rounded-xl shadow-md transition">Save Procedure</button>
+                <button type="button" onClick={() => setCatalogFormOpen(false)} className="px-6 py-3 text-slate-700 font-bold hover:bg-slate-100 rounded-xl transition">Cancel</button>
+                <button type="submit" disabled={saveCatalogMutation.isPending} className="px-6 py-3 bg-brand-600 text-white font-bold hover:bg-brand-700 rounded-xl shadow-md transition disabled:opacity-50">
+                    {saveCatalogMutation.isPending ? "Saving..." : "Save Procedure"}
+                </button>
               </div>
             </form>
           </div>
@@ -383,20 +434,21 @@ export default function AdminClient({
       {/* Taxonomy Form Modal */}
       <TaxonomyFormModal
         isOpen={isTaxonomyFormOpen}
-        onClose={() => setIsTaxonomyFormOpen(false)}
+        onClose={() => setTaxonomyFormOpen(false)}
         selectedTaxonomy={selectedTaxonomy}
         tenantId={settings.tenantId}
       />
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
-        isOpen={isDeleteModalOpen}
-        onClose={() => setIsDeleteModalOpen(false)}
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={handleDeleteConfirm}
         title={`Delete ${itemToDelete?.type}?`}
         message="Are you sure you want to remove this item? This action cannot be undone."
         confirmText="Yes, Delete"
         variant="danger"
+        loading={deleteMutation.isPending}
       />
     </div>
   );

@@ -26,22 +26,71 @@ import {
   Mail,
 } from "lucide-react";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUIStore } from "@/lib/store/useUIStore";
 
 export default function BillingClient({
   initialPending,
 }: {
   initialPending: Procedure[];
 }) {
-  const [pending, setPending] = useState<Procedure[]>(initialPending);
   const [searchTerm, setSearchTerm] = useState("");
+  const queryClient = useQueryClient();
+
+  const { isDeleteConfirmOpen, setDeleteConfirmOpen } = useUIStore();
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const PATIENTS_PER_PAGE = 10;
 
-  // Loading States
-  const [processingItems, setProcessingItems] = useState<string[]>([]);
-  const [processingPatients, setProcessingPatients] = useState<string[]>([]);
+  const { data: pending = [] } = useQuery({
+    queryKey: ["pendingBillings"],
+    queryFn: () => getPendingBillings() as Promise<Procedure[]>,
+    initialData: initialPending,
+  });
+
+  const finalizeMutation = useMutation({
+    mutationFn: ({ id, cost }: { id: string; cost: number }) => finalizeBilling(id, cost),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pendingBillings"] });
+      showToast("Procedure cost updated", "success");
+    },
+    onError: () => showToast("Failed to update cost", "error")
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: (id: string) => markAsPaid(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ["pendingBillings"] });
+      queryClient.invalidateQueries({ queryKey: ["adminStats"] });
+      showToast("Payment recorded successfully", "success");
+
+      // Auto-update invoice if open
+      if (invoiceGroup) {
+        const remainingItems = invoiceGroup.items.filter((i) => i.id !== id);
+        if (remainingItems.length === 0) setInvoiceGroup(null);
+        else
+          setInvoiceGroup({
+            ...invoiceGroup,
+            items: remainingItems,
+            total: remainingItems.reduce((s, i) => s + i.cost, 0),
+          });
+      }
+    },
+    onError: () => showToast("Failed to process payment", "error")
+  });
+
+  const settleAllMutation = useMutation({
+    mutationFn: (patientId: string) => markPatientProceduresPaid(patientId),
+    onSuccess: (_, patientId) => {
+      queryClient.invalidateQueries({ queryKey: ["pendingBillings"] });
+      queryClient.invalidateQueries({ queryKey: ["adminStats"] });
+      const settledGroup = grouped.find(g => g.patient.id === patientId);
+      if (settledGroup) showToast(`Settled ${formatCurrency(settledGroup.total)} balance`, "success");
+      setInvoiceGroup(null);
+    },
+    onError: () => showToast("Failed to settle balance", "error")
+  });
 
   // Modals & Notifications
   const [toast, setToast] = useState<{
@@ -49,7 +98,6 @@ export default function BillingClient({
     type: "success" | "error";
   } | null>(null);
   const [modalConfig, setModalConfig] = useState({
-    isOpen: false,
     title: "",
     message: "",
     onConfirm: async () => { },
@@ -75,85 +123,17 @@ export default function BillingClient({
     setCurrentPage(1);
   }, [searchTerm]);
 
-  const fetchPendingSilently = useCallback(async () => {
-    try {
-      const data = await getPendingBillings();
-      setPending(data as Procedure[]);
-    } catch (err) {
-      console.error("Failed to sync billings", err);
-    }
-  }, []);
-
-  // --- ACTIONS ---
-  const handleFinalize = async (id: string, cost: number) => {
-    setProcessingItems((prev) => [...prev, id]);
-    try {
-      setPending((prev) =>
-        prev.map((item) => (item.id === id ? { ...item, cost } : item)),
-      );
-      await finalizeBilling(id, cost);
-      showToast("Procedure cost updated", "success");
-      fetchPendingSilently();
-    } catch {
-      showToast("Failed to update cost", "error");
-      fetchPendingSilently();
-    } finally {
-      setProcessingItems((prev) => prev.filter((itemId) => itemId !== id));
-    }
-  };
-
-  const executePaid = async (id: string) => {
-    setModalConfig((prev) => ({ ...prev, isOpen: false }));
-    setProcessingItems((prev) => [...prev, id]);
-    try {
-      setPending((prev) => prev.filter((item) => item.id !== id));
-      await markAsPaid(id);
-      showToast("Payment recorded successfully", "success");
-      fetchPendingSilently();
-
-      // Auto-update invoice if open
-      if (invoiceGroup) {
-        const remainingItems = invoiceGroup.items.filter((i) => i.id !== id);
-        if (remainingItems.length === 0) setInvoiceGroup(null);
-        else
-          setInvoiceGroup({
-            ...invoiceGroup,
-            items: remainingItems,
-            total: remainingItems.reduce((s, i) => s + i.cost, 0),
-          });
-      }
-    } catch {
-      showToast("Failed to process payment", "error");
-      fetchPendingSilently();
-    } finally {
-      setProcessingItems((prev) => prev.filter((itemId) => itemId !== id));
-    }
-  };
-
-  const executeAllPaid = async (patientId: string, total: number) => {
-    setInvoiceGroup(null); // Close invoice modal
-    setProcessingPatients((prev) => [...prev, patientId]);
-    try {
-      setPending((prev) => prev.filter((item) => item.patientId !== patientId));
-      await markPatientProceduresPaid(patientId);
-      showToast(`Settled ${formatCurrency(total)} balance`, "success");
-      fetchPendingSilently();
-    } catch {
-      showToast("Failed to settle balance", "error");
-      fetchPendingSilently();
-    } finally {
-      setProcessingPatients((prev) => prev.filter((id) => id !== patientId));
-    }
-  };
-
   // --- TRIGGERS ---
   const triggerPaidConfirm = (id: string, amount: number) => {
     setModalConfig({
-      isOpen: true,
       title: "Confirm Single Payment",
       message: `Collect ${formatCurrency(amount)} for this procedure? This will mark it as paid.`,
-      onConfirm: () => executePaid(id),
+      onConfirm: async () => {
+        setDeleteConfirmOpen(false);
+        markPaidMutation.mutate(id);
+      },
     });
+    setDeleteConfirmOpen(true);
   };
 
   const formatCurrency = (amount: number) => {
@@ -222,8 +202,8 @@ export default function BillingClient({
 
       {/* CONFIRMATION MODAL */}
       <ConfirmationModal
-        isOpen={modalConfig.isOpen}
-        onClose={() => setModalConfig((prev) => ({ ...prev, isOpen: false }))}
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={modalConfig.onConfirm}
         title={modalConfig.title}
         message={modalConfig.message}
@@ -286,7 +266,7 @@ export default function BillingClient({
           </div>
         ) : (
           paginatedGrouped.map((group) => {
-            const isProcessing = processingPatients.includes(group.patient.id);
+            const isProcessing = settleAllMutation.isPending && settleAllMutation.variables === group.patient.id;
 
             return (
               <div
@@ -356,9 +336,7 @@ export default function BillingClient({
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
                       {group.items.map((item) => {
-                        const isItemProcessing = processingItems.includes(
-                          item.id,
-                        );
+                        const isItemProcessing = (finalizeMutation.isPending && finalizeMutation.variables?.id === item.id) || (markPaidMutation.isPending && markPaidMutation.variables === item.id);
                         return (
                           <tr
                             key={item.id}
@@ -400,7 +378,7 @@ export default function BillingClient({
                                   onBlur={(e) => {
                                     const val = parseFloat(e.target.value);
                                     if (val !== item.cost && !isNaN(val))
-                                      handleFinalize(item.id, val);
+                                      finalizeMutation.mutate({ id: item.id, cost: val });
                                   }}
                                   className="w-full pl-7 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold text-slate-900 outline-none focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-900/20 transition-all disabled:opacity-50"
                                 />
@@ -629,12 +607,12 @@ export default function BillingClient({
               </button>
               <button
                 onClick={() =>
-                  executeAllPaid(invoiceGroup.patient.id, invoiceGroup.total)
+                  settleAllMutation.mutate(invoiceGroup.patient.id)
                 }
-                disabled={processingPatients.includes(invoiceGroup.patient.id)}
+                disabled={settleAllMutation.isPending}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 bg-brand-600 hover:bg-brand-700 text-white px-8 py-3 rounded-xl font-bold text-sm tracking-wide transition-all shadow-md shadow-brand-900/20 disabled:opacity-70 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500"
               >
-                {processingPatients.includes(invoiceGroup.patient.id) ? (
+                {settleAllMutation.isPending ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" /> Processing...
                   </>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useTransition, useCallback, useRef } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { updateDiagnosis } from "@/app/actions/doctorActions";
 import { User, BillingCatalog } from "@prisma/client";
@@ -27,6 +27,9 @@ import ObjectiveTab from "./tabs/ObjectiveTab";
 import AssessmentPlanTab from "./tabs/AssessmentPlanTab";
 import PatientRiskAlerts from "./PatientRiskAlerts";
 import ToothButton from "./ToothButton";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getDoctorPatients } from "@/app/actions/doctorPatientActions";
+import { useUIStore } from "@/lib/store/useUIStore";
 
 type DoctorTab = "Subjective" | "Objective" | "Assessment & Plan";
 
@@ -49,7 +52,7 @@ interface TaxonomyGroupConfig {
 }
 
 export default function DoctorClient({
-  patients,
+  patients: initialPatients,
 }: {
   patients: ExtendedPatient[];
   doctors: Partial<User>[];
@@ -58,19 +61,23 @@ export default function DoctorClient({
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const patientIdParam = searchParams?.get("patientId");
+
+  const { isProfileOpen, setProfileOpen } = useUIStore();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [purposeFilter, setPurposeFilter] = useState("ALL");
   const [selectedPatient, setSelectedPatient] = useState<ExtendedPatient | null>(null);
   const [activeTab, setActiveTab] = useState<DoctorTab>("Subjective");
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"list" | "workspace">("list");
 
-  // UI States for workflow
-  const [isPending, startTransition] = useTransition();
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "success">("idle");
+  const { data: patients = [] } = useQuery({
+    queryKey: ["doctorPatients"],
+    queryFn: () => getDoctorPatients() as Promise<ExtendedPatient[]>,
+    initialData: initialPatients,
+  });
 
   // Local state for form fields
   const [vasScore, setVasScore] = useState(0);
@@ -106,6 +113,25 @@ export default function DoctorClient({
   const [expandedAPDiagnoses, setExpandedAPDiagnoses] = useState<Record<string, boolean>>({});
   const [expandedAPInvestigations, setExpandedAPInvestigations] = useState<Record<string, boolean>>({});
   const [expandedAPTreatments, setExpandedAPTreatments] = useState<Record<string, boolean>>({});
+
+  const mutation = useMutation({
+    mutationFn: ({ patientId, formData }: { patientId: string; formData: FormData }) => updateDiagnosis(patientId, formData),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      queryClient.invalidateQueries({ queryKey: ["doctorPatients"] });
+      queryClient.invalidateQueries({ queryKey: ["todaysAppointments"] });
+
+      const finalizeVal = variables.formData.get("finalize") === "true";
+      if (finalizeVal) {
+        setSelectedPatient(null);
+        setViewMode("list");
+      }
+    },
+    onError: (err) => {
+      console.error(err);
+      alert("An error occurred while saving the assessment.");
+    }
+  });
 
   // Memoize Exam Groups based on the static constant
   const EXAM_GROUPS = useMemo(() => {
@@ -305,7 +331,6 @@ export default function DoctorClient({
   };
 
   const handleFormAction = (formData: FormData) => {
-    setSaveStatus("saving");
     const finalizeInput = document.getElementById("finalize-input") as HTMLInputElement;
     const finalizeVal = finalizeInput ? finalizeInput.value : "false";
     formData.set("finalize", finalizeVal);
@@ -316,19 +341,9 @@ export default function DoctorClient({
     formData.append("selectedProcedures", JSON.stringify([...(objectiveData.selectedInvestigations || []), ...(objectiveData.selectedTreatments || [])]));
     formData.append("objectiveData", JSON.stringify(objectiveData));
 
-    startTransition(async () => {
-      try {
-        if (selectedPatient) await updateDiagnosis(selectedPatient.id, formData);
-        setSaveStatus("success");
-        setTimeout(() => setSaveStatus("idle"), 3000);
-        router.refresh();
-        if (finalizeVal === "true") { setSelectedPatient(null); setViewMode("list"); }
-      } catch (err) {
-        console.error(err);
-        setSaveStatus("idle");
-        alert("An error occurred while saving the assessment.");
-      }
-    });
+    if (selectedPatient) {
+      mutation.mutate({ patientId: selectedPatient.id, formData });
+    }
   };
 
   const renderTaxonomyGroup = (config: TaxonomyGroupConfig) => {
@@ -480,8 +495,8 @@ export default function DoctorClient({
                   <h1 className="text-lg font-bold text-slate-900">Clinical Workspace</h1>
                 </button>
                 <div className="flex items-center gap-2">
-                  {saveStatus === "saving" && <span className="text-sm text-brand-600 font-semibold flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving...</span>}
-                  {saveStatus === "success" && <span className="text-sm text-emerald-600 font-semibold flex items-center gap-2"><CheckCircle className="w-4 h-4" /> Saved Successfully</span>}
+                  {mutation.isPending && <span className="text-sm text-brand-600 font-semibold flex items-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /> Saving...</span>}
+                  {mutation.isSuccess && <span className="text-sm text-emerald-600 font-semibold flex items-center gap-2"><CheckCircle className="w-4 h-4" /> Saved Successfully</span>}
                 </div>
               </div>
 
@@ -497,7 +512,7 @@ export default function DoctorClient({
                     {selectedPatient.appointments?.[0]?.treatments && <span className="bg-brand-50 text-brand-800 px-2.5 py-1 rounded font-bold text-xs border border-brand-100">Purpose: {selectedPatient.appointments[0].treatments}</span>}
                   </div>
                 </div>
-                <button type="button" onClick={() => setIsProfileModalOpen(true)} className="bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-md text-sm font-semibold hover:bg-slate-200 transition-colors cursor-pointer">View Full Profile</button>
+                <button type="button" onClick={() => setProfileOpen(true)} className="bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2 rounded-md text-sm font-semibold hover:bg-slate-200 transition-colors cursor-pointer">View Full Profile</button>
               </div>
 
               <div className="bg-white px-6 border-b border-slate-200 shrink-0 flex gap-8 relative z-0">
@@ -524,11 +539,11 @@ export default function DoctorClient({
                         <span className="text-[13px] font-semibold text-slate-500 bg-slate-100 px-3 py-1.5 rounded-md">Current Patient: <span className="text-slate-800">{selectedPatient.firstName} {selectedPatient.lastName}</span></span>
                       </div>
                       <div className="flex gap-4">
-                        <button type="submit" disabled={isPending} onClick={() => { (document.getElementById("finalize-input") as HTMLInputElement).value = "false"; }} className="flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-lg text-sm hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-50">
+                        <button type="submit" disabled={mutation.isPending} onClick={() => { (document.getElementById("finalize-input") as HTMLInputElement).value = "false"; }} className="flex items-center gap-2 px-6 py-2.5 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-lg text-sm hover:bg-slate-50 hover:border-slate-300 transition-all disabled:opacity-50">
                           <Save className="w-4 h-4" /> Save Draft
                         </button>
-                        <button type="submit" disabled={isPending} onClick={() => { (document.getElementById("finalize-input") as HTMLInputElement).value = "true"; }} className="flex items-center gap-2 px-8 py-2.5 bg-brand-700 text-white font-bold rounded-lg text-sm hover:bg-brand-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50">
-                          {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Lock & Finalize Chart
+                        <button type="submit" disabled={mutation.isPending} onClick={() => { (document.getElementById("finalize-input") as HTMLInputElement).value = "true"; }} className="flex items-center gap-2 px-8 py-2.5 bg-brand-700 text-white font-bold rounded-lg text-sm hover:bg-brand-800 transition-all shadow-md hover:shadow-lg disabled:opacity-50">
+                          {mutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle className="w-4 h-4" />} Lock & Finalize Chart
                         </button>
                       </div>
                     </div>
@@ -560,7 +575,7 @@ export default function DoctorClient({
       )}
 
       {selectedPatient && (
-        <PatientProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} patientId={selectedPatient.id} patientName={`${selectedPatient.firstName} ${selectedPatient.lastName}`} patientPhone={selectedPatient.phone} />
+        <PatientProfileModal isOpen={isProfileOpen} onClose={() => setProfileOpen(false)} patientId={selectedPatient.id} patientName={`${selectedPatient.firstName} ${selectedPatient.lastName}`} patientPhone={selectedPatient.phone} />
       )}
     </div>
   );

@@ -9,7 +9,9 @@ import { VolumeChart } from "@/components/doctor/weeklyVolumeChart";
 import { TodayProgress } from "@/components/doctor/todayProgressCard";
 import { PatientQueueTable } from "@/components/doctor/patientqueue";
 import { RecentTreatmentsTimeline } from "@/components/doctor/recentpatient";
-import PatientsClient from "../../app/patients/PatientsClient";
+import { useQuery } from "@tanstack/react-query";
+import { getDoctorPatients } from "@/app/actions/doctorPatientActions";
+
 interface ChartDayData {
   day: string;
   date: string;
@@ -18,10 +20,10 @@ interface ChartDayData {
 }
 
 export default function DoctorDashboardClient({
-  pendingPatients,
-  completedPatients,
-  chartData,
-  averageVas,
+  pendingPatients: initialPending,
+  completedPatients: initialCompleted,
+  chartData: initialChartData,
+  averageVas: initialAverageVas,
   username,
 }: {
   pendingPatients: Patient[];
@@ -30,6 +32,25 @@ export default function DoctorDashboardClient({
   averageVas: number;
   username: string;
 }) {
+  const { data: allPatients = [] } = useQuery({
+    queryKey: ["doctorPatients"],
+    queryFn: () => getDoctorPatients(),
+    initialData: [...initialPending, ...initialCompleted] as any,
+  });
+
+  // Re-partition based on fresh data
+  const pendingPatients = allPatients.filter((p: any) =>
+    !p.appointments?.some(
+      (a: any) => a.status === "COMPLETED" && new Date(a.appointmentDate).toDateString() === new Date().toDateString()
+    )
+  );
+
+  const completedPatients = allPatients.filter((p: any) =>
+    p.appointments?.some(
+      (a: any) => a.status === "COMPLETED" && new Date(a.appointmentDate).toDateString() === new Date().toDateString()
+    )
+  );
+
   const totalPatientsCount = pendingPatients.length + completedPatients.length;
   const completedPatientsCount = completedPatients.length;
   const pendingPatientsCount = pendingPatients.length;
@@ -61,13 +82,13 @@ export default function DoctorDashboardClient({
         totalPatientsCount={totalPatientsCount}
         pendingPatientsCount={pendingPatientsCount}
         completedPatientsCount={completedPatientsCount}
-        averageVas={averageVas}
+        averageVas={initialAverageVas} // Keeping initial for simplicity as it requires complex calculation
       />
 
       {/* Charts + Quick Queue Grid */}
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="flex-1 mr-6">
-          <VolumeChart chartData={chartData} />
+          <VolumeChart chartData={initialChartData} />
         </div>
         <div className="w-full lg:w-[400px] flex-col flex gap-4">
           <RecentTreatmentsTimeline completedPatients={completedPatients} />

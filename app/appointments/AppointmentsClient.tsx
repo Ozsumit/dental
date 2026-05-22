@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { deleteAppointment } from "@/app/actions/appointmentActions";
+import { deleteAppointment, getAppointments, getTodaysAppointments } from "@/app/actions/appointmentActions";
 import { Appointment } from "@/lib/types";
 import ConfirmationModal from "@/components/ui/ConfirmationModal";
 
@@ -10,6 +10,9 @@ import { FilterPanel } from "@/components/appointments/filterpanel";
 import { QueueTable } from "@/components/appointments/queuetable";
 import { AppointmentsTable } from "@/components/appointments/appoitmenttable";
 import { AppointmentFormModal } from "@/components/appointments/appointmentformmodal";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
+import { useUIStore } from "@/lib/store/useUIStore";
 
 interface AppointmentsClientProps {
   appointments: Appointment[];
@@ -17,66 +20,72 @@ interface AppointmentsClientProps {
   currentPage: number;
   doctors: { id: string; username: string; fullName?: string | null }[];
   defaultFee?: number;
-  patient: {
-    id: string;
-    firstName: string;
-    lastName: string;
-  }
 }
 
 export default function AppointmentsClient({
-  appointments,
-  totalPages,
-  currentPage,
+  appointments: initialAppointments,
+  totalPages: initialTotalPages,
+  currentPage: initialCurrentPage,
   doctors,
   defaultFee = 0,
 }: AppointmentsClientProps) {
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
-  const [showTodayOnly, setShowTodayOnly] = useState(false);
-  const [todaysAppts, setTodaysAppts] = useState<Appointment[]>([]);
-  const [loadingTodays, setLoadingTodays] = useState(false);
+  const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const currentFilters = Object.fromEntries(searchParams.entries());
 
-  const refreshTodaysQueue = useCallback(async () => {
-    setLoadingTodays(true);
-    try {
-      const { getTodaysAppointments } = await import("@/app/actions/appointmentActions");
-      const res = await getTodaysAppointments();
-      setTodaysAppts(res as any);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingTodays(false);
+  const {
+    isApptFormOpen, setApptFormOpen,
+    isDeleteConfirmOpen, setDeleteConfirmOpen,
+    showTodayOnly, setShowTodayOnly
+  } = useUIStore();
+
+  const [selectedAppt, setSelectedAppt] = useState<Appointment | null>(null);
+
+  const { data: appointmentData } = useQuery({
+    queryKey: ["appointments", currentFilters],
+    queryFn: () => getAppointments(currentFilters),
+    initialData: {
+      data: initialAppointments,
+      totalPages: initialTotalPages,
+      currentPage: initialCurrentPage,
+      totalCount: 0
+    },
+    enabled: !showTodayOnly
+  });
+
+  const { data: todaysAppts, isLoading: loadingTodays } = useQuery({
+    queryKey: ["todaysAppointments"],
+    queryFn: () => getTodaysAppointments(),
+    enabled: showTodayOnly
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteAppointment(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["todaysAppointments"] });
+      queryClient.invalidateQueries({ queryKey: ["adminStats"] });
+      setDeleteConfirmOpen(false);
     }
-  }, []);
+  });
 
   const openAdd = () => {
     setSelectedAppt(null);
-    setIsFormOpen(true);
+    setApptFormOpen(true);
   };
 
   const openEdit = (appt: Appointment) => {
     setSelectedAppt(appt);
-    setIsFormOpen(true);
+    setApptFormOpen(true);
   };
 
-  const handleToggleToday = async () => {
-    if (!showTodayOnly) {
-      await refreshTodaysQueue();
-    }
+  const handleToggleToday = () => {
     setShowTodayOnly(!showTodayOnly);
   };
 
   const handleDeleteTrigger = (appt: Appointment) => {
     setSelectedAppt(appt);
-    setIsDeleteOpen(true);
-  };
-
-  const handleModalSuccess = async () => {
-    if (showTodayOnly) {
-      await refreshTodaysQueue();
-    }
+    setDeleteConfirmOpen(true);
   };
 
   return (
@@ -91,16 +100,16 @@ export default function AppointmentsClient({
       {/* Main Content Layout */}
       {showTodayOnly ? (
         <QueueTable
-          todaysAppts={todaysAppts}
+          todaysAppts={todaysAppts as any || []}
           loadingTodays={loadingTodays}
           onEdit={openEdit}
           onDelete={handleDeleteTrigger}
         />
       ) : (
         <AppointmentsTable
-          appointments={appointments}
-          currentPage={currentPage}
-          totalPages={totalPages}
+          appointments={appointmentData.data as any}
+          currentPage={appointmentData.currentPage}
+          totalPages={appointmentData.totalPages}
           onEdit={openEdit}
           onDelete={handleDeleteTrigger}
         />
@@ -108,24 +117,20 @@ export default function AppointmentsClient({
 
       {/* Dynamic Action Forms */}
       <AppointmentFormModal
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        selectedAppt={selectedAppt}
+        isOpen={isApptFormOpen}
+        onClose={() => setApptFormOpen(false)}
+        selectedAppt={selectedAppt as any}
         doctors={doctors}
         defaultFee={defaultFee}
-        onSuccess={handleModalSuccess}
       />
 
       {/* Delete Operations Modal */}
       <ConfirmationModal
-        isOpen={isDeleteOpen}
-        onClose={() => setIsDeleteOpen(false)}
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={async () => {
           if (selectedAppt) {
-            await deleteAppointment(selectedAppt.id);
-            if (showTodayOnly) {
-              await refreshTodaysQueue();
-            }
+            deleteMutation.mutate(selectedAppt.id);
           }
         }}
         title="Delete Appointment?"
@@ -133,6 +138,7 @@ export default function AppointmentsClient({
         confirmText="Yes, Delete"
         cancelText="Keep Appointment"
         variant="danger"
+        loading={deleteMutation.isPending}
       />
     </div>
   );

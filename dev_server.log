@@ -1,0 +1,125 @@
+
+> client-dashboard-8k@0.1.0 dev
+> next dev --turbopack
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+✓ Ready in 587ms
+
+○ Compiling /login ...
+ GET /login 200 in 5.7s (next.js: 4.9s, proxy.ts: 286ms, application-code: 545ms)
+ GET /login 200 in 122ms (next.js: 7ms, proxy.ts: 9ms, application-code: 107ms)
+⨯ Error [PrismaClientInitializationError]:
+Invalid `{imported module ./lib/prisma.ts}["default"].user.findUnique()` invocation in
+/app/.next/dev/server/chunks/ssr/[root-of-the-server]__0n_qbuq._.js:50:150
+
+  47 async function login(formData) {
+  48     const username = formData.get("username");
+  49     const password = formData.get("password");
+→ 50     const user = await {imported module ./lib/prisma.ts}["default"].user.findUnique(
+error: Environment variable not found: DATABASE_URL.
+  -->  schema.prisma:9
+   |
+ 8 |   provider   = "postgresql"
+ 9 |   url        = env("DATABASE_URL")
+   |
+
+Validation Error Count: 1
+    at <unknown> (app/actions/authActions.ts:13:34)
+    at <unknown> (-->  schema.prisma:9)
+    at async login (app/actions/authActions.ts:13:16)
+  11 |   const password = formData.get("password") as string;
+  12 |
+> 13 |   const user = await prisma.user.findUnique({
+     |                                  ^
+  14 |     where: { username },
+  15 |     include: { tenant: true },
+  16 |   }); {
+  clientVersion: '6.19.3',
+  errorCode: undefined,
+  retryable: undefined,
+  digest: '3704407724'
+}
+ POST /login 500 in 1002ms (next.js: 5ms, proxy.ts: 15ms, application-code: 983ms)
+  └─ ƒ login({}) in 28ms actions/authActions.ts
+[browser] ⨯ unhandledRejection: PrismaClientInitializationError:
+Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"].user.findUnique()` invocation in
+/app/.next/dev/server/chunks/ssr/[root-of-the-server]__0n_qbuq._.js:50:150
+
+  47 async function login(formData) {
+  48     const username = formData.get("username");
+  49     const password = formData.get("password");
+→ 50     const user = await __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$prisma$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["default"].user.findUnique(
+error: Environment variable not found: DATABASE_URL.
+  -->  schema.prisma:9
+   |
+ 8 |   provider   = "postgresql"
+ 9 |   url        = env("DATABASE_URL")
+   |
+
+Validation Error Count: 1
+    at <unknown> (app/actions/authActions.ts:13:34)
+    at <unknown> (-->  schema.prisma:9)
+    at  login (app/actions/authActions.ts:13:16)
+  11 |   const password = formData.get("password") as string;
+  12 |
+> 13 |   const user = await prisma.user.findUnique({
+     |                                  ^
+  14 |     where: { username },
+  15 |     include: { tenant: true },
+  16 |   });
+ GET /login 200 in 115ms (next.js: 5ms, proxy.ts: 8ms, application-code: 102ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <InnerScrollAndFocusHandlerOld focusAndScrollRef={{scrollRef:null, ...}} cacheNode={{rsc:{...}, ...}}>
+      <ErrorBoundary errorComponent={undefined} errorStyles={undefined} errorScripts={undefined}>
+        <LoadingBoundary name="login/" loading={null}>
+          <HTTPAccessFallbackBoundary notFound={undefined} forbidden={undefined} unauthorized={undefined}>
+            <RedirectBoundary>
+              <RedirectErrorBoundary router={{...}}>
+                <InnerLayoutRouter url="/login" tree={[...]} params={{}} cacheNode={{rsc:{...}, ...}} segmentPath={[...]} ...>
+                  <SegmentViewNode type="page" pagePath="login/page...">
+                    <SegmentTrieNode>
+                    <ClientPageRoot Component={function LoginPage} serverProvidedParams={{...}}>
+                      <LoginPage params={Promise} searchParams={Promise}>
+                        <div className="min-h-scre...">
+                          <div className="max-w-md w...">
+                            <div>
+                            <h2>
+                            <form onSubmit={function handleSubmit} className="space-y-4">
+                              <input
+                                name="username"
+                                required={true}
+                                disabled={false}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg disabled:opacity-50"
+                                placeholder="receptionist / doctor / admin"
+-                               style={{caret-color:"transparent"}}
+                              >
+                              <input
+                                name="password"
+                                type="password"
+                                required={true}
+                                disabled={false}
+                                className="w-full px-4 py-2 border border-slate-300 rounded-lg disabled:opacity-50"
+                                placeholder="••••••••"
+-                               style={{caret-color:"transparent"}}
+                              >
+                              ...
+                            ...
+                  ...
+                ...
+      ...
+
+[?25h
