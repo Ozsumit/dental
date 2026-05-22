@@ -45,8 +45,14 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
       roles: ["SUPERADMIN"],
     },
     {
-      name: "Patients",
+      name: "Dashboard",
       href: "/",
+      icon: LayoutDashboard,
+      roles: ["RECEPTIONIST", "ADMIN"],
+    },
+    {
+      name: "Patients",
+      href: "/patients",
       icon: Users,
       roles: ["RECEPTIONIST", "ADMIN"],
     },
