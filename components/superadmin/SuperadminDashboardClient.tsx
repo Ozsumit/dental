@@ -1,12 +1,15 @@
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   createTenant,
   deleteTenant,
   updateTenantDetails,
   resetUserPasswordGlobal,
   updateUserRoleGlobal,
+  getGlobalStats,
+  getTenantsList,
+  getGlobalUsers,
 } from "@/app/actions/superadminActions";
 import {
   Globe,
@@ -23,13 +26,14 @@ import {
   Key,
   Settings,
   Server,
-  HardDrive,
-  Cpu,
-  Database,
   Search,
   Lock,
   CheckCircle,
+  Cpu,
+  HardDrive,
+  Database,
 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 interface GlobalStats {
   totalTenants: number;
@@ -65,11 +69,27 @@ export default function SuperadminDashboardClient({
   initialTenants: TenantItem[];
   initialUsers: UserItem[];
 }) {
-  const [stats, setStats] = useState<GlobalStats>(initialStats);
-  const [tenants, setTenants] = useState<TenantItem[]>(initialTenants);
-  const [users, setUsers] = useState<UserItem[]>(initialUsers);
+  const queryClient = useQueryClient();
+
+  const { data: stats = initialStats } = useQuery({
+    queryKey: ["globalStats"],
+    queryFn: () => getGlobalStats(),
+    initialData: initialStats,
+  });
+
+  const { data: tenants = [] } = useQuery({
+    queryKey: ["tenants"],
+    queryFn: () => getTenantsList(),
+    initialData: initialTenants,
+  });
+
+  const { data: users = [] } = useQuery({
+    queryKey: ["globalUsers"],
+    queryFn: () => getGlobalUsers() as Promise<UserItem[]>,
+    initialData: initialUsers,
+  });
+
   const [activeTab, setActiveTab] = useState<"tenants" | "users" | "health">("tenants");
-  const [isPending, startTransition] = useTransition();
 
   // Search & Filter state for Users
   const [userSearch, setUserSearch] = useState("");
@@ -106,6 +126,83 @@ export default function SuperadminDashboardClient({
   const [tenantToDelete, setTenantToDelete] = useState<TenantItem | null>(null);
   const [deleteError, setDeleteError] = useState("");
 
+  const createMutation = useMutation({
+    mutationFn: (formData: FormData) => createTenant(formData),
+    onSuccess: (res) => {
+      if (res.success) {
+        setCreateSuccess(`Tenant created successfully.`);
+        queryClient.invalidateQueries({ queryKey: ["tenants"] });
+        queryClient.invalidateQueries({ queryKey: ["globalUsers"] });
+        queryClient.invalidateQueries({ queryKey: ["globalStats"] });
+        setTimeout(() => {
+          setShowCreateModal(false);
+          setCreateForm({ name: "", id: "", adminUsername: "", adminPassword: "", appointmentFee: "300" });
+          setCreateSuccess("");
+        }, 1500);
+      } else {
+        setCreateError(res.error || "Failed to create tenant.");
+      }
+    }
+  });
+
+  const editMutation = useMutation({
+    mutationFn: ({ id, name, fee }: { id: string, name: string, fee: number }) => updateTenantDetails(id, name, fee),
+    onSuccess: (res) => {
+      if (res.success) {
+        setEditSuccess("Tenant settings updated successfully.");
+        queryClient.invalidateQueries({ queryKey: ["tenants"] });
+        queryClient.invalidateQueries({ queryKey: ["globalUsers"] });
+        setTimeout(() => {
+          setTenantToEdit(null);
+          setEditSuccess("");
+        }, 1500);
+      } else {
+        setEditError(res.error || "Failed to update tenant.");
+      }
+    }
+  });
+
+  const roleMutation = useMutation({
+    mutationFn: ({ id, role }: { id: string, role: any }) => updateUserRoleGlobal(id, role),
+    onSuccess: (res) => {
+      if (res.success) {
+        queryClient.invalidateQueries({ queryKey: ["globalUsers"] });
+      } else {
+        alert(res.error || "Failed to update user role.");
+      }
+    }
+  });
+
+  const pwdMutation = useMutation({
+    mutationFn: ({ id, pwd }: { id: string, pwd: string }) => resetUserPasswordGlobal(id, pwd),
+    onSuccess: (res) => {
+      if (res.success) {
+        setPwdSuccess(`Password reset successfully.`);
+        setTimeout(() => {
+          setUserForPasswordReset(null);
+          setNewPassword("");
+          setPwdSuccess("");
+        }, 1500);
+      } else {
+        setPwdError(res.error || "Failed to reset password.");
+      }
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteTenant(id),
+    onSuccess: (res) => {
+      if (res.success) {
+        queryClient.invalidateQueries({ queryKey: ["tenants"] });
+        queryClient.invalidateQueries({ queryKey: ["globalUsers"] });
+        queryClient.invalidateQueries({ queryKey: ["globalStats"] });
+        setTenantToDelete(null);
+      } else {
+        setDeleteError(res.error || "Failed to delete tenant.");
+      }
+    }
+  });
+
   // Auto-generate ID slug from Name
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value;
@@ -123,159 +220,41 @@ export default function SuperadminDashboardClient({
     }));
   };
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
+  const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setCreateError("");
     setCreateSuccess("");
-
     if (!createForm.name || !createForm.id || !createForm.adminUsername || !createForm.adminPassword) {
       setCreateError("All fields are required.");
       return;
     }
-
     const formData = new FormData();
-    formData.append("name", createForm.name);
-    formData.append("id", createForm.id);
-    formData.append("adminUsername", createForm.adminUsername);
-    formData.append("adminPassword", createForm.adminPassword);
-    formData.append("appointmentFee", createForm.appointmentFee);
-
-    startTransition(async () => {
-      const res = await createTenant(formData);
-      if (res.success) {
-        setCreateSuccess(`Tenant '${createForm.name}' created successfully.`);
-        // Add locally
-        const newT: TenantItem = {
-          id: createForm.id,
-          name: createForm.name,
-          createdAt: new Date(),
-          userCount: 1,
-          patientCount: 0,
-          appointmentCount: 0,
-        };
-        setTenants([newT, ...tenants]);
-        
-        // Add new admin user locally
-        const newU: UserItem = {
-          id: `temp-${Date.now()}`,
-          username: createForm.adminUsername,
-          role: "ADMIN",
-          createdAt: new Date(),
-          tenantId: createForm.id,
-          tenantName: createForm.name,
-        };
-        setUsers([newU, ...users]);
-
-        setStats((prev) => ({
-          ...prev,
-          totalTenants: prev.totalTenants + 1,
-          totalUsers: prev.totalUsers + 1,
-        }));
-        
-        setTimeout(() => {
-          setShowCreateModal(false);
-          setCreateForm({
-            name: "",
-            id: "",
-            adminUsername: "",
-            adminPassword: "",
-            appointmentFee: "300",
-          });
-          setCreateSuccess("");
-        }, 1500);
-      } else {
-        setCreateError(res.error || "Failed to create tenant.");
-      }
-    });
+    Object.entries(createForm).forEach(([k, v]) => formData.append(k, v));
+    createMutation.mutate(formData);
   };
 
-  const handleEditSubmit = async (e: React.FormEvent) => {
+  const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenantToEdit) return;
     setEditError("");
     setEditSuccess("");
-
-    startTransition(async () => {
-      const res = await updateTenantDetails(
-        tenantToEdit.id,
-        editForm.name,
-        parseFloat(editForm.appointmentFee || "0")
-      );
-      if (res.success) {
-        setEditSuccess("Tenant settings updated successfully.");
-        // Update local state
-        setTenants(tenants.map(t => t.id === tenantToEdit.id ? { ...t, name: editForm.name } : t));
-        setUsers(users.map(u => u.tenantId === tenantToEdit.id ? { ...u, tenantName: editForm.name } : u));
-        
-        setTimeout(() => {
-          setTenantToEdit(null);
-          setEditSuccess("");
-        }, 1500);
-      } else {
-        setEditError(res.error || "Failed to update tenant.");
-      }
+    editMutation.mutate({
+      id: tenantToEdit.id,
+      name: editForm.name,
+      fee: parseFloat(editForm.appointmentFee || "0")
     });
   };
 
-  const handleRoleChange = async (userId: string, newRole: "ADMIN" | "DOCTOR" | "RECEPTIONIST" | "SUPERADMIN") => {
-    if (confirm(`Are you sure you want to change this user's role to ${newRole}?`)) {
-      startTransition(async () => {
-        const res = await updateUserRoleGlobal(userId, newRole);
-        if (res.success) {
-          setUsers(users.map(u => u.id === userId ? { ...u, role: newRole } : u));
-        } else {
-          alert(res.error || "Failed to update user role.");
-        }
-      });
-    }
-  };
-
-  const handlePasswordResetSubmit = async (e: React.FormEvent) => {
+  const handlePasswordResetSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!userForPasswordReset) return;
     setPwdError("");
     setPwdSuccess("");
-
     if (newPassword.length < 6) {
       setPwdError("Password must be at least 6 characters.");
       return;
     }
-
-    startTransition(async () => {
-      const res = await resetUserPasswordGlobal(userForPasswordReset.id, newPassword);
-      if (res.success) {
-        setPwdSuccess(`Password reset successfully for @${userForPasswordReset.username}.`);
-        setTimeout(() => {
-          setUserForPasswordReset(null);
-          setNewPassword("");
-          setPwdSuccess("");
-        }, 1500);
-      } else {
-        setPwdError(res.error || "Failed to reset password.");
-      }
-    });
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!tenantToDelete) return;
-    setDeleteError("");
-
-    startTransition(async () => {
-      const res = await deleteTenant(tenantToDelete.id);
-      if (res.success) {
-        setTenants(tenants.filter((t) => t.id !== tenantToDelete.id));
-        setUsers(users.filter((u) => u.tenantId !== tenantToDelete.id));
-        setStats((prev) => ({
-          ...prev,
-          totalTenants: prev.totalTenants - 1,
-          totalUsers: prev.totalUsers - tenantToDelete.userCount,
-          totalPatients: prev.totalPatients - tenantToDelete.patientCount,
-        }));
-        setTenantToDelete(null);
-      } else {
-        setDeleteError(res.error || "Failed to delete tenant.");
-      }
-    });
+    pwdMutation.mutate({ id: userForPasswordReset.id, pwd: newPassword });
   };
 
   // Memoized user search/filters
@@ -571,7 +550,7 @@ export default function SuperadminDashboardClient({
                       <td className="px-8 py-4">
                         <select
                           value={u.role}
-                          onChange={(e) => handleRoleChange(u.id, e.target.value as any)}
+                          onChange={(e) => roleMutation.mutate({ id: u.id, role: e.target.value })}
                           className={`px-3 py-1.5 rounded-lg border text-xs font-black tracking-wide outline-none cursor-pointer transition ${
                             u.role === "SUPERADMIN"
                               ? "bg-purple-50 text-purple-700 border-purple-150"
@@ -848,10 +827,10 @@ export default function SuperadminDashboardClient({
                 </button>
                 <button
                   type="submit"
-                  disabled={isPending}
+                  disabled={editMutation.isPending}
                   className="px-5 py-2.5 bg-brand-800 hover:bg-brand-900 text-white text-sm font-semibold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
                 >
-                  {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {editMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                   Save Configurations
                 </button>
               </div>
@@ -928,10 +907,10 @@ export default function SuperadminDashboardClient({
                 </button>
                 <button
                   type="submit"
-                  disabled={isPending}
+                  disabled={pwdMutation.isPending}
                   className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
                 >
-                  {isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {pwdMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
                   Confirm Credentials Reset
                 </button>
               </div>
@@ -1067,10 +1046,10 @@ export default function SuperadminDashboardClient({
                 </button>
                 <button
                   type="submit"
-                  disabled={isPending}
+                  disabled={createMutation.isPending}
                   className="px-5 py-2.5 bg-brand-800 hover:bg-brand-900 text-white text-sm font-semibold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
                 >
-                  {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {createMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                   Confirm Create
                 </button>
               </div>
@@ -1115,11 +1094,11 @@ export default function SuperadminDashboardClient({
                 Cancel
               </button>
               <button
-                onClick={handleDeleteConfirm}
-                disabled={isPending}
+                onClick={() => deleteMutation.mutate(tenantToDelete.id)}
+                disabled={deleteMutation.isPending}
                 className="px-4 py-2.5 bg-red-600 hover:bg-red-750 text-white text-sm font-semibold rounded-xl flex items-center gap-1.5 transition cursor-pointer"
               >
-                {isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                {deleteMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
                 Confirm Delete
               </button>
             </div>

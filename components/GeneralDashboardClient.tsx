@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useUIStore } from "@/lib/store/useUIStore";
 import { useRouter } from "next/navigation";
 import {
   Users,
@@ -22,6 +22,11 @@ import { ExtendedAppointment, Role } from "@/lib/types";
 // 1. Import your newly created line chart component
 import { TrendLineChart } from "@/components/ui/trendlineChart";
 import PatientAnalytics from "@/components/reception/PatientAnalytics";
+import { useQuery } from "@tanstack/react-query";
+import { getAdminStats, getSystemSettings } from "@/app/actions/billingActions";
+import { getPatientAnalytics } from "@/app/actions/patientsActions";
+import { getTodaysAppointments } from "@/app/actions/appointmentActions";
+import { getDoctors } from "@/app/actions/userActions";
 
 interface GeneralDashboardClientProps {
   adminStats: any;
@@ -34,17 +39,46 @@ interface GeneralDashboardClientProps {
 }
 
 export default function GeneralDashboardClient({
-  adminStats,
-  patientAnalytics,
-  todaysAppointments,
-  doctors,
-  defaultFee,
+  adminStats: initialAdminStats,
+  patientAnalytics: initialPatientAnalytics,
+  todaysAppointments: initialTodaysAppointments,
+  doctors: initialDoctors,
+  defaultFee: initialDefaultFee,
   userRole,
   userName,
 }: GeneralDashboardClientProps) {
   const router = useRouter();
-  const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
-  const [isApptModalOpen, setIsApptModalOpen] = useState(false);
+  const { isPatientFormOpen, isApptFormOpen, setPatientFormOpen, setApptFormOpen } = useUIStore();
+
+  const { data: adminStats } = useQuery({
+    queryKey: ["adminStats"],
+    queryFn: () => getAdminStats(),
+    initialData: initialAdminStats,
+  });
+
+  const { data: patientAnalytics } = useQuery({
+    queryKey: ["patientAnalytics"],
+    queryFn: () => getPatientAnalytics(),
+    initialData: initialPatientAnalytics,
+  });
+
+  const { data: todaysAppointments } = useQuery({
+    queryKey: ["todaysAppointments"],
+    queryFn: () => getTodaysAppointments(),
+    initialData: initialTodaysAppointments,
+  });
+
+  const { data: doctors } = useQuery({
+    queryKey: ["doctors"],
+    queryFn: () => getDoctors(),
+    initialData: initialDoctors,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ["systemSettings"],
+    queryFn: () => getSystemSettings(),
+    initialData: { appointmentFee: initialDefaultFee } as any,
+  });
 
   const isAtLeastAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
 
@@ -122,7 +156,7 @@ export default function GeneralDashboardClient({
           </Button>
           <Button
             variant="primary"
-            onClick={() => setIsApptModalOpen(true)}
+            onClick={() => setApptFormOpen(true)}
             icon={<PlusCircle className="w-5 h-5" />}
             className="shadow-brand-200 shadow-lg"
           >
@@ -176,7 +210,7 @@ export default function GeneralDashboardClient({
             </div>
 
             <QueueTable
-              todaysAppts={todaysAppointments}
+              todaysAppts={todaysAppointments as any}
               loadingTodays={false}
               onEdit={(appt) => {
                 router.push(`/appointments?id=${appt.id}`);
@@ -199,7 +233,7 @@ export default function GeneralDashboardClient({
           <Card title="Quick Actions" subtitle="Frequently used tasks">
             <div className="space-y-3">
               <button
-                onClick={() => setIsPatientModalOpen(true)}
+                onClick={() => setPatientFormOpen(true)}
                 className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-brand-50 rounded-2xl border border-slate-100 hover:border-brand-200 transition-all group"
               >
                 <div className="flex items-center gap-3">
@@ -214,7 +248,7 @@ export default function GeneralDashboardClient({
               </button>
 
               <button
-                onClick={() => setIsApptModalOpen(true)}
+                onClick={() => setApptFormOpen(true)}
                 className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-brand-50 rounded-2xl border border-slate-100 hover:border-brand-200 transition-all group"
               >
                 <div className="flex items-center gap-3">
@@ -284,26 +318,18 @@ export default function GeneralDashboardClient({
       <PatientAnalytics analytics={patientAnalytics} updateQuery={() => {}} />
       {/* Modals */}
       <PatientFormModal
-        isOpen={isPatientModalOpen}
-        onClose={() => setIsPatientModalOpen(false)}
-        onSuccess={() => {
-          setIsPatientModalOpen(false);
-          router.refresh();
-        }}
+        isOpen={isPatientFormOpen}
+        onClose={() => setPatientFormOpen(false)}
         initialDoctors={doctors}
-        defaultFee={defaultFee}
+        defaultFee={settings.appointmentFee}
       />
 
       <AppointmentFormModal
-        isOpen={isApptModalOpen}
-        onClose={() => setIsApptModalOpen(false)}
+        isOpen={isApptFormOpen}
+        onClose={() => setApptFormOpen(false)}
         selectedAppt={null}
         doctors={doctors}
-        defaultFee={defaultFee}
-        onSuccess={() => {
-          setIsApptModalOpen(false);
-          router.refresh();
-        }}
+        defaultFee={settings.appointmentFee}
       />
     </div>
   );

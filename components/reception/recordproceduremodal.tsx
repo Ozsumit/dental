@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { saveProcedure } from "@/app/actions/receptionistActions";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 export function RecordProcedureModal({
     patientId,
@@ -14,6 +15,19 @@ export function RecordProcedureModal({
     isOpen: boolean;
     onClose: () => void;
 }) {
+    const queryClient = useQueryClient();
+
+    const mutation = useMutation({
+        mutationFn: (formData: FormData) => saveProcedure(patientId, formData),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["patients"] });
+            queryClient.invalidateQueries({ queryKey: ["patientDetails", patientId] });
+            queryClient.invalidateQueries({ queryKey: ["adminStats"] });
+            onClose();
+        },
+        onError: (e: any) => alert(e.message)
+    });
+
     if (!isOpen) return null;
 
     return (
@@ -26,10 +40,7 @@ export function RecordProcedureModal({
                     </button>
                 </div>
                 <form
-                    action={async (formData: FormData) => {
-                        await saveProcedure(patientId, formData).catch(e => alert(e.message));
-                        onClose();
-                    }}
+                    action={(formData: FormData) => mutation.mutate(formData)}
                     className="p-6 space-y-4"
                 >
                     <Input
@@ -54,10 +65,10 @@ export function RecordProcedureModal({
                         placeholder="0.00"
                     />
                     <div className="pt-2 flex justify-end gap-3 mt-4">
-                        <Button type="button" variant="outline" onClick={onClose}>
+                        <Button type="button" variant="outline" onClick={onClose} disabled={mutation.isPending}>
                             Cancel
                         </Button>
-                        <Button type="submit" variant="primary">
+                        <Button type="submit" variant="primary" loading={mutation.isPending}>
                             Save Record
                         </Button>
                     </div>

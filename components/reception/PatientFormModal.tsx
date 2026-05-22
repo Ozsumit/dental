@@ -9,14 +9,14 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface PatientFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  selectedPatient: Patient | null;
+  selectedPatient?: Patient | null;
   initialDoctors: { id: string; username: string; fullName?: string | null }[];
   defaultFee: number;
-  onSuccess: () => void;
 }
 
 export default function PatientFormModal({
@@ -25,14 +25,33 @@ export default function PatientFormModal({
   selectedPatient,
   initialDoctors = [],
   defaultFee = 0,
-  onSuccess,
 }: PatientFormModalProps) {
   const [patientError, setPatientError] = useState<string | null>(null);
-  const [isSavingPatient, setIsSavingPatient] = useState(false);
   const [createApptToggle, setCreateApptToggle] = useState(false);
   const [apptBillAmount, setApptBillAmount] = useState<string | number>(
     defaultFee,
   );
+
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (formData: FormData) => savePatient(formData, selectedPatient?.id),
+    onSuccess: (res) => {
+      if (res && "error" in res && res.error) {
+        setPatientError(res.error as string);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["patients"] });
+        queryClient.invalidateQueries({ queryKey: ["patientAnalytics"] });
+        queryClient.invalidateQueries({ queryKey: ["adminStats"] });
+        queryClient.invalidateQueries({ queryKey: ["todaysAppointments"] });
+        onClose();
+        setPatientError(null);
+      }
+    },
+    onError: (error: any) => {
+      setPatientError(error.message || "An unexpected error occurred.");
+    },
+  });
 
   if (!isOpen) return null;
 
@@ -62,16 +81,10 @@ export default function PatientFormModal({
         )}
 
         <form
-          action={async (formData) => {
+          action={(formData) => {
             const err = formValidation(formData);
             if (err) return setPatientError(err);
-
-            setIsSavingPatient(true);
-            const res = await savePatient(formData, selectedPatient?.id).catch((e) => ({ error: e.message || "Database error" }));
-            setIsSavingPatient(false);
-
-            if (res && "error" in res && res.error) setPatientError(res.error as string);
-            else onSuccess();
+            mutation.mutate(formData);
           }}
           className="flex flex-col flex-1 overflow-hidden"
         >
@@ -319,7 +332,7 @@ export default function PatientFormModal({
             <Button
               type="button"
               variant="outline"
-              disabled={isSavingPatient}
+              disabled={mutation.isPending}
               onClick={onClose}
             >
               Cancel
@@ -327,10 +340,10 @@ export default function PatientFormModal({
             <Button
               type="submit"
               variant="primary"
-              disabled={isSavingPatient}
-              loading={isSavingPatient}
+              disabled={mutation.isPending}
+              loading={mutation.isPending}
             >
-              {isSavingPatient ? "Saving..." : "Confirm & Save"}
+              {mutation.isPending ? "Saving..." : "Confirm & Save"}
             </Button>
           </div>
         </form>
