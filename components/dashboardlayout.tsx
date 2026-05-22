@@ -13,27 +13,31 @@ export default function DashboardLayout({
   session,
   children,
 }: DashboardLayoutProps) {
+  // Login / public pages
+  if (!session) {
+    return <div className="min-h-screen bg-slate-50">{children}</div>;
+  }
+
+  // Authenticated dashboard layout
   return (
     <div className="flex h-screen w-full bg-slate-50 overflow-hidden">
-      {/* 1. Left Sidebar (Fixed width) */}
+      {/* Left Sidebar */}
       <Sidebar session={session} />
 
-      {/* 2. Right Side Content Panel */}
+      {/* Right Content Area */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Header containing the profile details on the top right */}
+        {/* Header */}
         <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-8 shrink-0 z-20">
           <div>
-            {/* Optional current section indicator */}
             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
               {session?.tenantName || "DentalCRM Workspace"}
             </span>
           </div>
 
-          {/* Profile details automatically aligned top-right */}
           <TopRightProfile session={session} />
         </header>
 
-        {/* 3. Main Page Content (Scrollable) */}
+        {/* Main Content */}
         <main className="flex-1 overflow-y-auto focus:outline-none">
           {children}
         </main>
