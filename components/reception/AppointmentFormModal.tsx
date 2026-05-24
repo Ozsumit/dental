@@ -22,7 +22,9 @@ export default function AppointmentFormModal({
   defaultFee = 0,
 }: AppointmentFormModalProps) {
   const [apptError, setApptError] = useState<string | null>(null);
-  const [apptBillAmount, setApptBillAmount] = useState<string | number>(defaultFee);
+  const [apptBillAmount, setApptBillAmount] = useState<string | number>(
+    defaultFee,
+  );
 
   const queryClient = useQueryClient();
 

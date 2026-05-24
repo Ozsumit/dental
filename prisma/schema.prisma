@@ -17,6 +17,7 @@ model Tenant {
   updatedAt      DateTime         @updatedAt
   users          User[]
   patients       Patient[]
+  LogoUrl        String?
   appointments   Appointment[]
   billingCatalog BillingCatalog[]
   procedures     Procedure[]

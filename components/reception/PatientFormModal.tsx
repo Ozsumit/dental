@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { X, AlertCircle, Calendar } from "lucide-react";
 import { savePatient } from "@/app/actions/patientsActions";
 import { Patient } from "@/lib/types/index";
@@ -10,6 +11,25 @@ import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+interface PatientFormData {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: string;
+  bloodGroup?: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  role?: string;
+  allergies?: string;
+  createAppointment?: boolean;
+  appointmentDate?: string;
+  doctorId?: string;
+  billAmount?: string | number;
+  isPaid?: boolean;
+  treatments?: string[];
+}
 
 interface PatientFormModalProps {
   isOpen: boolean;
@@ -27,15 +47,68 @@ export default function PatientFormModal({
   defaultFee = 0,
 }: PatientFormModalProps) {
   const [patientError, setPatientError] = useState<string | null>(null);
-  const [createApptToggle, setCreateApptToggle] = useState(false);
-  const [apptBillAmount, setApptBillAmount] = useState<string | number>(
-    defaultFee,
-  );
-
   const queryClient = useQueryClient();
 
+  // Initialize React Hook Form
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    formState: { errors },
+  } = useForm<PatientFormData>({
+    defaultValues: {
+      firstName: "",
+      lastName: "",
+      dateOfBirth: "",
+      gender: "",
+      bloodGroup: "",
+      phone: "",
+      email: "",
+      address: "",
+      role: "Regular",
+      allergies: "",
+      createAppointment: false,
+      appointmentDate: new Date().toISOString().split("T")[0],
+      doctorId: "",
+      billAmount: defaultFee,
+      isPaid: false,
+      treatments: [],
+    },
+  });
+
+  // Reset form with patient data when modal opens or when editing patient changes
+  useEffect(() => {
+    if (isOpen) {
+      reset({
+        firstName: selectedPatient?.firstName || "",
+        lastName: selectedPatient?.lastName || "",
+        dateOfBirth: selectedPatient?.dateOfBirth
+          ? new Date(selectedPatient.dateOfBirth).toISOString().split("T")[0]
+          : "",
+        gender: selectedPatient?.gender || "",
+        bloodGroup: selectedPatient?.bloodGroup || "",
+        phone: selectedPatient?.phone || "",
+        email: selectedPatient?.email || "",
+        address: selectedPatient?.address || "",
+        role: selectedPatient?.role || "Regular",
+        allergies: selectedPatient?.allergies || "",
+        createAppointment: false,
+        appointmentDate: new Date().toISOString().split("T")[0],
+        doctorId: "",
+        billAmount: defaultFee,
+        isPaid: false,
+        treatments: [],
+      });
+    }
+  }, [selectedPatient, isOpen, reset, defaultFee]);
+
+  // Watch the checkbox state to toggle fields
+  const createApptToggle = watch("createAppointment");
+
   const mutation = useMutation({
-    mutationFn: (formData: FormData) => savePatient(formData, selectedPatient?.id),
+    mutationFn: (formData: FormData) =>
+      savePatient(formData, selectedPatient?.id),
     onSuccess: (res) => {
       if (res && "error" in res && res.error) {
         setPatientError(res.error as string);
@@ -53,6 +126,49 @@ export default function PatientFormModal({
     },
   });
 
+  const onSubmit = (data: PatientFormData) => {
+    const formData = new FormData();
+
+    // Append regular fields
+    formData.append("firstName", data.firstName);
+    formData.append("lastName", data.lastName);
+    formData.append("dateOfBirth", data.dateOfBirth);
+    formData.append("gender", data.gender);
+    if (data.bloodGroup) formData.append("bloodGroup", data.bloodGroup);
+    formData.append("phone", data.phone);
+    if (data.email) formData.append("email", data.email);
+    if (data.address) formData.append("address", data.address);
+    if (data.role) formData.append("role", data.role);
+    if (data.allergies) formData.append("allergies", data.allergies);
+
+    // Append appointment fields conditionally
+    if (data.createAppointment) {
+      formData.append("createAppointment", "true");
+      if (data.appointmentDate)
+        formData.append("appointmentDate", data.appointmentDate);
+      if (data.doctorId) formData.append("doctorId", data.doctorId);
+      if (data.billAmount !== undefined) {
+        formData.append("billAmount", String(data.billAmount));
+      }
+      if (data.isPaid) formData.append("isPaid", "true");
+
+      if (Array.isArray(data.treatments)) {
+        data.treatments.forEach((treatment) => {
+          formData.append("treatments", treatment);
+        });
+      }
+    }
+
+    // Validate using the existing helper
+    const err = formValidation(formData);
+    if (err) {
+      setPatientError(err);
+      return;
+    }
+
+    mutation.mutate(formData);
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -63,6 +179,7 @@ export default function PatientFormModal({
             {selectedPatient ? "Update Record" : "Register new patient"}
           </h2>
           <button
+            type="button"
             onClick={() => {
               onClose();
               setPatientError(null);
@@ -81,11 +198,7 @@ export default function PatientFormModal({
         )}
 
         <form
-          action={(formData) => {
-            const err = formValidation(formData);
-            if (err) return setPatientError(err);
-            mutation.mutate(formData);
-          }}
+          onSubmit={handleSubmit(onSubmit)}
           className="flex flex-col flex-1 overflow-hidden"
         >
           <div className="p-6 overflow-y-auto flex-1 space-y-8 bg-slate-50/30">
@@ -97,38 +210,27 @@ export default function PatientFormModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Input
                   label="First Name *"
-                  required
+                  placeholder="Sumit"
                   type="text"
-                  name="firstName"
-                  defaultValue={selectedPatient?.firstName}
+                  {...register("firstName", { required: true })}
                 />
                 <Input
                   label="Last Name *"
-                  required
-                  name="lastName"
-                  defaultValue={selectedPatient?.lastName}
+                  placeholder="Pokhrel"
+                  type="text"
+                  {...register("lastName", { required: true })}
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <Input
                   label="Birth Date *"
-                  required
                   type="date"
-                  name="dateOfBirth"
-                  defaultValue={
-                    selectedPatient?.dateOfBirth
-                      ? new Date(selectedPatient.dateOfBirth)
-                        .toISOString()
-                        .split("T")[0]
-                      : ""
-                  }
+                  {...register("dateOfBirth", { required: true })}
                 />
                 <Select
                   label="Gender *"
-                  name="gender"
-                  required
-                  defaultValue={selectedPatient?.gender || ""}
+                  {...register("gender", { required: true })}
                   options={[
                     { label: "Select...", value: "" },
                     { label: "Male", value: "Male" },
@@ -138,12 +240,11 @@ export default function PatientFormModal({
                 />
                 <Select
                   label="Blood Group"
-                  name="bloodGroup"
-                  defaultValue={selectedPatient?.bloodGroup || ""}
+                  {...register("bloodGroup")}
                   options={[
                     { label: "Select...", value: "" },
                     ...["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"].map(
-                      (bg) => ({ label: bg, value: bg })
+                      (bg) => ({ label: bg, value: bg }),
                     ),
                   ]}
                 />
@@ -158,23 +259,22 @@ export default function PatientFormModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Input
                   label="Phone Number *"
-                  required
                   type="tel"
-                  name="phone"
-                  defaultValue={selectedPatient?.phone}
+                  placeholder="123-456-7890"
+                  {...register("phone", { required: true })}
                 />
                 <Input
                   label="Email Address"
                   type="email"
-                  name="email"
-                  defaultValue={selectedPatient?.email || ""}
+                  placeholder="sumitpokhrel@gmail.com"
+                  {...register("email")}
                 />
               </div>
               <Textarea
                 label="Residential Address"
-                name="address"
-                defaultValue={selectedPatient?.address || ""}
+                placeholder="Buddhashanti-2, Jhapa, Nepal"
                 rows={2}
+                {...register("address")}
               />
             </div>
 
@@ -186,8 +286,7 @@ export default function PatientFormModal({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <Select
                   label="Patient Category"
-                  name="role"
-                  defaultValue={selectedPatient?.role || "Regular"}
+                  {...register("role")}
                   options={[
                     { label: "Regular", value: "Regular" },
                     { label: "VIP", value: "VIP" },
@@ -199,9 +298,8 @@ export default function PatientFormModal({
                 />
                 <Input
                   label="Known Allergies"
-                  name="allergies"
-                  defaultValue={selectedPatient?.allergies || ""}
                   placeholder="e.g. Penicillin, Peanuts"
+                  {...register("allergies")}
                 />
               </div>
             </div>
@@ -213,19 +311,18 @@ export default function PatientFormModal({
                   <div className="relative flex items-center">
                     <input
                       type="checkbox"
-                      name="createAppointment"
-                      value="true"
                       className="sr-only"
-                      checked={createApptToggle}
-                      onChange={(e) => setCreateApptToggle(e.target.checked)}
+                      {...register("createAppointment")}
                     />
                     <div
-                      className={`block w-12 h-7 rounded-full transition-colors ${createApptToggle ? "bg-brand-600" : "bg-slate-200"
-                        }`}
+                      className={`block w-12 h-7 rounded-full transition-colors ${
+                        createApptToggle ? "bg-brand-600" : "bg-slate-200"
+                      }`}
                     ></div>
                     <div
-                      className={`absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform ${createApptToggle ? "translate-x-5" : ""
-                        }`}
+                      className={`absolute left-1 top-1 bg-white w-5 h-5 rounded-full transition-transform ${
+                        createApptToggle ? "translate-x-5" : ""
+                      }`}
                     ></div>
                   </div>
                   <div>
@@ -247,15 +344,16 @@ export default function PatientFormModal({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                       <Input
                         label="Preferred Date *"
-                        required={createApptToggle}
                         type="date"
-                        name="appointmentDate"
-                        defaultValue={new Date().toISOString().split("T")[0]}
+                        {...register("appointmentDate", {
+                          required: createApptToggle,
+                        })}
                       />
                       <Select
                         label="Assign Doctor *"
-                        required={createApptToggle}
-                        name="doctorId"
+                        {...register("doctorId", {
+                          required: createApptToggle,
+                        })}
                         options={[
                           { label: "Select Doctor...", value: "" },
                           ...initialDoctors.map((d) => ({
@@ -271,18 +369,15 @@ export default function PatientFormModal({
                         label="Bill Amount"
                         type="number"
                         step="0.01"
-                        name="billAmount"
-                        value={apptBillAmount}
-                        onChange={(e) => setApptBillAmount(e.target.value)}
                         placeholder="0.00"
+                        {...register("billAmount")}
                       />
                       <div className="flex items-end pb-3">
                         <label className="flex items-center gap-3 cursor-pointer">
                           <input
                             type="checkbox"
-                            name="isPaid"
-                            value="true"
                             className="w-5 h-5 rounded border-brand-300 text-brand-600 focus:ring-brand-500"
+                            {...register("isPaid")}
                           />
                           <span className="text-sm font-bold text-slate-700">
                             Payment Received (Paid)
@@ -311,9 +406,9 @@ export default function PatientFormModal({
                           >
                             <input
                               type="checkbox"
-                              name="treatments"
                               value={proc}
                               className="w-4 h-4 rounded border-brand-300 text-brand-600 focus:ring-brand-500"
+                              {...register("treatments")}
                             />
                             <span className="text-xs font-bold text-slate-700">
                               {proc}

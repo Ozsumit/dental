@@ -48,7 +48,12 @@ export default function GeneralDashboardClient({
   userName,
 }: GeneralDashboardClientProps) {
   const router = useRouter();
-  const { isPatientFormOpen, isApptFormOpen, setPatientFormOpen, setApptFormOpen } = useUIStore();
+  const {
+    isPatientFormOpen,
+    isApptFormOpen,
+    setPatientFormOpen,
+    setApptFormOpen,
+  } = useUIStore();
 
   const { data: adminStats } = useQuery({
     queryKey: ["adminStats"],
@@ -84,15 +89,15 @@ export default function GeneralDashboardClient({
 
   // Mock trend data fallback if backend does not supply historical series yet
   const defaultTrendData = [
-    { label: "Jan", value: 45 },
-    { label: "Feb", value: 52 },
-    { label: "Mar", value: 49 },
-    { label: "Apr", value: 63 },
-    { label: "May", value: 80 },
-    { label: "Jun", value: 95 },
+    { label: "Sun", value: 10 },
+    { label: "Mon", value: 25 },
+    { label: "Tue", value: 35 },
+    { label: "Wed", value: 32 },
+    { label: "Thu", value: 12 },
+    { label: "Fri", value: 19 },
   ];
 
-  const trendData = patientAnalytics?.monthlyTrend || defaultTrendData;
+  const trendData = patientAnalytics?.weeklyTrend || defaultTrendData;
 
   const stats = [
     {
