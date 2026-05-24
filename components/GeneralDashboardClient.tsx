@@ -15,6 +15,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { QueueTable } from "@/components/appointments/queuetable";
+import React from "react";
 import PatientFormModal from "@/components/reception/PatientFormModal";
 import { AppointmentFormModal } from "@/components/appointments/appointmentformmodal";
 import { ExtendedAppointment, Role } from "@/lib/types";
@@ -54,6 +55,10 @@ export default function GeneralDashboardClient({
     setPatientFormOpen,
     setApptFormOpen,
   } = useUIStore();
+
+  const [trendPeriod, setTrendPeriod] = React.useState<
+    "daily" | "weekly" | "monthly"
+  >("weekly");
 
   const { data: adminStats } = useQuery({
     queryKey: ["adminStats"],
@@ -97,7 +102,27 @@ export default function GeneralDashboardClient({
     { label: "Fri", value: 19 },
   ];
 
-  const trendData = patientAnalytics?.weeklyTrend || defaultTrendData;
+  const trendData =
+    trendPeriod === "daily"
+      ? patientAnalytics?.dailyTrend
+      : trendPeriod === "monthly"
+        ? patientAnalytics?.monthlyTrend
+        : patientAnalytics?.weeklyTrend || defaultTrendData;
+
+  const trendConfig = {
+    daily: {
+      title: "Daily Registration Trend",
+      subtitle: "Patients registered in the last 7 days",
+    },
+    weekly: {
+      title: "Weekly Registration Trend",
+      subtitle: "Patients registered in the last 4 weeks",
+    },
+    monthly: {
+      title: "Monthly Registration Trend",
+      subtitle: "Patients registered in the last 6 months",
+    },
+  };
 
   const stats = [
     {
@@ -225,12 +250,29 @@ export default function GeneralDashboardClient({
           </div>
 
           {/* 2. Added Line Graph Component directly below the table inside the main section */}
-          <TrendLineChart
-            title="Patient Registration trends"
-            subtitle="Analytics showing registration volumes"
-            data={trendData}
-            color="#0369a1"
-          />
+          <div className="relative">
+            <div className="absolute top-6 right-6 z-10 flex bg-slate-100 p-1 rounded-xl">
+              {(["daily", "weekly", "monthly"] as const).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setTrendPeriod(period)}
+                  className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                    trendPeriod === period
+                      ? "bg-white text-brand-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {period}
+                </button>
+              ))}
+            </div>
+            <TrendLineChart
+              title={trendConfig[trendPeriod].title}
+              subtitle={trendConfig[trendPeriod].subtitle}
+              data={trendData}
+              color="#0369a1"
+            />
+          </div>
         </div>
 
         {/* Sidebar: Quick Actions & Analytics */}
