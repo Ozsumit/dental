@@ -43,16 +43,19 @@ export default function PatientAnalytics({
 
   // Gender demographics parsing
   const maleObj = analytics.genderDistribution.find(
-    (g) => g.gender.toLowerCase() === "male"
+    (g) => g.gender.toLowerCase() === "male",
   );
   const femaleObj = analytics.genderDistribution.find(
-    (g) => g.gender.toLowerCase() === "female"
+    (g) => g.gender.toLowerCase() === "female",
   );
-  
+
   const maleCount = maleObj ? maleObj.count : 0;
   const femaleCount = femaleObj ? femaleObj.count : 0;
   const specifiedCount = maleCount + femaleCount;
-  const unspecifiedCount = Math.max(0, analytics.totalPatients - specifiedCount);
+  const unspecifiedCount = Math.max(
+    0,
+    analytics.totalPatients - specifiedCount,
+  );
 
   const malePct = (maleCount / total) * 100;
   const femalePct = (femaleCount / total) * 100;
@@ -71,7 +74,7 @@ export default function PatientAnalytics({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {/* 1. Directory Overview Card */}
-      <div 
+      <div
         onClick={() => updateQuery("status", "")}
         className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer group flex flex-col justify-between"
       >
@@ -99,7 +102,9 @@ export default function PatientAnalytics({
               className="flex items-center gap-1.5 text-slate-500 hover:text-emerald-700 transition-colors"
             >
               <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>Active: <strong>{analytics.activePatients}</strong></span>
+              <span>
+                Active: <strong>{analytics.activePatients}</strong>
+              </span>
             </button>
             <button
               onClick={(e) => {
@@ -109,18 +114,22 @@ export default function PatientAnalytics({
               className="flex items-center gap-1.5 text-slate-500 hover:text-rose-700 transition-colors"
             >
               <UserX className="w-3.5 h-3.5 text-rose-500" />
-              <span>Inactive: <strong>{analytics.inactivePatients}</strong></span>
+              <span>
+                Inactive: <strong>{analytics.inactivePatients}</strong>
+              </span>
             </button>
           </div>
 
           {/* Active / Inactive Dual Track Bar */}
           <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden flex">
-            <div 
+            <div
               style={{ width: `${(analytics.activePatients / total) * 100}%` }}
               className="bg-emerald-500 h-full rounded-l-full"
             />
-            <div 
-              style={{ width: `${(analytics.inactivePatients / total) * 100}%` }}
+            <div
+              style={{
+                width: `${(analytics.inactivePatients / total) * 100}%`,
+              }}
               className="bg-rose-400 h-full rounded-r-full"
             />
           </div>
@@ -128,15 +137,15 @@ export default function PatientAnalytics({
           <div className="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase tracking-wider">
             <span>Intake Trend</span>
             <span className="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full text-[9px] flex items-center gap-0.5">
-              <Sparkles className="w-2.5 h-2.5" />
-              +{analytics.newPatientsLast30Days} new (30d)
+              <Sparkles className="w-2.5 h-2.5" />+
+              {analytics.newPatientsLast30Days} new (30d)
             </span>
           </div>
         </div>
       </div>
 
       {/* 2. Gender Demographics Card */}
-      <div 
+      <div
         onClick={() => updateQuery("gender", "")}
         className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer group flex flex-col justify-between"
       >
@@ -164,19 +173,19 @@ export default function PatientAnalytics({
         <div className="mt-4 pt-4 border-t border-slate-100 space-y-3">
           {/* Custom Multi-Segment Progress Track */}
           <div className="h-2 w-full rounded-full bg-slate-100 flex overflow-hidden">
-            <div 
-              style={{ width: `${malePct}%` }} 
-              className="bg-blue-500 hover:opacity-95 transition-all duration-500" 
+            <div
+              style={{ width: `${malePct}%` }}
+              className="bg-blue-500 hover:opacity-95 transition-all duration-500"
               title={`Male: ${maleCount}`}
             />
-            <div 
-              style={{ width: `${femalePct}%` }} 
-              className="bg-pink-500 hover:opacity-95 transition-all duration-500" 
+            <div
+              style={{ width: `${femalePct}%` }}
+              className="bg-pink-500 hover:opacity-95 transition-all duration-500"
               title={`Female: ${femaleCount}`}
             />
-            <div 
-              style={{ width: `${unspecifiedPct}%` }} 
-              className="bg-purple-400 hover:opacity-95 transition-all duration-500" 
+            <div
+              style={{ width: `${unspecifiedPct}%` }}
+              className="bg-purple-400 hover:opacity-95 transition-all duration-500"
               title={`Unspecified: ${unspecifiedCount}`}
             />
           </div>
@@ -218,7 +227,7 @@ export default function PatientAnalytics({
       </div>
 
       {/* 3. Age Demographics Card */}
-      <div 
+      <div
         onClick={() => updateQuery("ageGroup", "")}
         className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer group flex flex-col justify-between"
       >
@@ -228,7 +237,10 @@ export default function PatientAnalytics({
               Age Breakdown
             </p>
             <h3 className="text-3xl font-black text-slate-900">
-              {analytics.ageGroups.adults > 0 || analytics.ageGroups.children > 0 ? "Segments" : "None"}
+              {analytics.ageGroups.adults > 0 ||
+              analytics.ageGroups.children > 0
+                ? "Segments"
+                : "None"}
             </h3>
           </div>
           <div className="p-3 bg-amber-50 text-amber-600 rounded-xl group-hover:bg-amber-100 transition-all duration-300">
@@ -240,55 +252,78 @@ export default function PatientAnalytics({
           {/* Progress Indicators per segment */}
           <div className="space-y-1.5">
             {/* Minors */}
-            <div 
+            <div
               onClick={(e) => {
                 e.stopPropagation();
                 updateQuery("ageGroup", "0-18");
               }}
               className="flex items-center justify-between text-[10px] text-slate-500 hover:text-amber-700 transition-colors font-medium cursor-pointer"
             >
-              <span className="flex items-center gap-1"><Baby className="w-3 h-3 text-amber-500 animate-pulse" /> Minors (&lt;18)</span>
-              <span>{analytics.ageGroups.children} ({Math.round(childPct)}%)</span>
+              <span className="flex items-center gap-1">
+                <Baby className="w-3 h-3 text-amber-500 animate-pulse" /> Minors
+                (&lt;18)
+              </span>
+              <span>
+                {analytics.ageGroups.children} ({Math.round(childPct)}%)
+              </span>
             </div>
             <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-              <div style={{ width: `${childPct}%` }} className="bg-amber-400 h-full rounded-full" />
+              <div
+                style={{ width: `${childPct}%` }}
+                className="bg-amber-400 h-full rounded-full"
+              />
             </div>
 
             {/* Adults */}
-            <div 
+            <div
               onClick={(e) => {
                 e.stopPropagation();
                 updateQuery("ageGroup", "36-50");
               }}
               className="flex items-center justify-between text-[10px] text-slate-500 hover:text-emerald-700 transition-colors font-medium mt-1 cursor-pointer"
             >
-              <span className="flex items-center gap-1"><Activity className="w-3 h-3 text-emerald-500" /> Adults (18-60)</span>
-              <span>{analytics.ageGroups.adults} ({Math.round(adultPct)}%)</span>
+              <span className="flex items-center gap-1">
+                <Activity className="w-3 h-3 text-emerald-500" /> Adults (18-60)
+              </span>
+              <span>
+                {analytics.ageGroups.adults} ({Math.round(adultPct)}%)
+              </span>
             </div>
             <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-              <div style={{ width: `${adultPct}%` }} className="bg-emerald-500 h-full rounded-full" />
+              <div
+                style={{ width: `${adultPct}%` }}
+                className="bg-emerald-500 h-full rounded-full"
+              />
             </div>
 
             {/* Seniors */}
-            <div 
+            <div
               onClick={(e) => {
                 e.stopPropagation();
                 updateQuery("ageGroup", "51+");
               }}
               className="flex items-center justify-between text-[10px] text-slate-500 hover:text-indigo-700 transition-colors font-medium mt-1 cursor-pointer"
             >
-              <span className="flex items-center gap-1"><Accessibility className="w-3 h-3 text-indigo-500" /> Seniors (60+)</span>
-              <span>{analytics.ageGroups.seniors} ({Math.round(seniorPct)}%)</span>
+              <span className="flex items-center gap-1">
+                <Accessibility className="w-3 h-3 text-indigo-500" /> Seniors
+                (60+)
+              </span>
+              <span>
+                {analytics.ageGroups.seniors} ({Math.round(seniorPct)}%)
+              </span>
             </div>
             <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-              <div style={{ width: `${seniorPct}%` }} className="bg-indigo-500 h-full rounded-full" />
+              <div
+                style={{ width: `${seniorPct}%` }}
+                className="bg-indigo-500 h-full rounded-full"
+              />
             </div>
           </div>
         </div>
       </div>
 
       {/* 4. Engagement & Segments Card */}
-      <div 
+      <div
         onClick={() => updateQuery("role", "")}
         className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-1 cursor-pointer group flex flex-col justify-between"
       >
@@ -326,8 +361,8 @@ export default function PatientAnalytics({
                   updateQuery("role", c.category);
                 }}
                 className={`text-[9px] font-black uppercase px-2 py-1 rounded-lg border transition-all ${
-                  idx === 0 
-                    ? "bg-brand-50 text-brand-700 border-brand-100 hover:bg-brand-100" 
+                  idx === 0
+                    ? "bg-brand-50 text-brand-700 border-brand-100 hover:bg-brand-100"
                     : idx === 1
                       ? "bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100"
                       : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
@@ -337,7 +372,9 @@ export default function PatientAnalytics({
               </button>
             ))}
             {sortedCategories.length === 0 && (
-              <span className="text-[10px] text-slate-400 italic">No category data</span>
+              <span className="text-[10px] text-slate-400 italic">
+                No category data
+              </span>
             )}
           </div>
         </div>

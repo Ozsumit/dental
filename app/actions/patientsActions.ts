@@ -544,6 +544,74 @@ export async function getPatientAnalytics() {
     },
   });
 
+  // Calculate Registration Trends
+  const sixMonthsAgo = new Date();
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+  sixMonthsAgo.setHours(0, 0, 0, 0);
+
+  const patientsForTrends = await prisma.patient.findMany({
+    where: {
+      tenantId,
+      createdAt: { gte: sixMonthsAgo },
+    },
+    select: { createdAt: true },
+    orderBy: { createdAt: "asc" },
+  });
+
+  // 1. Daily Trend (Last 7 days)
+  const dailyTrend = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const label = d.toLocaleDateString("en-US", { weekday: "short" });
+    const count = patientsForTrends.filter((p) => {
+      const pDate = new Date(p.createdAt);
+      return (
+        pDate.getDate() === d.getDate() &&
+        pDate.getMonth() === d.getMonth() &&
+        pDate.getFullYear() === d.getFullYear()
+      );
+    }).length;
+    dailyTrend.push({ label, value: count });
+  }
+
+  // 2. Weekly Trend (Last 4 weeks)
+  const weeklyTrend = [];
+  const now = new Date();
+  for (let i = 3; i >= 0; i--) {
+    const start = new Date(now);
+    start.setDate(now.getDate() - (i + 1) * 7);
+    start.setHours(0, 0, 0, 0);
+
+    const end = new Date(now);
+    end.setDate(now.getDate() - i * 7);
+    end.setHours(23, 59, 59, 999);
+
+    const label = i === 0 ? "This Week" : `${i + 1}w ago`;
+    const count = patientsForTrends.filter((p) => {
+      const pDate = new Date(p.createdAt);
+      return pDate >= start && pDate < end;
+    }).length;
+    weeklyTrend.push({ label, value: count });
+  }
+
+  // 3. Monthly Trend (Last 6 months)
+  const monthlyTrend = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(1); // Set to first of month to avoid overflow issues
+    d.setMonth(d.getMonth() - i);
+    const label = d.toLocaleDateString("en-US", { month: "short" });
+    const count = patientsForTrends.filter((p) => {
+      const pDate = new Date(p.createdAt);
+      return (
+        pDate.getMonth() === d.getMonth() &&
+        pDate.getFullYear() === d.getFullYear()
+      );
+    }).length;
+    monthlyTrend.push({ label, value: count });
+  }
+
   return {
     totalPatients: totalCount,
     activePatients: activeCount,
@@ -566,6 +634,9 @@ export async function getPatientAnalytics() {
       avgVisits: visitStats._avg.visitCount || 0,
       totalVisits: visitStats._sum.visitCount || 0,
     },
+    dailyTrend,
+    weeklyTrend,
+    monthlyTrend,
   };
 }
 

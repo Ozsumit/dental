@@ -17,7 +17,7 @@ import ConfirmationModal from "@/components/ui/ConfirmationModal";
 import PatientFilter from "@/components/reception/PatientFilter";
 import PatientTable from "@/components/reception/PatientTable";
 import PatientFormModal from "@/components/reception/PatientFormModal";
-import AppointmentFormModal from "@/components/reception/AppointmentFormModal";
+// import AppointmentFormModal from "@/components/reception/AppointmentFormModal";
 import PatientProfileModal from "@/components/reception/PatientProfileModal";
 import PatientAnalytics, {
   PatientAnalyticsData,
@@ -49,12 +49,18 @@ export default function PatientsClient({
   const queryClient = useQueryClient();
 
   const {
-    isPatientFormOpen, setPatientFormOpen,
-    isApptFormOpen, setApptFormOpen,
-    isDeleteConfirmOpen, setDeleteConfirmOpen,
-    isProfileOpen, setProfileOpen,
-    showFilters, setShowFilters,
-    showAnalytics, setShowAnalytics
+    isPatientFormOpen,
+    setPatientFormOpen,
+    isApptFormOpen,
+    setApptFormOpen,
+    isDeleteConfirmOpen,
+    setDeleteConfirmOpen,
+    isProfileOpen,
+    setProfileOpen,
+    showFilters,
+    setShowFilters,
+    showAnalytics,
+    setShowAnalytics,
   } = useUIStore();
 
   // Selected item states (still local as they are specific to this view and not "global UI visibility")
@@ -68,10 +74,10 @@ export default function PatientsClient({
     queryKey: ["patients", currentFilters],
     queryFn: () => getPatients(currentFilters),
     initialData: {
-        data: initialPatients,
-        totalPages: initialTotalPages,
-        currentPage: initialCurrentPage,
-        totalCount: 0
+      data: initialPatients,
+      totalPages: initialTotalPages,
+      currentPage: initialCurrentPage,
+      totalCount: 0,
     },
   });
 
@@ -84,10 +90,10 @@ export default function PatientsClient({
   const deleteMutation = useMutation({
     mutationFn: (id: string) => deletePatient(id),
     onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["patients"] });
-        queryClient.invalidateQueries({ queryKey: ["patientAnalytics"] });
-        setDeleteConfirmOpen(false);
-    }
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      queryClient.invalidateQueries({ queryKey: ["patientAnalytics"] });
+      setDeleteConfirmOpen(false);
+    },
   });
 
   const updateQuery = useCallback(
@@ -243,13 +249,13 @@ export default function PatientsClient({
       )}
 
       {/* Create New Session Modal */}
-      <AppointmentFormModal
+      {/* <AppointmentFormModal
         isOpen={isApptFormOpen}
         onClose={() => setApptFormOpen(false)}
         patient={apptPatient}
         initialDoctors={initialDoctors}
         defaultFee={defaultFee}
-      />
+      /> */}
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
