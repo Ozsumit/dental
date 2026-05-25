@@ -229,43 +229,42 @@ export default function AdminClient({
             </div>
           </div>
         </div>
-
-        <div className="flex gap-2">
-          {activeTab === "Users" && (
-            <button
-              onClick={() => {
-                setSelectedUser(null);
-                setUserFormError("");
-                setUserFormOpen(true);
-              }}
-              className="bg-brand-700 hover:bg-brand-800 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
-            >
-              <Plus className="w-5 h-5" /> Add New User
-            </button>
-          )}
-          {activeTab === "Catalog" && (
-            <button
-              onClick={() => {
-                setSelectedCatalogItem(null);
-                setCatalogFormOpen(true);
-              }}
-              className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
-            >
-              <Plus className="w-5 h-5" /> Add Procedure
-            </button>
-          )}
-          {activeTab === "Taxonomies" && (
-            <button
-              onClick={() => {
-                setSelectedTaxonomy(null);
-                setTaxonomyFormOpen(true);
-              }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
-            >
-              <Plus className="w-5 h-5" /> Add Taxonomy
-            </button>
-          )}
-        </div>
+      </div>
+      <div className="flex gap-2">
+        {activeTab === "Users" && (
+          <button
+            onClick={() => {
+              setSelectedUser(null);
+              setUserFormError("");
+              setUserFormOpen(true);
+            }}
+            className="bg-brand-700 hover:bg-brand-800 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
+          >
+            <Plus className="w-5 h-5" /> Add New User
+          </button>
+        )}
+        {activeTab === "Catalog" && (
+          <button
+            onClick={() => {
+              setSelectedCatalogItem(null);
+              setCatalogFormOpen(true);
+            }}
+            className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
+          >
+            <Plus className="w-5 h-5" /> Add Procedure
+          </button>
+        )}
+        {activeTab === "Taxonomies" && (
+          <button
+            onClick={() => {
+              setSelectedTaxonomy(null);
+              setTaxonomyFormOpen(true);
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
+          >
+            <Plus className="w-5 h-5" /> Add Taxonomy
+          </button>
+        )}
       </div>
 
       {activeTab === "Users" && (
