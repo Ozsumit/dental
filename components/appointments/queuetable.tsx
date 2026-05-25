@@ -27,16 +27,16 @@ export function QueueTable({
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden overflow-x-auto">
-      <div className="p-6 border-b border-slate-100 bg-amber-50/30 flex justify-between items-center">
+      <div className="p-6 border-b border-slate-100 bg-brand-50/30 flex justify-between items-center">
         <div>
-          <h3 className="text-base font-extrabold text-amber-800">
-            Today&apos;s Appointment Queue
+          <h3 className="text-base font-extrabold text-brand-800">
+            Today's Appointment Queue
           </h3>
-          <p className="text-xs text-amber-600 font-medium">
+          <p className="text-xs text-brand-800 font-medium">
             Sorted chronologically with token numbers
           </p>
         </div>
-        <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full border border-amber-200">
+        <span className="px-3 py-1 bg-brand-100 text-brand-800 text-xs font-bold rounded-full border border-brand-200">
           Total Today: {todaysAppts.length}
         </span>
       </div>
