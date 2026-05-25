@@ -229,43 +229,42 @@ export default function AdminClient({
             </div>
           </div>
         </div>
-
-        <div className="flex gap-2">
-          {activeTab === "Users" && (
-            <button
-              onClick={() => {
-                setSelectedUser(null);
-                setUserFormError("");
-                setUserFormOpen(true);
-              }}
-              className="bg-brand-700 hover:bg-brand-800 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
-            >
-              <Plus className="w-5 h-5" /> Add New User
-            </button>
-          )}
-          {activeTab === "Catalog" && (
-            <button
-              onClick={() => {
-                setSelectedCatalogItem(null);
-                setCatalogFormOpen(true);
-              }}
-              className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
-            >
-              <Plus className="w-5 h-5" /> Add Procedure
-            </button>
-          )}
-          {activeTab === "Taxonomies" && (
-            <button
-              onClick={() => {
-                setSelectedTaxonomy(null);
-                setTaxonomyFormOpen(true);
-              }}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
-            >
-              <Plus className="w-5 h-5" /> Add Taxonomy
-            </button>
-          )}
-        </div>
+      </div>
+      <div className="flex gap-2">
+        {activeTab === "Users" && (
+          <button
+            onClick={() => {
+              setSelectedUser(null);
+              setUserFormError("");
+              setUserFormOpen(true);
+            }}
+            className="bg-brand-700 hover:bg-brand-800 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
+          >
+            <Plus className="w-5 h-5" /> Add New User
+          </button>
+        )}
+        {activeTab === "Catalog" && (
+          <button
+            onClick={() => {
+              setSelectedCatalogItem(null);
+              setCatalogFormOpen(true);
+            }}
+            className="bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
+          >
+            <Plus className="w-5 h-5" /> Add Procedure
+          </button>
+        )}
+        {activeTab === "Taxonomies" && (
+          <button
+            onClick={() => {
+              setSelectedTaxonomy(null);
+              setTaxonomyFormOpen(true);
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition"
+          >
+            <Plus className="w-5 h-5" /> Add Taxonomy
+          </button>
+        )}
       </div>
 
       {activeTab === "Users" && (
@@ -304,25 +303,16 @@ export default function AdminClient({
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      {user.role !== "ADMIN" ? (
-                        <button
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setUserFormError("");
-                            setUserFormOpen(true);
-                          }}
-                          className="p-2 text-slate-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                      ) : (
-                        <span
-                          className="p-2 text-slate-300 cursor-not-allowed select-none"
-                          title="System Administrator cannot be edited"
-                        >
-                          <Edit2 className="w-4 h-4 opacity-40" />
-                        </span>
-                      )}
+                      <button
+                        onClick={() => {
+                          setSelectedUser(user);
+                          setUserFormError("");
+                          setUserFormOpen(true);
+                        }}
+                        className="p-2 text-slate-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </button>
 
                       {/* Hide or disable delete button if the user has an ADMIN role */}
                       {user.role !== "ADMIN" ? (
