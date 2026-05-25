@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Calendar, AlertCircle } from "lucide-react";
 import { createAppointmentAction } from "@/app/actions/patientsActions";
 import { Patient } from "@/lib/types/index";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface AppointmentFormModalProps {
   isOpen: boolean;
@@ -11,7 +12,6 @@ interface AppointmentFormModalProps {
   patient: Patient | null;
   initialDoctors: { id: string; username: string; fullName?: string | null }[];
   defaultFee: number;
-  onSuccess: () => void;
 }
 
 export default function AppointmentFormModal({
@@ -20,11 +20,28 @@ export default function AppointmentFormModal({
   patient,
   initialDoctors = [],
   defaultFee = 0,
-  onSuccess,
 }: AppointmentFormModalProps) {
   const [apptError, setApptError] = useState<string | null>(null);
-  const [isSavingAppt, setIsSavingAppt] = useState(false);
-  const [apptBillAmount, setApptBillAmount] = useState<string | number>(defaultFee);
+  const [apptBillAmount, setApptBillAmount] = useState<string | number>(
+    defaultFee,
+  );
+
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: (formData: FormData) => createAppointmentAction(formData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["todaysAppointments"] });
+      queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      queryClient.invalidateQueries({ queryKey: ["patientAnalytics"] });
+      onClose();
+      setApptError(null);
+    },
+    onError: (error: any) => {
+      setApptError(error.message || "Failed to create appointment.");
+    },
+  });
 
   if (!isOpen || !patient) return null;
 
@@ -48,18 +65,10 @@ export default function AppointmentFormModal({
         )}
 
         <form
-          action={async (formData) => {
+          action={(formData) => {
             setApptError(null);
-            setIsSavingAppt(true);
             formData.append("patientId", patient.id);
-            try {
-              await createAppointmentAction(formData);
-              onSuccess();
-            } catch (e: any) {
-              setApptError(e.message || "Failed to create appointment.");
-            } finally {
-              setIsSavingAppt(false);
-            }
+            mutation.mutate(formData);
           }}
           className="p-8 space-y-6"
         >
@@ -118,7 +127,6 @@ export default function AppointmentFormModal({
               {[
                 "Follow up",
                 "Routine Checkup",
-                "",
                 "Checkup",
                 "Whitening",
                 "Extraction",
@@ -158,7 +166,7 @@ export default function AppointmentFormModal({
           <div className="flex gap-3 mt-4">
             <button
               type="button"
-              disabled={isSavingAppt}
+              disabled={mutation.isPending}
               onClick={onClose}
               className="flex-1 py-4 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition cursor-pointer"
             >
@@ -166,10 +174,10 @@ export default function AppointmentFormModal({
             </button>
             <button
               type="submit"
-              disabled={isSavingAppt}
+              disabled={mutation.isPending}
               className="flex-1 py-4 bg-brand-600 text-white rounded-xl font-bold hover:bg-brand-700 shadow-lg shadow-brand-100 transition disabled:opacity-70 cursor-pointer"
             >
-              {isSavingAppt ? "Creating..." : "Create Session"}
+              {mutation.isPending ? "Creating..." : "Create Session"}
             </button>
           </div>
         </form>

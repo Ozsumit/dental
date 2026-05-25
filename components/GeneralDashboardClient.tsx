@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useUIStore } from "@/lib/store/useUIStore";
 import { useRouter } from "next/navigation";
 import {
   Users,
@@ -15,6 +15,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { QueueTable } from "@/components/appointments/queuetable";
+import React from "react";
 import PatientFormModal from "@/components/reception/PatientFormModal";
 import { AppointmentFormModal } from "@/components/appointments/appointmentformmodal";
 import { ExtendedAppointment, Role } from "@/lib/types";
@@ -22,6 +23,11 @@ import { ExtendedAppointment, Role } from "@/lib/types";
 // 1. Import your newly created line chart component
 import { TrendLineChart } from "@/components/ui/trendlineChart";
 import PatientAnalytics from "@/components/reception/PatientAnalytics";
+import { useQuery } from "@tanstack/react-query";
+import { getAdminStats, getSystemSettings } from "@/app/actions/billingActions";
+import { getPatientAnalytics } from "@/app/actions/patientsActions";
+import { getTodaysAppointments } from "@/app/actions/appointmentActions";
+import { getDoctors } from "@/app/actions/userActions";
 
 interface GeneralDashboardClientProps {
   adminStats: any;
@@ -34,31 +40,89 @@ interface GeneralDashboardClientProps {
 }
 
 export default function GeneralDashboardClient({
-  adminStats,
-  patientAnalytics,
-  todaysAppointments,
-  doctors,
-  defaultFee,
+  adminStats: initialAdminStats,
+  patientAnalytics: initialPatientAnalytics,
+  todaysAppointments: initialTodaysAppointments,
+  doctors: initialDoctors,
+  defaultFee: initialDefaultFee,
   userRole,
   userName,
 }: GeneralDashboardClientProps) {
   const router = useRouter();
-  const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
-  const [isApptModalOpen, setIsApptModalOpen] = useState(false);
+  const {
+    isPatientFormOpen,
+    isApptFormOpen,
+    setPatientFormOpen,
+    setApptFormOpen,
+  } = useUIStore();
+
+  const [trendPeriod, setTrendPeriod] = React.useState<
+    "daily" | "weekly" | "monthly"
+  >("weekly");
+
+  const { data: adminStats } = useQuery({
+    queryKey: ["adminStats"],
+    queryFn: () => getAdminStats(),
+    initialData: initialAdminStats,
+  });
+
+  const { data: patientAnalytics } = useQuery({
+    queryKey: ["patientAnalytics"],
+    queryFn: () => getPatientAnalytics(),
+    initialData: initialPatientAnalytics,
+  });
+
+  const { data: todaysAppointments } = useQuery({
+    queryKey: ["todaysAppointments"],
+    queryFn: () => getTodaysAppointments(),
+    initialData: initialTodaysAppointments,
+  });
+
+  const { data: doctors } = useQuery({
+    queryKey: ["doctors"],
+    queryFn: () => getDoctors(),
+    initialData: initialDoctors,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ["systemSettings"],
+    queryFn: () => getSystemSettings(),
+    initialData: { appointmentFee: initialDefaultFee } as any,
+  });
 
   const isAtLeastAdmin = userRole === "ADMIN" || userRole === "SUPERADMIN";
 
   // Mock trend data fallback if backend does not supply historical series yet
   const defaultTrendData = [
-    { label: "Jan", value: 45 },
-    { label: "Feb", value: 52 },
-    { label: "Mar", value: 49 },
-    { label: "Apr", value: 63 },
-    { label: "May", value: 80 },
-    { label: "Jun", value: 95 },
+    { label: "Sun", value: 10 },
+    { label: "Mon", value: 25 },
+    { label: "Tue", value: 35 },
+    { label: "Wed", value: 32 },
+    { label: "Thu", value: 12 },
+    { label: "Fri", value: 19 },
   ];
 
-  const trendData = patientAnalytics?.monthlyTrend || defaultTrendData;
+  const trendData =
+    trendPeriod === "daily"
+      ? patientAnalytics?.dailyTrend
+      : trendPeriod === "monthly"
+        ? patientAnalytics?.monthlyTrend
+        : patientAnalytics?.weeklyTrend || defaultTrendData;
+
+  const trendConfig = {
+    daily: {
+      title: "Daily Registration Trend",
+      subtitle: "Patients registered in the last 7 days",
+    },
+    weekly: {
+      title: "Weekly Registration Trend",
+      subtitle: "Patients registered in the last 4 weeks",
+    },
+    monthly: {
+      title: "Monthly Registration Trend",
+      subtitle: "Patients registered in the last 6 months",
+    },
+  };
 
   const stats = [
     {
@@ -122,7 +186,7 @@ export default function GeneralDashboardClient({
           </Button>
           <Button
             variant="primary"
-            onClick={() => setIsApptModalOpen(true)}
+            onClick={() => setApptFormOpen(true)}
             icon={<PlusCircle className="w-5 h-5" />}
             className="shadow-brand-200 shadow-lg"
           >
@@ -176,7 +240,7 @@ export default function GeneralDashboardClient({
             </div>
 
             <QueueTable
-              todaysAppts={todaysAppointments}
+              todaysAppts={todaysAppointments as any}
               loadingTodays={false}
               onEdit={(appt) => {
                 router.push(`/appointments?id=${appt.id}`);
@@ -186,12 +250,29 @@ export default function GeneralDashboardClient({
           </div>
 
           {/* 2. Added Line Graph Component directly below the table inside the main section */}
-          <TrendLineChart
-            title="Patient Registration trends"
-            subtitle="Analytics showing registration volumes"
-            data={trendData}
-            color="#0369a1"
-          />
+          <div className="relative">
+            <div className="absolute top-6 right-6 z-10 flex bg-slate-100 p-1 rounded-xl">
+              {(["daily", "weekly", "monthly"] as const).map((period) => (
+                <button
+                  key={period}
+                  onClick={() => setTrendPeriod(period)}
+                  className={`px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all ${
+                    trendPeriod === period
+                      ? "bg-white text-brand-700 shadow-sm"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {period}
+                </button>
+              ))}
+            </div>
+            <TrendLineChart
+              title={trendConfig[trendPeriod].title}
+              subtitle={trendConfig[trendPeriod].subtitle}
+              data={trendData}
+              color="#0369a1"
+            />
+          </div>
         </div>
 
         {/* Sidebar: Quick Actions & Analytics */}
@@ -199,7 +280,7 @@ export default function GeneralDashboardClient({
           <Card title="Quick Actions" subtitle="Frequently used tasks">
             <div className="space-y-3">
               <button
-                onClick={() => setIsPatientModalOpen(true)}
+                onClick={() => setPatientFormOpen(true)}
                 className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-brand-50 rounded-2xl border border-slate-100 hover:border-brand-200 transition-all group"
               >
                 <div className="flex items-center gap-3">
@@ -214,7 +295,7 @@ export default function GeneralDashboardClient({
               </button>
 
               <button
-                onClick={() => setIsApptModalOpen(true)}
+                onClick={() => setApptFormOpen(true)}
                 className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-brand-50 rounded-2xl border border-slate-100 hover:border-brand-200 transition-all group"
               >
                 <div className="flex items-center gap-3">
@@ -284,26 +365,18 @@ export default function GeneralDashboardClient({
       <PatientAnalytics analytics={patientAnalytics} updateQuery={() => {}} />
       {/* Modals */}
       <PatientFormModal
-        isOpen={isPatientModalOpen}
-        onClose={() => setIsPatientModalOpen(false)}
-        onSuccess={() => {
-          setIsPatientModalOpen(false);
-          router.refresh();
-        }}
+        isOpen={isPatientFormOpen}
+        onClose={() => setPatientFormOpen(false)}
         initialDoctors={doctors}
-        defaultFee={defaultFee}
+        defaultFee={settings.appointmentFee}
       />
 
       <AppointmentFormModal
-        isOpen={isApptModalOpen}
-        onClose={() => setIsApptModalOpen(false)}
+        isOpen={isApptFormOpen}
+        onClose={() => setApptFormOpen(false)}
         selectedAppt={null}
         doctors={doctors}
-        defaultFee={defaultFee}
-        onSuccess={() => {
-          setIsApptModalOpen(false);
-          router.refresh();
-        }}
+        defaultFee={settings.appointmentFee}
       />
     </div>
   );

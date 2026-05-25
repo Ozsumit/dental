@@ -1,7 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "./lib/auth/session";
 
-const protectedRoutes = ["/", "/patients", "/admin", "/doctor", "/appointments", "/billing", "/superadmin", "/settings"];
+const protectedRoutes = [
+  "/",
+  "/patients",
+  "/admin",
+  "/doctor",
+  "/appointments",
+  "/billing",
+  "/superadmin",
+  "/settings",
+];
 
 const publicRoutes = ["/login"];
 
@@ -21,13 +30,27 @@ export default async function middleware(req: NextRequest) {
   }
 
   // Already logged in
+  // Role-based homepage redirect
+  if (session && path === "/") {
+    let redirectPath = "/";
+
+    if (session.role === "SUPERADMIN") {
+      redirectPath = "/superadmin";
+    } else if (session.role === "DOCTOR") {
+      redirectPath = "/doctor";
+    }
+
+    if (redirectPath !== path) {
+      return NextResponse.redirect(new URL(redirectPath, req.nextUrl));
+    }
+  }
+
+  // Already logged in and trying to access login
   if (isPublicRoute && session) {
     let redirectPath = "/";
 
     if (session.role === "SUPERADMIN") redirectPath = "/superadmin";
-    else if (session.role === "ADMIN") redirectPath = "/";
     else if (session.role === "DOCTOR") redirectPath = "/doctor";
-    else if (session.role === "RECEPTIONIST") redirectPath = "/";
 
     return NextResponse.redirect(new URL(redirectPath, req.nextUrl));
   }

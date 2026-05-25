@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { Patient } from "@/lib/types/index";
 import { Stethoscope, Activity, FileText } from "lucide-react";
 import { finalizeBilling, markAsPaid } from "@/app/actions/billingActions";
@@ -20,40 +19,51 @@ import { ClinicalOverviewTab } from "@/components/reception/clinicaloverviewtab"
 import { OdontogramView } from "@/components/reception/odontogramview";
 import { VisitHistoryTab } from "@/components/reception/visithistorytab";
 import { RecordProcedureModal } from "@/components/reception/recordproceduremodal";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function ReceptionistPatientView({
   patient: initialPatient,
 }: {
   patient: Patient;
 }) {
-  const router = useRouter();
-  const [activePatient, setActivePatient] = useState<Patient>(initialPatient);
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<"overview" | "odontogram" | "procedures">("overview");
   const [isProcedureModalOpen, setIsProcedureModalOpen] = useState(false);
 
-  useEffect(() => {
-    setActivePatient(initialPatient);
-  }, [initialPatient]);
+  const { data: activePatient = initialPatient } = useQuery({
+    queryKey: ["patientDetails", initialPatient.id],
+    queryFn: () => getPatientDetails(initialPatient.id) as Promise<Patient>,
+    initialData: initialPatient,
+  });
+
+  const finalizeMutation = useMutation({
+    mutationFn: ({ id, cost }: { id: string, cost: number }) => finalizeBilling(id, cost),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["patientDetails", activePatient.id] });
+        queryClient.invalidateQueries({ queryKey: ["pendingBillings"] });
+    }
+  });
+
+  const paidMutation = useMutation({
+    mutationFn: (id: string) => markAsPaid(id),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["patientDetails", activePatient.id] });
+        queryClient.invalidateQueries({ queryKey: ["pendingBillings"] });
+    }
+  });
 
   const handleSwitchPatient = async (id: string) => {
-    try {
-      const details = await getPatientDetails(id);
-      if (details) {
-        setActivePatient(details as any);
-      }
-    } catch (error) {
-      console.error("Error switching patient profile:", error);
-    }
+    // This could be refactored to use navigation or update a local state that useQuery depends on
+    // For now, let's just use the query cache if it's already there
+    queryClient.invalidateQueries({ queryKey: ["patientDetails", id] });
   };
 
   const handleFinalize = async (id: string, cost: number) => {
-    await finalizeBilling(id, cost);
-    router.refresh();
+    finalizeMutation.mutate({ id, cost });
   };
 
   const handlePaid = async (id: string) => {
-    await markAsPaid(id);
-    router.refresh();
+    paidMutation.mutate(id);
   };
 
   const pendingProcedures = activePatient.procedures?.filter((p) => p.status === "PENDING") || [];

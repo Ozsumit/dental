@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
 import { Button } from "@/components/ui/Button";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useUIStore } from "@/lib/store/useUIStore";
 
 interface TaxonomyFormModalProps {
   isOpen: boolean;
@@ -16,6 +18,18 @@ interface TaxonomyFormModalProps {
 }
 
 export default function TaxonomyFormModal({ isOpen, onClose, selectedTaxonomy, tenantId }: TaxonomyFormModalProps) {
+  const queryClient = useQueryClient();
+  const { setTaxonomyFormOpen } = useUIStore();
+
+  const mutation = useMutation({
+    mutationFn: (formData: FormData) => saveTaxonomy(formData),
+    onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["taxonomies"] });
+        setTaxonomyFormOpen(false);
+    },
+    onError: (e: any) => alert(e.message)
+  });
+
   if (!isOpen) return null;
 
   return (
@@ -25,15 +39,12 @@ export default function TaxonomyFormModal({ isOpen, onClose, selectedTaxonomy, t
           <h2 className="text-xl font-bold text-slate-800">
             {selectedTaxonomy ? "Edit Clinical Taxonomy" : "New Clinical Taxonomy"}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full">
+          <button onClick={() => setTaxonomyFormOpen(false)} className="text-slate-400 hover:text-slate-600 bg-slate-100 p-1.5 rounded-full">
             <X className="w-5 h-5" />
           </button>
         </div>
         <form
-          action={async (formData) => {
-            await saveTaxonomy(formData).catch(e => alert(e.message));
-            onClose();
-          }}
+          action={(formData) => mutation.mutate(formData)}
           className="p-6 space-y-5"
         >
           <input type="hidden" name="id" value={selectedTaxonomy?.id || ""} />
@@ -98,10 +109,10 @@ export default function TaxonomyFormModal({ isOpen, onClose, selectedTaxonomy, t
           />
 
           <div className="pt-2 flex justify-end gap-3 mt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={() => setTaxonomyFormOpen(false)} disabled={mutation.isPending}>
               Cancel
             </Button>
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="primary" loading={mutation.isPending}>
               <Save className="w-4 h-4 mr-2" /> Save Taxonomy
             </Button>
           </div>

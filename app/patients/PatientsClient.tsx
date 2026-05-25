@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";
 import {
   deletePatient,
+  getPatients,
+  getPatientAnalytics,
   getPatientsForExport,
 } from "../actions/patientsActions";
 import { Patient } from "@/lib/types/index";
@@ -15,11 +17,13 @@ import ConfirmationModal from "@/components/ui/ConfirmationModal";
 import PatientFilter from "@/components/reception/PatientFilter";
 import PatientTable from "@/components/reception/PatientTable";
 import PatientFormModal from "@/components/reception/PatientFormModal";
-import AppointmentFormModal from "@/components/reception/AppointmentFormModal";
+// import AppointmentFormModal from "@/components/reception/AppointmentFormModal";
 import PatientProfileModal from "@/components/reception/PatientProfileModal";
 import PatientAnalytics, {
   PatientAnalyticsData,
 } from "@/components/reception/PatientAnalytics";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useUIStore } from "@/lib/store/useUIStore";
 
 interface PatientsClientProps {
   patients: Patient[];
@@ -32,27 +36,65 @@ interface PatientsClientProps {
 }
 
 export default function PatientsClient({
-  patients,
-  totalPages,
-  currentPage,
+  patients: initialPatients,
+  totalPages: initialTotalPages,
+  currentPage: initialCurrentPage,
+  searchParams,
   initialDoctors = [],
   defaultFee = 0,
-  analytics,
+  analytics: initialAnalytics,
 }: PatientsClientProps) {
   const router = useRouter();
   const params = useSearchParams();
+  const queryClient = useQueryClient();
 
-  // Dialog State Management
-  const [isApptFormOpen, setIsApptFormOpen] = useState(false);
+  const {
+    isPatientFormOpen,
+    setPatientFormOpen,
+    isApptFormOpen,
+    setApptFormOpen,
+    isDeleteConfirmOpen,
+    setDeleteConfirmOpen,
+    isProfileOpen,
+    setProfileOpen,
+    showFilters,
+    setShowFilters,
+    showAnalytics,
+    setShowAnalytics,
+  } = useUIStore();
+
+  // Selected item states (still local as they are specific to this view and not "global UI visibility")
   const [apptPatient, setAppointmentPatient] = useState<Patient | null>(null);
-
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
+
+  const currentFilters = Object.fromEntries(params.entries());
+
+  const { data: patientData } = useQuery({
+    queryKey: ["patients", currentFilters],
+    queryFn: () => getPatients(currentFilters),
+    initialData: {
+      data: initialPatients,
+      totalPages: initialTotalPages,
+      currentPage: initialCurrentPage,
+      totalCount: 0,
+    },
+  });
+
+  const { data: analytics } = useQuery({
+    queryKey: ["patientAnalytics"],
+    queryFn: () => getPatientAnalytics(),
+    initialData: initialAnalytics,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deletePatient(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["patients"] });
+      queryClient.invalidateQueries({ queryKey: ["patientAnalytics"] });
+      setDeleteConfirmOpen(false);
+    },
+  });
 
   const updateQuery = useCallback(
     (name: string, value: string) => {
@@ -88,28 +130,27 @@ export default function PatientsClient({
 
   const openAdd = () => {
     setSelectedPatient(null);
-    setIsFormOpen(true);
+    setPatientFormOpen(true);
   };
 
   const openEdit = (p: Patient) => {
     setSelectedPatient(p);
-    setIsFormOpen(true);
+    setPatientFormOpen(true);
   };
 
   const openDelete = (p: Patient) => {
     setSelectedPatient(p);
-    setIsDeleteOpen(true);
+    setDeleteConfirmOpen(true);
   };
 
   const openProfile = (p: Patient) => {
     setSelectedPatient(p);
-    setIsProfileOpen(true);
+    setProfileOpen(true);
   };
 
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const currentFilters = Object.fromEntries(params.entries());
       const dataToExport = await getPatientsForExport(currentFilters);
 
       const formattedData = dataToExport.map((p: Patient) => ({
@@ -170,18 +211,11 @@ export default function PatientsClient({
         openAdd={openAdd}
       />
 
-      {/* Analytics Dashboard */}
-      {/* {showAnalytics && analytics && (
-        <div className="animate-in fade-in slide-in-from-top-4 duration-300">
-          <PatientAnalytics analytics={analytics} updateQuery={updateQuery} />
-        </div>
-      )} */}
-
       {/* Patient Listings Directory */}
       <PatientTable
-        patients={patients}
-        currentPage={currentPage}
-        totalPages={totalPages}
+        patients={patientData.data}
+        currentPage={patientData.currentPage}
+        totalPages={patientData.totalPages}
         hasActiveFilters={hasActiveFilters}
         clearFilters={clearFilters}
         updateQuery={updateQuery}
@@ -192,54 +226,44 @@ export default function PatientsClient({
 
       {/* Add / Edit Patient Form Modal */}
       <PatientFormModal
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
+        isOpen={isPatientFormOpen}
+        onClose={() => setPatientFormOpen(false)}
         selectedPatient={selectedPatient}
         initialDoctors={initialDoctors}
         defaultFee={defaultFee}
-        onSuccess={() => {
-          setIsFormOpen(false);
-          router.refresh();
-        }}
       />
 
       {/* Patient Profile Records Modal */}
       {isProfileOpen && selectedPatient && (
         <PatientProfileModal
           isOpen={isProfileOpen}
-          onClose={() => setIsProfileOpen(false)}
+          onClose={() => setProfileOpen(false)}
           patientId={selectedPatient.id}
           patientName={`${selectedPatient.firstName} ${selectedPatient.lastName}`}
           patientPhone={selectedPatient.phone}
           openNewAppointment={() => {
             setAppointmentPatient(selectedPatient);
-            setIsApptFormOpen(true);
+            setApptFormOpen(true);
           }}
         />
       )}
 
       {/* Create New Session Modal */}
-      <AppointmentFormModal
+      {/* <AppointmentFormModal
         isOpen={isApptFormOpen}
-        onClose={() => setIsApptFormOpen(false)}
+        onClose={() => setApptFormOpen(false)}
         patient={apptPatient}
         initialDoctors={initialDoctors}
         defaultFee={defaultFee}
-        onSuccess={() => {
-          setIsApptFormOpen(false);
-          router.refresh();
-        }}
-      />
+      /> */}
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
-        isOpen={isDeleteOpen}
-        onClose={() => setIsDeleteOpen(false)}
+        isOpen={isDeleteConfirmOpen}
+        onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={async () => {
           if (selectedPatient) {
-            await deletePatient(selectedPatient.id);
-            setIsDeleteOpen(false);
-            router.refresh();
+            deleteMutation.mutate(selectedPatient.id);
           }
         }}
         title="Delete Patient Record?"
@@ -247,6 +271,7 @@ export default function PatientsClient({
         confirmText="Yes, Delete Record"
         cancelText="Keep Record"
         variant="danger"
+        loading={deleteMutation.isPending}
       />
     </div>
   );
