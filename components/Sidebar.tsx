@@ -105,7 +105,7 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
     <div className="w-64 bg-brand-900 border-r border-brand-800 h-screen flex flex-col shadow-sm shrink-0">
       {/* BRANDING HEADER */}
       <div className="p-6 border-b justify-center border-brand-800 flex items-center gap-3 shrink-0">
-        <div className="bg-brand-800 text-brand-300 rounded-full p-2 border border-brand-700 shadow-inner shrink-0">
+        <div className="bg-brand-800 text-brand-300 rounded-full p-2 border shadow-inner shrink-0">
           <HeartPulse className="w-12 h-12" />
         </div>
       </div>
@@ -138,10 +138,10 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
       </div>
 
       {/* FOOTER ACTIONS */}
-      <div className="p-4 border-t border-brand-800 space-y-1 shrink-0">
+      <div className="p-4 border-t  border-brand-800 space-y-1 shrink-0">
         <Link
           href="/help"
-          className="flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-slate-200 hover:bg-brand-800 hover:text-slate-100 transition"
+          className="flex items-center gap-3 px-4 py-4 rounded-xl font-medium text-slate-200 hover:bg-brand-800 hover:text-slate-100 transition"
         >
           <HelpCircle className="w-5 h-5 text-slate-100" />
           Help & Support
@@ -149,9 +149,9 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
 
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium text-red-200 hover:bg-red-950/40 hover:text-red-100 transition text-left cursor-pointer"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-medium bg-red-600 text-white hover:bg-red-950/40 hover:text-red-100 transition text-left cursor-pointer"
         >
-          <LogOut className="w-5 h-5 text-red-400" />
+          <LogOut className="w-5 h-5 text-white" />
           Logout
         </button>
       </div>
