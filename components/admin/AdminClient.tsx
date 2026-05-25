@@ -304,16 +304,25 @@ export default function AdminClient({
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedUser(user);
-                          setUserFormError("");
-                          setUserFormOpen(true);
-                        }}
-                        className="p-2 text-slate-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
+                      {user.role !== "ADMIN" ? (
+                        <button
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setUserFormError("");
+                            setUserFormOpen(true);
+                          }}
+                          className="p-2 text-slate-500 hover:text-brand-700 hover:bg-brand-50 rounded-lg transition"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                      ) : (
+                        <span
+                          className="p-2 text-slate-300 cursor-not-allowed select-none"
+                          title="System Administrator cannot be edited"
+                        >
+                          <Edit2 className="w-4 h-4 opacity-40" />
+                        </span>
+                      )}
 
                       {/* Hide or disable delete button if the user has an ADMIN role */}
                       {user.role !== "ADMIN" ? (
