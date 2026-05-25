@@ -82,12 +82,17 @@ export default function Sidebar({ session }: { session: UserSession | null }) {
       roles: ["DOCTOR"],
     },
     {
-      name: "Analytics",
-      href: "/##",
-      icon: Graph,
-      roles: ["DOCTOR", "ADMIN", "SUPERADMIN", "RECEPTIONIST"],
+      name: "Staff",
+      href: "/admin/staff",
+      icon: Users,
+      roles: ["ADMIN", "SUPERADMIN"],
     },
-
+    {
+      name: "Reports",
+      href: "/admin/reports",
+      icon: Graph,
+      roles: ["ADMIN", "SUPERADMIN"],
+    },
     {
       name: "Settings",
       href: "/settings",

@@ -23,6 +23,7 @@ model Tenant {
   procedures     Procedure[]
   systemSettings SystemSettings[]
   taxonomies     Taxonomy[]
+  inventory      Inventory[]
 }
 
 model User {
@@ -45,6 +46,7 @@ model User {
   specialization      String?
   nmcRegNo            String?
   photoUrl            String?
+  status              String          @default("ACTIVE")
   notifyAppointment   Boolean         @default(false)
   notifyWaiting       Boolean         @default(true)
   notifyLabResults    Boolean         @default(false)
@@ -255,10 +257,25 @@ model Taxonomy {
   @@index([group])
 }
 
+model Inventory {
+  id          String   @id @default(uuid())
+  name        String
+  category    String?
+  quantity    Int      @default(0)
+  unit        String?
+  minStock    Int      @default(5)
+  price       Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId])
+}
+
 enum Role {
   SUPERADMIN
   ADMIN
   DOCTOR
   RECEPTIONIST
 }
-
