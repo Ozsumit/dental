@@ -73,3 +73,32 @@ export async function getDoctors() {
     orderBy: { username: "asc" },
   });
 }
+
+export async function getSchedules() {
+  const tenantId = await getTenantIdOrThrow();
+  return await prisma.schedule.findMany({
+    where: {
+      user: { tenantId },
+    },
+  });
+}
+
+export async function saveSchedule(userId: string, shifts: string[]) {
+  const tenantId = await getTenantIdOrThrow();
+
+  // Verify user belongs to tenant
+  const user = await prisma.user.findFirst({
+    where: { id: userId, tenantId },
+  });
+  if (!user) throw new Error("User not found");
+
+  const [mon, tue, wed, thu, fri, sat, sun] = shifts;
+
+  await prisma.schedule.upsert({
+    where: { userId },
+    update: { mon, tue, wed, thu, fri, sat, sun },
+    create: { userId, mon, tue, wed, thu, fri, sat, sun },
+  });
+
+  revalidatePath("/admin/staff");
+}
