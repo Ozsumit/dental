@@ -40,7 +40,7 @@ export default function PatientFilter({
   const params = useSearchParams();
 
   return (
-    <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+    <div className="bg-white p-5 w-full rounded-2xl border border-slate-200 shadow-sm space-y-4">
       <div className="flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
