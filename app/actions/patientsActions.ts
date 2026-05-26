@@ -182,12 +182,23 @@ export async function savePatient(formData: FormData, id?: string) {
       });
     } else {
       // Check for duplicate patient by phone number BEFORE attempting DB write within the same tenant
-      const existingPatient = await prisma.patient.findFirst({
+      const existingPhone = await prisma.patient.findFirst({
         where: { phone: patientData.phone, tenantId },
       });
+      const existingEmail = await prisma.patient.findFirst({
+        where: { email: patientData.email, tenantId },
+      });
 
-      if (existingPatient) {
-        return { error: "A patient with this phone number already exists in this hospital." };
+      if (existingPhone) {
+        return {
+          error:
+            "A patient with this phone number already exists in this hospital.",
+        };
+      }
+      if (existingEmail) {
+        return {
+          error: "A patient with this email already exists in this hospital.",
+        };
       }
 
       // Create Patient
@@ -406,7 +417,11 @@ export async function getPatientsForExport(searchParams: {
   });
 }
 
-export async function linkFamilyMember(primaryId: string, dependentId: string, relation: string) {
+export async function linkFamilyMember(
+  primaryId: string,
+  dependentId: string,
+  relation: string,
+) {
   const tenantId = await getTenantIdOrThrow();
 
   const [primary, dependent] = await Promise.all([
@@ -449,12 +464,15 @@ export async function unlinkFamilyMember(dependentId: string) {
   revalidatePath("/");
 }
 
-export async function searchPatientsToLink(query: string, excludePatientId: string) {
+export async function searchPatientsToLink(
+  query: string,
+  excludePatientId: string,
+) {
   const tenantId = await getTenantIdOrThrow();
   if (!query || !query.trim()) return [];
 
   const terms = query.trim().split(/\s+/);
-  
+
   return await prisma.patient.findMany({
     where: {
       tenantId,
@@ -485,12 +503,12 @@ export async function getPatientAnalytics() {
   const eighteenYearsAgo = new Date(
     today.getFullYear() - 18,
     today.getMonth(),
-    today.getDate()
+    today.getDate(),
   );
   const sixtyYearsAgo = new Date(
     today.getFullYear() - 60,
     today.getMonth(),
-    today.getDate()
+    today.getDate(),
   );
 
   const [
@@ -639,5 +657,3 @@ export async function getPatientAnalytics() {
     monthlyTrend,
   };
 }
-
-

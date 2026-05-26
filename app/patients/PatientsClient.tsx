@@ -197,19 +197,24 @@ export default function PatientsClient({
   return (
     <div className="space-y-6">
       {/* Search and Filters */}
-      <PatientFilter
-        showFilters={showFilters}
-        setShowFilters={setShowFilters}
-        showAnalytics={showAnalytics}
-        setShowAnalytics={setShowAnalytics}
-        hasActiveFilters={hasActiveFilters}
-        clearFilters={clearFilters}
-        handleTextSearch={handleTextSearch}
-        updateQuery={updateQuery}
-        handleExport={handleExport}
-        isExporting={isExporting}
-        openAdd={openAdd}
-      />
+      <div className="flex flex-row justify-between items-center gap-4 ">
+        <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
+          Patients
+        </h1>
+        <PatientFilter
+          showFilters={showFilters}
+          setShowFilters={setShowFilters}
+          showAnalytics={showAnalytics}
+          setShowAnalytics={setShowAnalytics}
+          hasActiveFilters={hasActiveFilters}
+          clearFilters={clearFilters}
+          handleTextSearch={handleTextSearch}
+          updateQuery={updateQuery}
+          handleExport={handleExport}
+          isExporting={isExporting}
+          openAdd={openAdd}
+        />
+      </div>
 
       {/* Patient Listings Directory */}
       <PatientTable
