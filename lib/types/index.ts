@@ -1,4 +1,3 @@
-
 import {
   Patient,
   User,
@@ -9,10 +8,21 @@ import {
   Taxonomy,
   ClinicalAssessment,
   Procedure,
-  Role
+  Role,
 } from "@prisma/client";
 
-export type { Patient, User, BillingCatalog, Appointment, Diagnosis, MedicalRecord, Taxonomy, ClinicalAssessment, Procedure, Role };
+export type {
+  Patient,
+  User,
+  BillingCatalog,
+  Appointment,
+  Diagnosis,
+  MedicalRecord,
+  Taxonomy,
+  ClinicalAssessment,
+  Procedure,
+  Role,
+};
 
 export type ExtendedPatient = Patient & {
   appointments?: Appointment[];
@@ -27,10 +37,17 @@ export type ExtendedAppointment = Appointment & {
   doctor?: User | null;
 };
 
-
 export interface ObjectiveData {
-  toothChart: Record<string, { status: string; notes: string; problems?: string[] }>;
-  oralHygiene: { plaque: string; inflammation: string; pocketing: string; calculus: string; };
+  toothChart: Record<
+    string,
+    { status: string; notes: string; problems?: string[] }
+  >;
+  oralHygiene: {
+    plaque: string;
+    inflammation: string;
+    pocketing: string;
+    calculus: string;
+  };
   tmj: string;
   biteOcclusion: string;
   softTissue: string;

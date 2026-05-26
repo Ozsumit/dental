@@ -127,7 +127,7 @@ export function VolumeChart({ chartData }: { chartData: ChartDayData[] }) {
       </div>
 
       {/* Static HTML Legend underneath */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-slate-100 pt-4 text-[11px] sm:text-xs font-semibold text-slate-500">
+      <div className="flex flex-wrap items-center gap-x-0 gap-y-2 border-t border-slate-100 pt-4 text-[11px] sm:text-xs font-semibold text-slate-500">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shrink-0" />
           <span>Total Appointments</span>

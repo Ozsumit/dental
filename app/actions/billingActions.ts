@@ -25,7 +25,6 @@ export async function getSystemSettings() {
         appointmentFee: 0,
         tenantId,
       },
-
     });
   }
   return settings;
@@ -106,7 +105,7 @@ export async function getAdminStats() {
 export async function getPendingBillings() {
   const tenantId = await getTenantIdOrThrow();
   return await prisma.procedure.findMany({
-    where: { status: { in: ["PENDING", "BILLED"] }, tenantId },
+    where: { status: { in: ["PENDING", "BILLED", "PAID"] }, tenantId },
     include: { patient: true },
     orderBy: { procedureDate: "desc" },
   });
@@ -203,12 +202,14 @@ export async function markPatientProceduresPaid(patientId: string) {
     }
 
     // 2. Find unique appointment IDs affected
-    const appointmentIds = [...new Set(procedures.map(p => p.appointmentId).filter(Boolean))] as string[];
+    const appointmentIds = [
+      ...new Set(procedures.map((p) => p.appointmentId).filter(Boolean)),
+    ] as string[];
 
     // 3. For each appointment, check if all its procedures are now PAID
     for (const appId of appointmentIds) {
       const unpaidCount = await tx.procedure.count({
-        where: { appointmentId: appId, status: { not: "PAID" } }
+        where: { appointmentId: appId, status: { not: "PAID" } },
       });
 
       if (unpaidCount === 0) {
@@ -218,8 +219,9 @@ export async function markPatientProceduresPaid(patientId: string) {
             where: { id: appId },
             data: {
               isPaid: true,
-              status: appt.status === "PENDING_PAYMENT" ? "SCHEDULED" : undefined
-            }
+              status:
+                appt.status === "PENDING_PAYMENT" ? "SCHEDULED" : undefined,
+            },
           });
         }
       }
@@ -306,7 +308,10 @@ export async function markAsPaid(procedureId: string) {
 
     if (procedure.appointmentId) {
       const unpaidCount = await tx.procedure.count({
-        where: { appointmentId: procedure.appointmentId, status: { not: "PAID" } }
+        where: {
+          appointmentId: procedure.appointmentId,
+          status: { not: "PAID" },
+        },
       });
 
       if (unpaidCount === 0) {
@@ -318,7 +323,8 @@ export async function markAsPaid(procedureId: string) {
             where: { id: procedure.appointmentId },
             data: {
               isPaid: true,
-              status: appt.status === "PENDING_PAYMENT" ? "SCHEDULED" : undefined,
+              status:
+                appt.status === "PENDING_PAYMENT" ? "SCHEDULED" : undefined,
             },
           });
         }

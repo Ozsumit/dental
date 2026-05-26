@@ -19,7 +19,9 @@ export async function getAppointments(searchParams: {
   if (searchParams?.q) {
     const q = (searchParams.q as string).trim();
     where.OR = [
-      { patient: { firstName: { contains: q, mode: "insensitive" }, tenantId } },
+      {
+        patient: { firstName: { contains: q, mode: "insensitive" }, tenantId },
+      },
       { patient: { lastName: { contains: q, mode: "insensitive" }, tenantId } },
       { patient: { phone: { contains: q, mode: "insensitive" }, tenantId } },
     ];
@@ -56,7 +58,7 @@ export async function getAppointments(searchParams: {
     prisma.appointment.findMany({
       where,
       skip,
-      take: limit,
+
       include: {
         patient: true,
         doctor: true,
@@ -313,7 +315,10 @@ export async function getAppointmentsForExport(searchParams: {
 
   if (searchParams?.status) where.status = searchParams.status as string;
   if (searchParams?.treatment) {
-    where.treatments = { contains: searchParams.treatment as string, mode: "insensitive" };
+    where.treatments = {
+      contains: searchParams.treatment as string,
+      mode: "insensitive",
+    };
   }
   if (searchParams?.dateFrom || searchParams?.dateTo) {
     where.appointmentDate = {};
