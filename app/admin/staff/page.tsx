@@ -2,7 +2,13 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { saveUser, deleteUser, getUsers } from "@/app/actions/userActions";
+import {
+  saveUser,
+  deleteUser,
+  getUsers,
+  getSchedules,
+  saveSchedule,
+} from "@/app/actions/userActions";
 import { User } from "@prisma/client";
 import {
   Plus,
@@ -231,6 +237,22 @@ export default function StaffClient({ initialUsers }: StaffClientProps) {
   const [scheduleEditUser, setScheduleEditUser] = useState<any | null>(null);
   const [tempShifts, setTempShifts] = useState<string[]>([]);
 
+  const { data: dbSchedules = [] } = useQuery({
+    queryKey: ["schedules"],
+    queryFn: () => getSchedules(),
+  });
+
+  const saveScheduleMutation = useMutation({
+    mutationFn: ({ userId, shifts }: { userId: string; shifts: string[] }) =>
+      saveSchedule(userId, shifts),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schedules"] });
+      setScheduleEditUser(null);
+    },
+    onError: (err: any) =>
+      alert(err.message || "Failed to update shift schedule."),
+  });
+
   const adminCount = useMemo(
     () => users.filter((u) => u.role === "ADMIN").length,
     [users],
@@ -241,11 +263,24 @@ export default function StaffClient({ initialUsers }: StaffClientProps) {
     if (users.length > 0) {
       const initialSchedules: Record<string, string[]> = {};
       users.forEach((u) => {
-        initialSchedules[u.id] = getInitialShifts(u.username);
+        const dbSched = dbSchedules.find((s) => s.userId === u.id);
+        if (dbSched) {
+          initialSchedules[u.id] = [
+            dbSched.mon,
+            dbSched.tue,
+            dbSched.wed,
+            dbSched.thu,
+            dbSched.fri,
+            dbSched.sat,
+            dbSched.sun,
+          ];
+        } else {
+          initialSchedules[u.id] = getInitialShifts(u.username);
+        }
       });
       setSchedules(initialSchedules);
     }
-  }, [users]);
+  }, [users, dbSchedules]);
 
   // --- MUTATIONS ---
   const deleteMutation = useMutation({
@@ -338,11 +373,10 @@ export default function StaffClient({ initialUsers }: StaffClientProps) {
 
   const handleSaveSchedule = () => {
     if (scheduleEditUser) {
-      setSchedules((prev) => ({
-        ...prev,
-        [scheduleEditUser.id]: tempShifts,
-      }));
-      setScheduleEditUser(null);
+      saveScheduleMutation.mutate({
+        userId: scheduleEditUser.id,
+        shifts: tempShifts,
+      });
     }
   };
 
