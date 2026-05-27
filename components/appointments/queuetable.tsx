@@ -18,9 +18,11 @@ export function QueueTable({
   onDelete,
 }: QueueTableProps) {
   // Filter out appointments that haven't been paid yet (PENDING_PAYMENT)
-  const paidOrCompletedAppts = todaysAppts?.filter(
-    (appt) => appt.status !== "PENDING_PAYMENT"
-  ) || [];
+  const paidOrCompletedAppts =
+    todaysAppts?.filter(
+      (appt) =>
+        appt.status !== "PENDING_PAYMENT" && appt.status !== "COMPLETED",
+    ) || [];
 
   if (loadingTodays) {
     return (
@@ -87,14 +89,16 @@ export function QueueTable({
                   </td>
                   <td className="px-6 py-4 font-bold text-slate-800">
                     <div className="flex items-center gap-2 text-brand-600">
-                      <Clock className="w-4 h-4 text-brand-500" />
+                      {/* <Clock className="w-4 h-4 text-brand-500" /> */}
                       {apptTimeStr}
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2 font-bold text-slate-900">
-                      <User className="w-4 h-4 text-slate-400" />{" "}
-                      {appt.patient?.firstName} {appt.patient?.lastName}
+                      <span className="overflow-clip flex w-1/2 text-ellipsis whitespace-nowrap">
+                        <User className="w-4 h-4 text-slate-400 " />{" "}
+                        {appt.patient?.firstName} {appt.patient?.lastName}
+                      </span>
                     </div>
                     <div className="text-xs text-slate-500 ml-6">
                       {appt.patient?.phone}

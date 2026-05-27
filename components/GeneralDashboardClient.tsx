@@ -11,6 +11,7 @@ import {
   CalendarDays,
   DollarSign,
   PlusCircle,
+  Banknote,
   UserPlus,
   ArrowRight,
   TrendingUp,
@@ -163,7 +164,7 @@ export default function GeneralDashboardClient({
     dashboardStats.push({
       label: "Today's Revenue",
       value: `$${adminStats?.totalRevenue?.toFixed?.(2) || "0.00"}`,
-      icon: DollarSign,
+      icon: Banknote,
       color: "text-brand-700",
       bgColor: "bg-brand-50",
     });

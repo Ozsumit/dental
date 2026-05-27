@@ -10,6 +10,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { Patient } from "@/lib/types/index";
+// import { AppointmentFormModal } from "../appointments/appointmentformmodal";
 
 interface PatientTableProps {
   patients: Patient[];

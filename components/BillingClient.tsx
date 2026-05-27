@@ -43,10 +43,6 @@ export interface BillingStats {
 }
 
 // ==========================================
-// SUB-COMPONENT: BILLING STATS CARDS
-// ==========================================
-
-// ==========================================
 // SUB-COMPONENT: BILLING TOOLBAR
 // ==========================================
 interface BillingToolbarProps {
@@ -123,10 +119,6 @@ function BillingToolbar({
 }
 
 // ==========================================
-// SUB-COMPONENT: BILLING TABLE
-// ==========================================
-
-// ==========================================
 // CORE LAYOUT MODULE: BILLING CLIENT
 // ==========================================
 export default function BillingClient({
@@ -168,6 +160,7 @@ export default function BillingClient({
     message: string;
     type: "success" | "error";
   } | null>(null);
+
   const [invoiceGroup, setInvoiceGroup] = useState<{
     patient: Patient;
     items: Procedure[];

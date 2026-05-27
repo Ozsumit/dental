@@ -79,10 +79,10 @@ export function RecentTreatmentsTimeline({
               {/* Timeline track and node point */}
               <div className="flex flex-col items-center relative shrink-0">
                 {/* Node point */}
-                <div className="w-3.5 h-3.5 rounded-full bg-[#085a75] mt-5 z-10 shrink-0" />
+                <div className="w-3.5 h-3.5 rounded-full bg-[#085a75] mt-0 z-10 shrink-0" />
 
                 {/* Vertical path line between nodes */}
-                {index !== timelineItems.length - 1 && (
+                {index !== timelineItems.length && (
                   <div className="w-[2px] bg-slate-200 grow -my-2" />
                 )}
               </div>

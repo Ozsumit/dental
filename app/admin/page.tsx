@@ -119,7 +119,7 @@ export default async function AdminPage() {
           </div>
 
           {/* Recent Procedures */}
-          <RecentProcedures procedures={stats.recentProcedures} />
+          {/* <RecentProcedures procedures={stats.recentProcedures} /> */}
         </div>
       </div>
     </div>

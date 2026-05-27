@@ -36,15 +36,22 @@ export default function RecentProcedures({
             <div className="flex flex-row justify-center items-center gap-6">
               <p className="text-sm flex flex-row justify-center items-center gap-1 text-slate-400  uppercase">
                 <Circle width={16} className="fill-slate-400" height={16} />
-                {new Date(proc.procedureDate).toLocaleDateString()}
+                {new Date(proc.procedureDate).toLocaleDateString(undefined, {
+                  month: "numeric",
+                  day: "numeric",
+                })}
               </p>
-              <p className="text-sm  flex flex-row items-center  text-slate-700">
+              <p className="text-sm flex flex-row items-center text-slate-700">
                 {" "}
-                {proc.patient?.firstName} {proc.patient?.lastName}
+                <span className="overflow-hidden text-ellipsis  whitespace-nowrap ">
+                  {proc.patient?.firstName} {proc.patient?.lastName}
+                </span>
                 <Minus />
-                {proc.name}
+                <span className="overflow-hidden text-ellipsis  whitespace-nowrap ">
+                  {proc.name}
+                </span>
                 <Minus />
-                Rs.{proc.cost.toFixed(2)}
+                Rs. {proc.cost.toFixed(2)}
               </p>
             </div>
             {/* <div className="text-right">

@@ -2,6 +2,7 @@
 
 import { Banknote, Hourglass, CheckCircle2, Undo2 } from "lucide-react";
 import { BillingStats } from "@/components/BillingClient";
+
 interface BillingStatsCardsProps {
   stats: BillingStats;
   pendingTotal: number;

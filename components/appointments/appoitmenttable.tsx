@@ -72,6 +72,7 @@ const CARD_THEMES = [
 export function AppointmentsTable({
   //   doctors,
   //   defaultFee = 0,
+
   appointments,
   doctors = [],
   currentPage = 1,
@@ -119,8 +120,11 @@ export function AppointmentsTable({
     > = {};
 
     // 1. Pre-populate columns with all registered doctors
-    doctors.forEach((doc) => {
-      const docName = `Dr. ${doc.fullName || doc.username || "Unknown"}`;
+    doctors.forEach((doc, User) => {
+      const docName =
+        doc.role === "ADMIN"
+          ? `${doc.fullName || doc.username || "Unknown"}`
+          : `Dr. ${doc.fullName || doc.username || "Unknown"}`;
       groups[doc.id] = {
         doctorName: docName,
         specialty: doc.specialty || "General Dentistry",
