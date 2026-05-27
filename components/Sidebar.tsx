@@ -8,6 +8,8 @@ import {
   HeartPulse,
   Shield,
   LogOut,
+  CircleUser,
+  Bell,
   ChartNoAxesCombined as Graph,
   Receipt,
   ListOrdered,
@@ -193,13 +195,14 @@ export function TopRightProfile({ session }: TopRightProfileProps) {
 
   return (
     <div className="flex items-center justify-center gap-3 bg-white  border-slate-200 rounded-2xl p-2 pr-4 hover:border-slate-300 transition duration-150">
+      <Bell className="w-10 h-10 fill-brand-800 text-brand-800" />{" "}
+      <CircleUser strokeWidth={2.5} className="w-10 h-10  text-brand-800" />
       {/* Avatar Indicator */}
-      <div
+      {/* <div
         className={`w-9 h-9 rounded-sm flex items-center justify-center text-lg font-black text-white bg-linear-to-br from-brand-600 to-brand-800 shrink-0`}
       >
         {getInitial(displayName)}
-      </div>
-
+      </div> */}
       {/* Name and Role Stack */}
       <div className="text-left min-w-0">
         <p className="text-xs font-black capitalize text-slate-900 truncate tracking-tight">

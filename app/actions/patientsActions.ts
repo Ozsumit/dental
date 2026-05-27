@@ -81,7 +81,7 @@ export async function getPatients(searchParams: {
     orderBy = [{ firstName: "desc" }, { lastName: "desc" }];
   if (searchParams?.sort === "mostVisits") orderBy = { visitCount: "desc" };
 
-  // 6. FETCH DATA (Optimized: Removed heavy includes for page load times)
+  // 6. FETCH DATA (Optimized)
   const [totalCount, patients] = await Promise.all([
     prisma.patient.count({ where }),
     prisma.patient.findMany({
@@ -136,6 +136,7 @@ export async function savePatient(formData: FormData, id?: string) {
   const firstName = formData.get("firstName")?.toString().trim();
   const lastName = formData.get("lastName")?.toString().trim();
   const phone = formData.get("phone")?.toString().trim();
+  const email = formData.get("email")?.toString().trim() || null;
 
   if (!firstName || !lastName || !phone) {
     throw new Error("First Name, Last Name, and Phone are required.");
@@ -145,7 +146,7 @@ export async function savePatient(formData: FormData, id?: string) {
     firstName,
     lastName,
     phone,
-    email: formData.get("email")?.toString() || null,
+    email,
     gender: formData.get("gender")?.toString() || null,
     status: formData.get("status")?.toString() || "ACTIVE",
     address: formData.get("address")?.toString() || null,
@@ -157,6 +158,7 @@ export async function savePatient(formData: FormData, id?: string) {
     ),
     visitCount: visitCount,
     isOld: visitCount > 1,
+    tenantId, // Ensure tenantId is passed if creating
   };
 
   const medicalRecordData = {
@@ -167,8 +169,11 @@ export async function savePatient(formData: FormData, id?: string) {
     emergencyContactNo: formData.get("emergencyContactNo")?.toString() || null,
   };
 
+  let savedPatient;
+
   if (id) {
-    await prisma.patient.update({
+    // UPDATE PATIENT
+    savedPatient = await prisma.patient.update({
       where: { id, tenantId },
       data: {
         ...patientData,
@@ -178,73 +183,44 @@ export async function savePatient(formData: FormData, id?: string) {
             update: medicalRecordData,
           },
         },
-      });
-    } else {
-      // Check for duplicate patient by phone number BEFORE attempting DB write within the same tenant
-      const existingPhone = await prisma.patient.findFirst({
-        where: { phone: patientData.phone, tenantId },
-      });
+      },
+    });
+  } else {
+    // CREATE PATIENT
+    // Check for duplicate patient by phone number BEFORE DB write
+    const existingPhone = await prisma.patient.findFirst({
+      where: { phone: patientData.phone, tenantId },
+    });
+    if (existingPhone) {
+      return {
+        error:
+          "A patient with this phone number already exists in this hospital.",
+      };
+    }
+
+    if (email) {
       const existingEmail = await prisma.patient.findFirst({
         where: { email: patientData.email, tenantId },
       });
-
-      if (existingPhone) {
-        return {
-          error:
-            "A patient with this phone number already exists in this hospital.",
-        };
-      }
       if (existingEmail) {
         return {
           error: "A patient with this email already exists in this hospital.",
         };
       }
-
-      const appt = await prisma.appointment.create({
-        data: {
-          patientId: patient.id,
-          doctorId,
-          appointmentDate,
-          status,
-          treatments,
-          billAmount,
-          isPaid,
-          tenantId,
-        },
-      });
-
-      if (billAmount > 0) {
-        await prisma.procedure.create({
-          data: {
-            id: `appt-bill-${appt.id}`,
-            patientId: patient.id,
-            appointmentId: appt.id,
-            name: `Appointment Fee: ${treatments}`,
-            type: "Appointment",
-            cost: billAmount,
-            procedureDate: appointmentDate,
-            status: isPaid ? "PAID" : "PENDING",
-            tenantId,
-          },
-        });
-      }
-
-      // Update Patient's assigned doctor based on first appointment
-      await prisma.medicalRecord.update({
-        where: { patientId: patient.id },
-        data: { assignedDoctorId: doctorId },
-      });
-
-      await prisma.patient.update({
-        where: { id: patient.id, tenantId },
-        data: { visitCount: 1, lastVisitDate: appointmentDate },
-      });
     }
 
-    revalidatePath("/");
-    return patient;
+    savedPatient = await prisma.patient.create({
+      data: {
+        ...patientData,
+        medicalRecord: {
+          create: medicalRecordData,
+        },
+      },
+    });
   }
+
   revalidatePath("/");
+  return savedPatient;
 }
 
 export async function deletePatient(id: string) {
@@ -258,7 +234,6 @@ export async function transferPatientDoctor(
   doctorId: string,
 ) {
   const tenantId = await getTenantIdOrThrow();
-  // Ensure patient belongs to tenant
   const patient = await prisma.patient.findFirst({
     where: { id: patientId, tenantId },
   });
@@ -522,6 +497,17 @@ export async function getPatientAnalytics() {
       createdAt: { gte: thirtyDaysAgo },
     },
   });
+  // Calculate patients registered in last 24 hours
+  const twentyFourHoursAgo = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+
+  const newPatientsLast24Hours = await prisma.patient.count({
+    where: {
+      tenantId,
+      createdAt: {
+        gte: twentyFourHoursAgo,
+      },
+    },
+  });
 
   // Calculate Registration Trends
   const sixMonthsAgo = new Date();
@@ -578,7 +564,7 @@ export async function getPatientAnalytics() {
   const monthlyTrend = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date();
-    d.setDate(1); // Set to first of month to avoid overflow issues
+    d.setDate(1);
     d.setMonth(d.getMonth() - i);
     const label = d.toLocaleDateString("en-US", { month: "short" });
     const count = patientsForTrends.filter((p) => {
@@ -596,6 +582,7 @@ export async function getPatientAnalytics() {
     activePatients: activeCount,
     inactivePatients: Math.max(0, totalCount - activeCount),
     newPatientsLast30Days,
+    newPatientsLast24Hours,
     genderDistribution: genderGroups.map((g) => ({
       gender: g.gender || "Unspecified",
       count: g._count._all,
