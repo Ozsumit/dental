@@ -116,7 +116,7 @@ export default function AppointmentsClient({
         <AppointmentsTable
           appointments={appointmentData.data as any}
           currentPage={appointmentData.currentPage}
-          doctors={doctors}
+          doctors={doctors as [Array]}
           totalPages={appointmentData.totalPages}
           onEdit={openEdit}
           onDelete={handleDeleteTrigger}

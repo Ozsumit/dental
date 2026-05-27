@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { Prisma } from "@prisma/client";
 import { getTenantIdOrThrow } from "@/lib/auth/session";
+import { validateDoctorAvailability } from "@/lib/utils/schedule";
 
 export async function getAppointments(searchParams: {
   [key: string]: string | string[] | undefined;
@@ -19,9 +20,11 @@ export async function getAppointments(searchParams: {
   if (searchParams?.q) {
     const q = (searchParams.q as string).trim();
     where.OR = [
-      { patient: { firstName: { contains: q, mode: "insensitive" }, tenantId } },
-      { patient: { lastName: { contains: q, mode: "insensitive" }, tenantId } },
-      { patient: { phone: { contains: q, mode: "insensitive" }, tenantId } },
+      {
+        patient: { firstName: { contains: q } },
+      },
+      { patient: { lastName: { contains: q } } },
+      { patient: { phone: { contains: q } } },
     ];
   }
 
@@ -34,7 +37,6 @@ export async function getAppointments(searchParams: {
   if (searchParams?.treatment) {
     where.treatments = {
       contains: searchParams.treatment as string,
-      mode: "insensitive",
     };
   }
 
@@ -56,7 +58,7 @@ export async function getAppointments(searchParams: {
     prisma.appointment.findMany({
       where,
       skip,
-      take: limit,
+
       include: {
         patient: true,
         doctor: true,
@@ -84,9 +86,9 @@ export async function searchPatientsForDropdown(query: string) {
       tenantId,
       AND: tokens.map((token) => ({
         OR: [
-          { firstName: { contains: token, mode: "insensitive" } },
-          { lastName: { contains: token, mode: "insensitive" } },
-          { phone: { contains: token, mode: "insensitive" } },
+          { firstName: { contains: token } },
+          { lastName: { contains: token } },
+          { phone: { contains: token } },
         ],
       })),
     },
@@ -124,6 +126,9 @@ export async function saveAppointment(formData: FormData, id?: string) {
   if (isNaN(appointmentDate.getTime())) {
     throw new Error("Invalid appointment date.");
   }
+
+  // Validate doctor availability
+  await validateDoctorAvailability(doctorId, appointmentDate);
 
   const treatments =
     formData.getAll("treatments").join(", ") ||
@@ -303,9 +308,9 @@ export async function getAppointmentsForExport(searchParams: {
       tenantId,
       AND: tokens.map((token) => ({
         OR: [
-          { firstName: { contains: token, mode: "insensitive" } },
-          { lastName: { contains: token, mode: "insensitive" } },
-          { phone: { contains: token, mode: "insensitive" } },
+          { firstName: { contains: token } },
+          { lastName: { contains: token } },
+          { phone: { contains: token } },
         ],
       })),
     };
@@ -313,7 +318,9 @@ export async function getAppointmentsForExport(searchParams: {
 
   if (searchParams?.status) where.status = searchParams.status as string;
   if (searchParams?.treatment) {
-    where.treatments = { contains: searchParams.treatment as string, mode: "insensitive" };
+    where.treatments = {
+      contains: searchParams.treatment as string,
+    };
   }
   if (searchParams?.dateFrom || searchParams?.dateTo) {
     where.appointmentDate = {};

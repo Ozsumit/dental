@@ -17,6 +17,11 @@ export function QueueTable({
   onEdit,
   onDelete,
 }: QueueTableProps) {
+  // Filter out appointments that haven't been paid yet (PENDING_PAYMENT)
+  const paidOrCompletedAppts = todaysAppts?.filter(
+    (appt) => appt.status !== "PENDING_PAYMENT"
+  ) || [];
+
   if (loadingTodays) {
     return (
       <div className="py-20 text-center font-bold text-slate-500 animate-pulse">
@@ -37,7 +42,7 @@ export function QueueTable({
           </p>
         </div>
         <span className="px-3 py-1 bg-brand-100 text-brand-800 text-xs font-bold rounded-full border border-brand-200">
-          Total Today: {todaysAppts.length}
+          Total Today: {paidOrCompletedAppts.length}
         </span>
       </div>
       <table className="min-w-full text-left text-sm text-slate-600">
@@ -52,7 +57,7 @@ export function QueueTable({
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
-          {todaysAppts.length === 0 ? (
+          {paidOrCompletedAppts.length === 0 ? (
             <tr>
               <td
                 colSpan={6}
@@ -62,7 +67,7 @@ export function QueueTable({
               </td>
             </tr>
           ) : (
-            todaysAppts.map((appt: ExtendedAppointment, index) => {
+            paidOrCompletedAppts.map((appt: ExtendedAppointment, index) => {
               const apptTimeStr = new Date(
                 appt.appointmentDate,
               ).toLocaleTimeString([], {

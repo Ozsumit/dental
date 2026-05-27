@@ -24,7 +24,11 @@ export const patientSchema = z
       .min(1, "Last name is required.")
       .regex(/^[^0-9]+$/, "Last name cannot contain numbers."),
     dateOfBirth: z.string().min(1, "Birth date is required."),
-    gender: z.string().min(1, "Gender is required."),
+    gender: z
+      .string()
+      .min(1, "Gender is required.")
+      .regex(/^[^0-9]+$/, "Gender name cannot contain numbers."),
+
     bloodGroup: z.string().optional(),
     phone: z
       .string()

@@ -5,9 +5,8 @@ generator client {
 }
 
 datasource db {
-  provider   = "postgresql"
-  url        = env("DATABASE_URL")
-  extensions = [citext]
+provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Tenant {
@@ -34,6 +33,7 @@ model User {
   updatedAt           DateTime        @updatedAt
   appointments        Appointment[]   @relation("DoctorAppointments")
   assignedRecords     MedicalRecord[]
+  schedule            Schedule?
   tenantId            String
   tenant              Tenant          @relation(fields: [tenantId], references: [id])
 
@@ -57,10 +57,10 @@ model User {
 
 model Patient {
   id            String         @id @default(uuid())
-  firstName     String         @db.Citext
-  lastName      String         @db.Citext
-  phone         String         @db.Citext
-  email         String?        @db.Citext
+  firstName     String
+  lastName      String
+  phone         String
+  email         String?
   dateOfBirth   DateTime
   gender        String?
   status        String         @default("ACTIVE")
@@ -112,7 +112,7 @@ model MedicalRecord {
   updatedAt            DateTime @updatedAt
   assignedDoctor       User?    @relation(fields: [assignedDoctorId], references: [id])
   patient              Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  medicalHistory       Json?
+  medicalHistory       String?
 }
 
 model Diagnosis {
@@ -243,7 +243,7 @@ model Taxonomy {
   category  String? // e.g. "Systemic Diseases"
   label     String
   value     String
-  metadata  Json? // { type: "critical", placeholder: "...", options: ["..."] }
+  metadata  String?
   order     Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -255,10 +255,24 @@ model Taxonomy {
   @@index([group])
 }
 
+model Schedule {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mon       String   @default("—")
+  tue       String   @default("—")
+  wed       String   @default("—")
+  thu       String   @default("—")
+  fri       String   @default("—")
+  sat       String   @default("—")
+  sun       String   @default("—")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum Role {
   SUPERADMIN
   ADMIN
   DOCTOR
   RECEPTIONIST
 }
-
